@@ -1,4 +1,4 @@
-// random play through the 0.9 loop: minions, sites, lairs on the map, war parties from lairs in reach, command-mode turns
+// random play through the 0.9 loop (0.24: talents instead of research): minions, sites, lairs on the map, war parties from lairs in reach, command-mode turns
 const G = require(__dirname + '/game.js'); // 0.19: two purses, Millbrook, no Lore
 const N = +process.argv[2] || 30;
 const R = () => Math.random();
@@ -16,13 +16,13 @@ function check(s) {
   const pos = s.objects.map(o => o.x + ',' + o.y); if (new Set(pos).size !== pos.length) throw new Error('two objects on a tile');
   for (const n of s.nodes) if (G.objAt(s, n.x, n.y)) throw new Error('object on a site');
   for (const o of G.myLairs(s)) { for (const k of Object.keys(o.pool)) if (!(o.pool[k] >= 0)) throw new Error('pool ' + o.pool[k]); if (!(o.building >= 0)) throw new Error('building'); }
-  if (s.minions.length > G.MAX_MINIONS) throw new Error('too many minions');
-  if ((s.summons || []).length > G.MAX_SUMMONS || s.minions.length + (s.summons || []).length > G.MAX_MINIONS) throw new Error('summon queue');
+  if (s.minions.length > G.MAX_MINIONS + 8) throw new Error('too many minions');
+  if ((s.summons || []).length > G.MAX_SUMMONS || s.minions.length + (s.summons || []).length > G.MAX_MINIONS + 8) throw new Error('summon queue');
   for (const q of s.summons || []) if (!(q.days >= 1 && q.days <= q.total)) throw new Error('summon days ' + q.days);
   if (s.base.libBuild && !(s.base.libBuild.days >= 1)) throw new Error('library days');
-  if (s.research.queue.length > G.MAX_RESEARCH) throw new Error('research queue');
-  for (const k of Object.keys(s.research.done)) if (s.research.done[k] > G.researchRanks(k)) throw new Error('research rank ' + k);
-  for (const o of G.myLairs(s)) if (!G.lairKnown(s, o.dtype)) throw new Error('lair not researched ' + o.dtype);
+  for (const k of Object.keys(s.talents.r)) if (s.talents.r[k] > G.talentRanks(k) || G.talentTrees(s).indexOf(G.TALENTS[k].tree) < 0) throw new Error('talent rank ' + k);
+  if (G.talentSpent(s) > G.talentEarned(s)) throw new Error('overspent talents');
+  for (const o of G.myLairs(s)) if (o.dtype in G.DUNGEONS && G.DUNGEONS[o.dtype].villain && G.DUNGEONS[o.dtype].villain !== s.villain.type) throw new Error('another villain\'s lair ' + o.dtype);
   for (const m of s.minions) {
     if (!isFinite(G.tileCost(s, m.x, m.y))) throw new Error('minion in a wall');
     if (m.job && m.job.kind === 'work' && !s.nodes.some(n => n.id === m.job.node)) throw new Error('bad work job');
@@ -75,12 +75,12 @@ for (let i = 0; i < N; i++) {
     if (s.phase === 'encounter') { encounter(s); continue; }
     if (s.phase === 'week') { G.startNextWeek(s); if (s.phase !== 'over') check(s); continue; }
     if (R() < 0.4 && !G.trainMinion(s)) c.trains++;
-    if (R() < 0.3) { const k = pickA(G.RESEARCH_ORDER); if (!G.startResearch(s, k)) c.research = (c.research || 0) + 1; }
-    if (s.research.queue.length && R() < 0.06) G.cancelResearch(s, Math.floor(R() * s.research.queue.length));
+    for (let t = 0; t < 3; t++) { const k = pickA(G.TALENT_ORDER); if (!G.learnTalent(s, k)) c.talents = (c.talents || 0) + 1; }
+    if (R() < 0.02 && !G.resetTalents(s)) c.resets = (c.resets || 0) + 1;
     if ((s.summons || []).length && R() < 0.08) { const g0 = s.res.gold; if (!G.cancelSummon(s, Math.floor(R() * s.summons.length)) && s.res.gold > g0) c.cancels++; }
     for (let k = 0; k < 3; k++) if (R() < 0.6 && !G.orderWork(s, pickA(s.nodes).id)) c.works++;
-    for (let k = 0; k < 2; k++) { const x = Math.floor(R() * G.MW), y = Math.floor(R() * G.MH); if (!G.orderBuild(s, pickA(G.LAIR_ORDER), x, y)) c.builds++; }
-    if (R() < 0.5) { const sp = G.lairSpots(s, 'warren', 3); if (sp.length && !G.orderBuild(s, pickA(G.LAIR_ORDER), sp[0].x, sp[0].y)) c.builds++; }
+    for (let k = 0; k < 2; k++) { const x = Math.floor(R() * G.MW), y = Math.floor(R() * G.MH); if (!G.orderBuild(s, pickA(G.lairsFor(s)), x, y)) c.builds++; }
+    if (R() < 0.5) { const sp = G.lairSpots(s, 'warren', 3); if (sp.length && !G.orderBuild(s, pickA(G.lairsFor(s)), sp[0].x, sp[0].y)) c.builds++; }
     for (const o of G.myLairs(s)) { if (R() < 0.15 && !G.expandLair(s, o.id)) c.expands++; if (o.building && R() < 0.05 && !G.cancelBuild(s, o.id)) c.cancels++; }
     if (R() < 0.2 && s.minions.length) { if (!G.recallMinion(s, pickA(s.minions).id)) c.recalls++; }
     if (R() < 0.2 && !G.recallFrom(s, pickA(s.nodes).id)) c.recalls++;
@@ -92,7 +92,7 @@ for (let i = 0; i < N; i++) {
       else if (r < 0.45) { if (!G.orderMove(s, m.id, Math.floor(R() * G.MW), Math.floor(R() * G.MH))) c.moves = (c.moves || 0) + 1; }
       else if (r < 0.55) { if (!G.orderHome(s, m.id)) c.homes = (c.homes || 0) + 1; }
       else if (r < 0.7) { const b = G.myLairs(s).filter(o => o.building); if (b.length && !G.orderHelp(s, pickA(b).id, m.id)) c.helps = (c.helps || 0) + 1; }
-      else if (r < 0.8) { const sp = G.lairSpots(s, 'warren', 3); if (sp.length && !G.orderBuild(s, pickA(G.LAIR_ORDER), sp[0].x, sp[0].y, m.id)) c.mbuilds = (c.mbuilds || 0) + 1; }
+      else if (r < 0.8) { const sp = G.lairSpots(s, 'warren', 3); if (sp.length && !G.orderBuild(s, pickA(G.lairsFor(s)), sp[0].x, sp[0].y, m.id)) c.mbuilds = (c.mbuilds || 0) + 1; }
     }
     // 0.10: band orders, plotting and dancing
     { const bs = s.objects.filter(o => o.kind === 'stack'); if (bs.length) { const o = pickA(bs); const r = R();

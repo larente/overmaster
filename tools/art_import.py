@@ -25,6 +25,8 @@ ROOT = os.path.dirname(HERE)
 ROSTER = ['brakka', 'thrain', 'grukka', 'sylvaine', 'bramble', 'vex', 'pip', 'sable', 'korra', 'nilsa',
           'ione', 'durgan', 'wren', 'aelith', 'ushka', 'orrin', 'maelis', 'tobias', 'esk', 'zarga']
 MONSTERS = ['goblin', 'wolf', 'bandit', 'skeleton', 'orc', 'ogre', 'wraith', 'troll', 'giant', 'dragon', 'vampire', 'hydra', 'demon', 'knight']
+# 0.24: each villain's own monster
+MONSTERS += ['colossus', 'drake', 'hellhound', 'irongolem', 'werewolf', 'rider']
 MINIONS = ['thrall', 'kobold', 'imp', 'golem', 'ghoul', 'digger']
 VILLAINS = {'lich': 'king', 'dragon': 'wyrm', 'demon': 'archfiend', 'archmage': 'archmage', 'vampire': 'vlord', 'deathknight': 'dknight'}
 VILLAIN_ICONS = set(VILLAINS.values())

@@ -10,6 +10,8 @@ Run it in Terminal:
     python3 ~/Documents/bts-art/pixellab_gen.py portraits brakka goblin   # just these
     python3 ~/Documents/bts-art/pixellab_gen.py objects         # map buildings, landmarks and icons
     python3 ~/Documents/bts-art/pixellab_gen.py objects library tower-lich   # just these
+    python3 ~/Documents/bts-art/pixellab_gen.py colossus drake hellhound irongolem werewolf rider   # each villain's own monster
+    python3 ~/Documents/bts-art/pixellab_gen.py objects villain-lairs   # and their lairs
     python3 ~/Documents/bts-art/pixellab_gen.py talk            # talking portraits: mouth shapes for every hero, lip-sync for their lines
     python3 ~/Documents/bts-art/pixellab_gen.py talk ione pip   # just these heroes
 
@@ -67,6 +69,13 @@ CAST = {
     'hydra': ('Hydra', 'five-headed hydra beast, a huge scaly dark green swamp reptile standing on four thick clawed legs, no arms, five long serpent necks each ending in a snapping snake head, thick tail', 'lion'),
     'demon': ('Pit Demon', 'towering horned pit demon, red-black skin with burning cracks, bat wings, flaming whip'),
     'knight': ('Hollow Knight', 'empty suit of dark plate armor walking on its own, cold blue light inside the helmet, longsword and kite shield'),
+    # each villain's own monster (0.24)
+    'colossus': ('Bone Colossus', 'hulking giant made of hundreds of fused yellowed bones and skulls, rib-cage chest, massive bone fists, hunched and lumbering, green glow inside the ribs'),
+    'drake': ('Drake', 'young copper-orange drake, a lean small dragon with leathery wings half spread, long tail, sharp horns, standing on four legs', 'lion'),
+    'hellhound': ('Hellhound', 'huge black demonic hound with cracks of glowing orange fire in its skin, burning eyes, smoke rising from its back, snarling', 'dog'),
+    'irongolem': ('Iron Golem', 'towering iron golem of riveted dark steel plates, glowing blue runes on the chest and arms, heavy square head with glowing slit eyes, huge fists'),
+    'werewolf': ('Werewolf', 'hulking brown-grey werewolf standing on two legs, wolf head, long claws, torn trousers, muscular and hunched, feral yellow eyes'),
+    'rider': ('Black Rider', 'cursed knight in black plate armor riding a black warhorse with glowing red eyes, long black lance, tattered dark cloak', 'horse'),
     # villains
     'villain-lich': ('The Lich', 'skeletal lich sorcerer-king, cracked iron crown, tattered black and violet royal robes, skull-topped staff, green fire in the eye sockets'),
     'villain-dragon': ('The Ashen Wyrm', 'enormous ancient dragon, ash-grey scales with glowing ember cracks, wings spread', 'lion'),
@@ -653,6 +662,13 @@ OBJECTS = {
     'node-gold': ('small gold mine: timber-framed tunnel entrance in a rock with a mine cart full of gold nuggets', 128),
     'node-lumber': ('lumber camp: stacked logs, tree stumps and a chopping block with an axe', 128),
     'node-ore': ('ore mine: a rocky tunnel entrance with timber supports and a cart full of dark iron ore', 128),
+    # each villain's own lair (0.24)
+    'boneforge': ('bone forge: a dark stone furnace with a chimney of stacked skulls, glowing green fire inside, piles of bones and a huge half-built bone giant chained beside it', 160),
+    'eyrie': ('drake eyrie: a tall jagged rock crag with big twig and bone nests on ledges, scorch marks, a few copper drake eggs', 160),
+    'brimstone': ('brimstone kennels: smouldering black iron cages and pens on cracked red-glowing ground, sulphur smoke, gnawed bones', 160),
+    'foundry': ('golem foundry: a stone workshop with a big anvil, glowing blue rune circle on the floor, iron moulds and a half-finished iron golem', 160),
+    'lodge': ('werewolf lodge: a dark wooden hunting lodge with wolf skulls over the door, claw marks on the walls, deep in a pine forest', 160),
+    'stables': ('black stables: long dark wooden stables with black horses with glowing red eyes in the stalls, tattered black banners', 160),
     # things on the map
     'chest': ('wooden treasure chest with iron bands, lid open, gold coins and gems inside', 96),
     'artifact': ('magic artifact: an ornate golden amulet floating above a small stone pedestal, magical glow', 96),
@@ -860,6 +876,7 @@ def main():
         groups = {'millbrook': [k for k in OBJECTS if k.startswith('t-') and not k.startswith(TOWER_WORKS)],
                   'darktower': [k for k in OBJECTS if k.startswith(TOWER_WORKS)] + (['library'] if 'library' in OBJECTS else []),
                   'stages': [k for k in OBJECTS if re.match(r'tower-[a-z]+-\d$', k)]}
+        groups['villain-lairs'] = ['boneforge', 'eyrie', 'brimstone', 'foundry', 'lodge', 'stables']
         for v in ('lich', 'dragon', 'demon', 'archmage', 'vampire', 'deathknight'):
             groups['stages-' + v] = [k for k in OBJECTS if re.match(r'tower-%s-\d$' % v, k)]
         args = [k for a in args for k in groups.get(a, [a])]

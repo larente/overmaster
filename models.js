@@ -922,6 +922,11 @@ const Models = (() => {
   const cache = {};
   function blueprint(key) {
     if (cache[key]) return cache[key];
+    // stand-ins (0.24): a villain's own monster or lair with no model yet borrows another's, scaled, until its art arrives
+    { const Gm = typeof Game !== 'undefined' ? Game : {}; const u = key.startsWith('unit-') ? key.slice(5) : null, pre = key.startsWith('obj-') ? 'obj-' : '';
+      const C = u && !UNIT_DEF[u] && Gm.CREATURES && Gm.CREATURES[u], D = !u && !P[key] && Gm.DUNGEONS && Gm.DUNGEONS[key.slice(pre.length)];
+      const st = C && C.stand ? 'unit-' + C.stand : D && D.stand ? pre + D.stand : null;
+      if (st && st !== key) { const base = blueprint(st); const sc = (C && C.sc) || 1; cache[key] = Object.assign({}, base, { h: base.h * sc, scale: sc }); return cache[key]; } }
     const b = new Builder(key.length * 31 + key.charCodeAt(0)), g = new Builder(3); const L = [];
     let h = 0.5;
     const unit = key.startsWith('unit-') ? key.slice(5) : null;
@@ -939,9 +944,10 @@ const Models = (() => {
   function make(key, opts) {
     opts = opts || {};
     const bp = blueprint(key); const grp = new T.Group();
-    if (bp.body) { const m = new T.Mesh(bp.body, opts.mat || MAT.body); m.castShadow = opts.shadow !== false; m.receiveShadow = true; grp.add(m); grp.userData.body = m; }
-    if (bp.glow) { const m = new T.Mesh(bp.glow, opts.glowMat || MAT.glow); grp.add(m); grp.userData.glow = m; }
-    if (!opts.noLights) for (const [x, y, z, c, s] of bp.lights) { const sp = glowSprite(c, s * (opts.lightScale || 1), 0.85); sp.position.set(x, y, z); grp.add(sp); }
+    const k = bp.scale || 1;
+    if (bp.body) { const m = new T.Mesh(bp.body, opts.mat || MAT.body); m.scale.setScalar(k); m.castShadow = opts.shadow !== false; m.receiveShadow = true; grp.add(m); grp.userData.body = m; }
+    if (bp.glow) { const m = new T.Mesh(bp.glow, opts.glowMat || MAT.glow); m.scale.setScalar(k); grp.add(m); grp.userData.glow = m; }
+    if (!opts.noLights) for (const [x, y, z, c, s] of bp.lights) { const sp = glowSprite(c, s * (opts.lightScale || 1), 0.85); sp.position.set(x * k, y * k, z * k); grp.add(sp); }
     grp.userData.h = bp.h;
     return grp;
   }

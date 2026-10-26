@@ -65,10 +65,10 @@
     const T = BOSS_TYPES[type] || BOSS_TYPES.lich; const F = T.F; const tk = BOSS_TYPES[type] ? type : 'lich';
     // the map form keeps the classic projection's scale, shifted by how this type differs from the baseline
     const hpBase = final ? F.hp : (50 + 45 * L) * (F.hp / 2700);
-    const hp = Math.round(hpBase * (1 + 0.1 * (up.vigor || 0)) * (up.ritual ? 1.1 : 1)); // (0.16: halved, now that every DM can research them)
+    const hp = Math.round(hpBase * (1 + 0.1 * (up.vigor || 0)) * (up.ritual ? 1.1 : 1) * (1 + (up.hpPct || 0))); // (0.16: halved; 0.24: talents add hpPct)
     const P = {}; for (const k of T.powers) P[k] = true;
     const u = { id: 'boss', side: 'dm', type: 'king', btype: tk, icon: T.icon, name: name || T.names[0], one: name || T.names[0], boss: true, count: 1, hp, maxHp: hp, level: final ? BOSS_LEVEL : L,
-      hit: (final ? F.hit : 5 + Math.floor(L / 2) + (F.hit - 17)) + (up.ritual ? 1 : 0), ac: final ? F.ac : 14 + Math.floor(L / 3) + (F.ac - 21),
+      hit: (final ? F.hit : 5 + Math.floor(L / 2) + (F.hit - 17)) + (up.ritual ? 1 : 0) + (up.hitBonus || 0), ac: final ? F.ac : 14 + Math.floor(L / 3) + (F.ac - 21),
       dice: final ? F.dice.slice() : [2, 8, Math.round((2 + L) * F.dice[2] / 18)], extra: [], sv: final ? F.sv : 4 + (F.sv - 8), spd: final ? F.spd : Math.max(5, F.spd - 1),
       attacks: final ? F.attacks : Math.min(2, F.attacks), ranged: !!F.ranged, shots: F.ranged ? 99 : 0, flyer: !!F.flyer, undead: tk === 'lich' || tk === 'vampire' || tk === 'deathknight', drain: !!F.drain,
       alive: true, down: false, retal: true, defending: false, pos: 0, startCount: 1, turns: 0, final: !!final,
@@ -151,7 +151,7 @@
   }
   function addGroups(b, type, n, near) {
     const parts = splitStacks([[type, n]], 4); const spots = dmFreeHexes(b, near); const made = [];
-    for (const [t, c] of parts) { const k = spots.shift(); if (k === undefined) break; const u = stackUnit(t, c, 'm' + (b.uid++)); u.pos = k; b.units.push(u); b.waitQ.push(u.id); made.push(u); }
+    for (const [t, c] of parts) { const k = spots.shift(); if (k === undefined) break; const u = stackUnit(t, c, 'm' + (b.uid++)); if (b.tstate) talentMod(b.tstate, u); u.pos = k; b.units.push(u); b.waitQ.push(u.id); made.push(u); }
     // whatever didn't fit joins the last group
     const placed = sum(made, u => u.count); if (made.length && placed < n) { const L = made[made.length - 1]; L.count += n - placed; L.startCount = L.count; }
     return made;
@@ -168,7 +168,7 @@
     const stacks = opts.stacks || [[stackObj.type, stackObj.count]];
     const command = opts.boss && vType(s).powers.indexOf('command') >= 0;
     const lvl = opts.lvl || (stackObj && stackObj.lvl) || 1;
-    for (const [t, n, src] of splitStacks(stacks, MAX_GROUPS - k)) { if (k >= DM_POS.length) break; const u = stackUnit(t, n, 'm' + k); u.src = src; if (command && u.type === 'knight') { u.hit += 2; u.commanded = true; } if (lvl > 1) veteran(u, lvl); u.pos = DM_POS[k++]; units.push(u); }
+    for (const [t, n, src] of splitStacks(stacks, MAX_GROUPS - k)) { if (k >= DM_POS.length) break; const u = talentMod(s, stackUnit(t, n, 'm' + k)); u.src = src; if (command && u.type === 'knight') { u.hit += 2; u.commanded = true; } if (lvl > 1) veteran(u, lvl); u.pos = DM_POS[k++]; units.push(u); }
     const terrain = opts.finale ? 'waste' : terrainAt(s, s.party.x, s.party.y);
     const fr = mulberry((s.seed + s.week * 97 + s.day * 13 + s.party.x * 7 + s.party.y + (s.uid || 0) * 31) | 0);
     const tiles = makeField(fr, terrain);
@@ -177,6 +177,7 @@
     // a party without a cleric stocks up on healing potions in Millbrook instead
     if (!party.some(u => u.cls === 'cleric')) for (const u of party) u.potions = 2;
     const b = {
+      tstate: { talents: { r: Object.assign({}, (s.talents && s.talents.r) || {}) } },   // the DM's talents, for monsters that join mid-fight
       objId: stackObj ? stackObj.id : null, dungeonId: opts.dungeonId || null, guardLair: opts.guardLair || null, raidNode: opts.raidNode || null, attack: !!opts.attack, sent: opts.attack ? stacks.map(x => [x[0], x[1]]) : null, villain: !!opts.boss, finale: !!opts.finale, stage: opts.stage || 0, terrain, boss: !!opts.boss,
       round: 1, units, tiles, traps: [], freeTraps: opts.dungeonId ? 2 : opts.stage === 1 ? 1 + (hasTech(s, 'forge') ? 2 : 0) : opts.finale ? 1 + (s.villain.up.traps || 0) : 0, boughtTraps: 0,
       hallowed: party.some(u => conscious(u) && u.ab.indexOf('hallowed') >= 0), intervention: party.some(u => u.ab.indexOf('intervention') >= 0), intervened: false,
@@ -274,6 +275,7 @@
     u.couldAttack = u.side === 'dm' && !u.boss ? options(b, u).targets.length > 0 : false;
     if (u.boss && u.P) bossTurnStart(b, u);
     if (u.regen && u.alive && u.hp < u.maxHp) { const h = Math.min(u.maxHp - u.hp, Math.max(10, Math.round(u.maxHp * 0.3))); u.hp += h; blog(b, `The ${u.name} regenerate ${h} HP.`, 'foe'); }
+    else if (u.regenT && u.alive && u.hp < u.maxHp) { const h = Math.min(u.maxHp - u.hp, Math.max(3, Math.round(u.maxHp * 0.1))); u.hp += h; blog(b, `The ${u.name}'s wounds close (+${h} HP).`, 'foe'); }
   }
   function endRound(b) {
     for (const u of b.units) if (u.side === 'party' && u.alive && u.down && !u.stable) deathSave(b, u);
@@ -293,6 +295,8 @@
         if (chance(p)) { b.over = 'retreat'; blog(b, 'The party grabs its fallen and retreats from the field!', 'big'); return; }
       }
     }
+    // (0.24) a fight that grinds on and on, say against monsters that heal every turn, ends with the monsters giving up
+    if (!b.boss && b.round >= 40) { b.over = 'fled'; blog(b, 'After a long, grinding fight the monsters break and run.', 'big'); return; }
     b.round++;
     blog(b, `Round ${b.round}`, 'round');
     newRound(b);
@@ -1177,6 +1181,8 @@
       tline(flawless ? `${cap(name)}: a flawless victory against real danger` : label === 'Trivial' ? `${cap(name)}: way too easy. The players yawned` : `${cap(name)}: ${label === 'Easy' ? 'an' : 'a'} ${label.toLowerCase()} fight`, flawless ? 2 : val);
       const downs = Math.min(2, b.downed.length);
       if (downs) tline(downs > 1 ? 'Two heroes dropped and came back' : 'A hero dropped and came back', downs * 2);
+      // 0.24: Infamy for the villain: close fights and fallen heroes earn bonus talent points
+      addInfamy(s, (label === 'Tense' ? 1 : label === 'Harrowing' ? 2 : 0) + downs);
       const g = s.heroes.find(h => h.status === 'ok' && h.drive === 'glory');
       const bigFight = b.boss || b.dungeonId || b.units.some(u => u.side === 'dm' && ['ogre', 'wraith', 'troll', 'giant', 'dragon', 'vampire', 'hydra', 'demon', 'knight'].indexOf(u.type) >= 0) || label === 'Harrowing';
       if (g && bigFight) tline(`${g.name} got the big fight they wanted`, db(s, g, 3), g.id);

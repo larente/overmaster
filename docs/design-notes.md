@@ -299,3 +299,27 @@ Version 6 and 7 saves convert on load: each tower building from 0.8 becomes a la
 - **Wordmark:** OVERMASTER in Cinzel 800, one span per letter, with a gold gradient and a white shine that sweeps letter by letter (`.wordmark`).
 - **The opening** (`showIntro` in front.js, `.intro` in front.css) plays once a visit (sessionStorage `om-intro`), starts when the fonts are loaded, and is skipped for reduced motion and for a game restored after a reload. While it plays, the title column is hidden with `visibility` rather than faded, so a slow compositor can never leave the menu invisible.
 
+## Talents (alpha 0.24)
+Replaces research. The rules are in part_core.js: `TALENTS`, `TREES`, `TIER_NEED`, `talentFx`, `learnTalent`, `resetTalents`, `talentTick` and `addInfamy`. The screen is `towerTalents` in ui.js.
+- **Points.** `earned` starts at 1. `talentTick` (called from `giveXp`) adds the party's level gains. `addInfamy` (called from `finishBattle`) gives 1 Infamy for a tense fight, 2 for a harrowing one and 1 per hero knocked down; every `INFAMY_STEP` (6) Infamy is a point. The Forbidden Library's levels and the Archmage's Arcane Scholar add more. `talentFree` is what's left to spend.
+- **Trees.** Each villain has `brood`, `dominion`, `dread` and `v-<villain>`. A talent's `tier` needs `TIER_NEED[tier]` points already spent in its tree; `needs` lists other talents or starting lairs.
+- **Kinds of talent:**
+  - `lair: true` lets minions build that lair (the talent's key is the lair's key);
+  - `power` raises one of the villain's dark powers (stored on `villain.up`, where battles read them);
+  - everything else has `fx`.
+- **What `fx` can do.** `talentFx(s)` adds up every learned talent's effects, kept in memory until the ranks change:
+  - monster stats per type or for all: hp%, ac, hit, dmg, regen, drain (applied by `talentMod` when monsters join a battle, and counted in `bandPower` through `talentPower`);
+  - brood rates and lair caps;
+  - mine yields, nightly gold, gold per lair, and Blood Tithe from Millbrook's purse;
+  - summon cost, summon days, build days and Dark Empire;
+  - reach and sight;
+  - extra bands per lair, and bands that start as veterans;
+  - finale guards, and the villain's hp and to-hit (`villain.up.hpPct`, `villain.up.hitBonus`);
+  - faster Infamy, and bonus points.
+- **Reset.** `resetTalents` is allowed once per week (`talents.resetWeek`).
+- **Villain monsters.** `CREATURES` entries with `villain` (only that villain's lairs raise them) and `stand`/`tint`/`sc` (a stand-in picture). Lairs in `DUNGEONS` carry the same fields. `lairsFor(s)` lists the lairs this villain can ever build. Stand-ins:
+  - in ui.js (`STANDS`, `tinted`, `standIcons`, and the borrowers in `loadArt`), the stand's pixel art is tinted with the canvas `color` blend;
+  - in models.js, the blueprint borrows the stand's model, scaled by `sc`;
+  - in world3d.js, a battle figure keeps the stand's scale.
+- **Save version 15.** `toV15` turns research into talents.
+

@@ -147,7 +147,7 @@ const Front = (() => {
           <img class="vbig" src="${A.URI[vIcon(V.type)]}" data-icon="${vIcon(V.type)}" alt="">
           <p class="vfull" id="v-full">${esc(full)}</p>
           <p class="vkind">A level 20 ${esc(T.label.toLowerCase())}</p>
-          ${Shop.villainOpen(V.type) ? '' : unlockPanel(V.type)}
+          ${Shop.villainOpen(V.type) ? ownHint(V.type) : unlockPanel(V.type)}
           <label class="fld" for="v-name"><span>Name</span><span class="inrow"><input id="v-name" maxlength="28" autocomplete="off" value="${esc(V.name)}"><button class="btn sm" data-fx="vroll" title="Pick a random name and title">Roll</button></span></label>
           <label class="fld" for="v-title"><span>Title</span><input id="v-title" maxlength="40" autocomplete="off" list="v-titles" value="${esc(V.title)}"><datalist id="v-titles">${T.titles.map(t => `<option value="${esc(t)}">`).join('')}</datalist></label>
           <div class="fld"><span>Referred to as</span><div class="pills" role="group" aria-label="Pronouns">${pr}</div></div>
@@ -157,12 +157,23 @@ const Front = (() => {
       <footer class="sfoot"><button class="btn" data-fx="title">Cancel</button>${Shop.villainOpen(V.type) ? '<button class="btn big" data-fx="toparty">Next: choose the heroes</button>'
         : `<button class="btn big" data-fx="buy" data-sku="${Shop.villainSku(V.type)}">${LOCK} Unlock to play · ${esc(Shop.money(Shop.price(Shop.villainSku(V.type))))}</button>`}</footer>`;
   }
+  function ownHint(type) {
+    const lair = Object.keys(G.DUNGEONS).find(k => G.DUNGEONS[k].villain === type); const tr = G.TREES && G.TREES['v-' + type]; if (!lair) return '';
+    return `<p class="hint vown">Its own monster: <b>${esc(G.CREATURES[G.DUNGEONS[lair].unit].name)}</b>${tr ? ` · its own talents: <b>${esc(tr.name)}</b>` : ''}</p>`;
+  }
+  // a villain's own monster and talent path (0.24)
+  function ownLine(type) {
+    const lair = Object.keys(G.DUNGEONS).find(k => G.DUNGEONS[k].villain === type); const tr = G.TREES && G.TREES['v-' + type];
+    if (!lair) return '';
+    const D = G.DUNGEONS[lair], C = G.CREATURES[D.unit];
+    return `<li><b>Its own monster:</b> ${esc(C.name)}, raised in the ${esc(D.name)}. ${esc(C.text)}</li>${tr ? `<li><b>Its own talents:</b> ${esc(tr.name)}. ${esc(tr.blurb.replace(/^[^:]*: /, ''))}</li>` : ''}`;
+  }
   // what a locked villain offers, and the buttons to unlock it
   function unlockPanel(type) {
     const T = G.BOSS_TYPES[type], M = G.MINION_TYPES[type], sku = Shop.villainSku(type), bundle = 'bundle-dark-court';
     const both = Shop.price(bundle) > Shop.price(sku);
     return `<div class="unlock"><p class="ulead">${LOCK}Unlock the ${esc(T.label)} to play it</p>
-      <ul class="plain udiff">${T.signature ? `<li><b>On the map:</b> ${esc(T.signature)}</li>` : ''}<li><b>Minions:</b> ${esc(M.name)}. ${esc(M.text)}</li><li><b>In the final battle:</b> ${T.powers.map(p => esc(G.BOSS_POWERS[p].name)).join(' · ')}</li></ul>
+      <ul class="plain udiff">${ownLine(type)}<li><b>Minions:</b> ${esc(M.name)}. ${esc(M.text)}</li><li><b>In the final battle:</b> ${T.powers.map(p => esc(G.BOSS_POWERS[p].name)).join(' · ')}</li></ul>
       <button class="btn big" data-fx="buy" data-sku="${sku}">Unlock · ${esc(Shop.label(sku))}</button>
       ${both ? `<button class="btn" data-fx="buy" data-sku="${bundle}">All four paid villains · ${esc(Shop.label(bundle))}</button>` : ''}
       <p class="hint">Yours for good, on every device you sign in on.</p></div>`;

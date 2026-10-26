@@ -1539,7 +1539,8 @@ const World3D = (() => {
     const g = new T.Group();
     let key = u.icon || 'king';
     if (u.side === 'party') { const S0 = hooks.state(); const hero = S0 && S0.heroes.find(h => h.id === u.hero); key = hero ? M.defineHero(hero).slice(5) : key; }
-    const sc = (UNIT_SCALE[key] || (key.indexOf('hero-') === 0 ? 3.5 : 1.7)) * BIG;
+    const stand = typeof Game !== 'undefined' && Game.CREATURES[key] && Game.CREATURES[key].stand;   // a stand-in keeps its model's scale (its own size is in the blueprint)
+    const sc = (UNIT_SCALE[key] || (stand && UNIT_SCALE[stand]) || (key.indexOf('hero-') === 0 ? 3.5 : 1.7)) * BIG;
     let mat = M.painted({ transparent: true }); let fig;
     if (SPR.on && renderer) { fig = figure('unit-' + key); mat = fig.userData.mat; } else fig = M.make('unit-' + key, { mat, lightScale: 1.6 });
     fig.scale.setScalar(sc); g.add(fig);

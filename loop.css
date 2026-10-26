@@ -478,3 +478,52 @@ ul.dpw li.off { opacity: .5; }
 .pshared .pitems { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
 @media (max-width: 1100px) { .pgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 560px) { .pgrid { grid-template-columns: minmax(0, 1fr); } .partybtn kbd { display: none; } }
+/* ---------- talents (0.24): four trees at the Dark Tower ---------- */
+.ttab .tb.pts, .badge.pts { background: linear-gradient(180deg, #ffe08a, #d9a83a); color: #2a1a06; box-shadow: 0 0 10px rgba(255,210,110,.55); }
+.thead { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 16px; align-items: center; }
+.tpts { display: grid; grid-template-columns: auto auto; gap: 8px; align-items: center; padding: 8px 14px; border-radius: 3px; background: rgba(0,0,0,.35); box-shadow: inset 0 0 0 1px #3a2c1c; }
+.tpts b { font-family: var(--font-display); font-size: 34px; line-height: 1; color: #8a7a60; }
+.tpts span { font-family: var(--font-display); font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); line-height: 1.3; }
+.tpts.has { box-shadow: inset 0 0 0 1px #9a7a2a, 0 0 18px rgba(255,210,110,.18); }
+.tpts.has b { color: #ffd77a; text-shadow: 0 0 12px rgba(255,200,90,.6); }
+.tsrc .hint { margin: 0 0 6px; }
+.tinf { display: grid; grid-template-columns: auto minmax(80px, 260px) auto; gap: 8px; align-items: center; cursor: help; }
+.tinf span { font-family: var(--font-display); font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: #c79cf0; }
+.tinf small { font-size: 12px; color: var(--muted); }
+.treset { display: grid; justify-items: center; gap: 3px; }
+.treset small { font-size: 11px; color: var(--muted); }
+.ttrees { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; align-items: start; }
+.ttree { display: grid; gap: 6px; padding: 10px; border: 1px solid #000; border-radius: 3px; background: linear-gradient(180deg, #241a10, #120d08); box-shadow: inset 0 1px 0 rgba(255,225,150,.05), 0 0 0 1px #3a2c1c; }
+.ttree.own { background: linear-gradient(180deg, #2c1838, #140a1a); box-shadow: inset 0 1px 0 rgba(220,170,255,.08), 0 0 0 1px #5a3a78, 0 0 22px rgba(160,90,220,.12); }
+.ttree header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ttree h3 { margin: 0; font-family: var(--font-display); font-size: 15px; letter-spacing: .06em; color: var(--gold); text-shadow: 0 1px 0 #000; }
+.ttree.own h3 { color: #e2c2ff; }
+.tspent { min-width: 28px; padding: 2px 8px; border-radius: 3px; text-align: center; font-family: var(--font-display); font-size: 16px; background: rgba(0,0,0,.45); color: #f2e4c0; box-shadow: inset 0 0 0 1px #4a3a24; }
+.ttree > .hint { margin: 0 0 4px; font-size: 12.5px; min-height: 2.6em; }
+.trow { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 6px; align-items: start; padding-top: 6px; border-top: 1px solid rgba(90,70,40,.35); }
+.trow.shut .tnode { opacity: .5; }
+.tneed { padding-top: 10px; text-align: center; font-family: var(--font-display); font-size: 10.5px; color: #8a7a60; cursor: help; white-space: nowrap; }
+.trow.shut .tneed { color: #6a5a46; font-size: 9.5px; }
+.tnodes { display: grid; gap: 5px; }
+.tnode { position: relative; display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 8px; align-items: center; width: 100%; padding: 5px 8px 5px 5px; text-align: left; cursor: pointer;
+  border: 1px solid #3a2c1c; border-radius: 3px; background: linear-gradient(180deg, #1e1710, #120d08); color: var(--ink); }
+.tnode .tni { width: 34px; height: 34px; object-fit: contain; image-rendering: pixelated; border-radius: 3px; background: rgba(0,0,0,.35); }
+.tnt { display: grid; min-width: 0; }
+.tnt b { font-family: var(--font-display); font-size: 12px; line-height: 1.2; color: #e8dcc0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tnt small { font-size: 11px; color: #8a7a60; }
+.tpips { display: flex; gap: 3px; }
+.tpips i { width: 7px; height: 7px; border-radius: 50%; background: #2a2016; box-shadow: inset 0 0 0 1px #5a4424; }
+.tpips i.on { background: radial-gradient(circle at 35% 35%, #fff2c0, #e0a83a); box-shadow: 0 0 5px rgba(255,200,90,.7); }
+.tnode.locked { cursor: help; filter: grayscale(.8); opacity: .55; }
+.tnode.ready { cursor: help; }
+.tnode.avail { border-color: #8a64c0; box-shadow: inset 0 0 0 1px rgba(170,130,255,.3), 0 0 12px rgba(150,100,240,.18); }
+.tnode.avail small { color: #cbb2ff; }
+.tnode.avail:hover, .tnode.avail:focus-visible { border-color: #d0b0ff; box-shadow: inset 0 0 0 1px #d0b0ff, 0 0 18px rgba(170,130,255,.45); }
+.tnode.part, .tnode.maxed { border-color: #9a7a2a; background: linear-gradient(180deg, #3a2e14, #1e170a); box-shadow: inset 0 0 0 1px rgba(217,180,94,.35); }
+.tnode.part.avail { border-color: #c8a0ff; }
+.tnode.maxed { cursor: default; }
+.tnode.maxed b, .tnode.part b { color: #ffe6a8; }
+.tnode.lair .tnt small { color: #9fd08a; }
+.tnode.lair.avail .tnt small { color: #b8f0a0; }
+@media (max-width: 1240px) { .ttrees { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 620px) { .ttrees { grid-template-columns: minmax(0, 1fr); } .thead { grid-template-columns: minmax(0, 1fr); } .tinf { grid-template-columns: auto minmax(60px, 1fr); } .tinf small { grid-column: 1 / -1; } }

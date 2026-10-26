@@ -1,5 +1,37 @@
 # Overmaster — roadmap
 
+## Delivered in alpha 0.24
+- **Talents instead of research.** The villain no longer buys research with gold and ore. Instead the villain earns **talent points**:
+  - one to start;
+  - one every time the heroes gain a level;
+  - one for every 6 **Infamy**, which comes from tense and harrowing fights and from heroes knocked down;
+  - one for each level of the Forbidden Library.
+- **The trees.** Points are spent at the Dark Tower in four trees, World of Warcraft style. A row opens once enough points are spent in its tree (0, 2, 4, 6 and 8), and many talents have 2 or 3 ranks.
+  - **The Brood:** new lairs, bigger broods, and tougher goblins, wolves, brutes and undead, up to Apex Predators.
+  - **Dominion:** faster summoning and building, richer mines, nightly gold, longer reach and sharper eyes, up to Dark Empire (lairs go up in one night).
+  - **Dread:** the villain's dark powers, the honor guard, and Ascension for the final fight.
+  - **The villain's own path,** six to seven ranks of talents only that villain has.
+- **Each villain's own monster,** learned at the top of its path:
+
+  | Villain | Monster | Lair |
+  |---|---|---|
+  | Lich | Bone Colossi | Bone Forge |
+  | Ancient Dragon | Drakes | Drake Eyrie |
+  | Demon Prince | Hellhounds | Brimstone Kennels |
+  | Archmage | Iron Golems | Golem Foundry |
+  | Vampire Lord | Werewolves | Werewolf Lodge |
+  | Death Knight | Black Riders | Black Stables |
+
+  Until their PixelLab art is made, they borrow another monster's or lair's picture, tinted. Make the art with `pixellab_gen.py colossus drake hellhound irongolem werewolf rider` and `pixellab_gen.py objects villain-lairs`.
+- **Respec.** Once a week, every point can be unlearned and spent again. Lairs already built keep working.
+- **Old saves** keep everything they had researched as talents, get their queued research refunded, and start with as many points as their heroes' level would have earned.
+- **The villain picker** shows each villain's own monster and talent path. The shop's unlock panel lists them too.
+- **Fixes:**
+  - Heroes who started their march while standing on the tower's tile now storm it, instead of waiting forever.
+  - A non-boss battle that drags past round 40 ends with the monsters fleeing.
+  - Talents that grant regeneration heal 10% a turn, not a troll's 30%.
+- **Balance.** In 56 simulated campaigns with a scripted villain, the heroes won about 80% of the time, in week 9 to 10 on average. The villain earned about 22 talent points in a campaign: 17 from levels, 4 from Infamy and 1 to 2 from the Library.
+
 ## Delivered in alpha 0.23
 - **The party sheet.** One window with all four heroes side by side. Each hero shows HP, mana and XP bars; to hit, AC, damage (with its average), speed and save; skills; abilities, with the next one due; and artifacts. Treasures the whole party shares are listed underneath, along with how ready the heroes are for the showdown. Bonuses from Millbrook's buildings are called out under each hero's stats. Open it with the **Party** button beside "Heading for", or the **P** key. A portrait opens that hero's full sheet, which now has a **Whole party** button back.
 
@@ -171,7 +203,7 @@ Roughly in the order that would make the biggest difference.
 3. **Finish the art set.** The villain towers and the redone mine, Wolf Den and wrecked lair are in (0.17); the Forbidden Library is still to make (`pixellab_gen.py objects library`). Then trees, rocks and the ground in pixel art (the map still mixes 3D models with pixel sprites), and icons for the dark powers and servant research (they borrow the villain's and minions' tokens).
 4. **Character animation.** Sprites slide and hop. PixelLab walk, attack and hit animations, starting with the four default heroes and the commonest monsters.
 5. **Put the game online.** A private GitHub repository connected to Cloudflare Pages, plus Supabase, so accounts, cloud saves and tester feedback work (guide in `site/README.md`).
-6. **Villain signatures** (plan in `docs/monetization-plan.md`): each villain plays differently on the map, starting with the Vampire Lord's Night Court.
+6. **Villain signatures** (plan in `docs/monetization-plan.md`). Each villain now has its own talent path and monster (0.24). Still to come are the map rules: the Lich's hidden Phylactery, the Dragon's hoard, the Demon's rifts, the Archmage's mana, the Vampire's thralls in Millbrook and the Death Knight's Legion.
 7. **Steam.** A store page needs a capsule picture set (the emblem and wordmark are a start), a trailer, screenshots, the AI-content disclosure and the $100 Steam Direct fee. The game would be wrapped as a desktop app (for example Electron or Tauri).
 
 ### Feel
@@ -217,6 +249,7 @@ Roughly in the order that would make the biggest difference.
 11. The DM gathers gold, lumber and ore with villain-specific minions who work sites each day; lairs are built on the map by minions and war parties march from lairs in reach; heroes can raid sites and lairs.
 12. The world is 3D and the characters are 2D painted sprites (alpha 0.11), with AI-made art dropped in as it is ready. The look is dark gothic painterly, original rather than copied from any one game.
 14. Towns open on their view (0.20): pixel-art buildings on plots in a small 3D scene, Heroes 3 style; the main building grows every few levels; the heroes and the villain appear when they're home.
+17. The villain earns talent points instead of buying research (0.24): from the heroes' levels, Infamy and the Library, spent in three shared trees and one villain path, with one free reset a week. Each villain has its own monster.
 16. Free to play (0.22): the Lich and the Dragon are free; the other four villains are $2.99 CAD each or $7.99 together, sold through Stripe, with Alex as the seller. Google sign-in, with email as a backup. Future content comes as bundles (for example a Paladin hero pack).
 15. The game is called Overmaster (0.21), developed by Alex Larente. The artifact page keeps its old file name so its link doesn't change, and saves keep their old storage keys.
 13. The DM runs both sides (0.19): the Dark Tower and Millbrook, each a town with its own purse and buildings. Lore is cut. The goal is to power the heroes up until they destroy the villain; there's no clock, and the score rewards speed. The mood is a score, not a timer. Quests return as Millbrook's bounty board (decision 9 had cut them).

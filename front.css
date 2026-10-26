@@ -265,3 +265,5 @@ ul.pw { display: grid; gap: 6px; }
 .codein { font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace; font-size: 18px; letter-spacing: .12em; text-transform: uppercase; }
 .codein::placeholder { letter-spacing: .12em; opacity: .45; }
 
+.vown { margin: -4px 0 0; text-align: center; }
+.vown b { color: #e6d3a0; font-weight: 500; }
