@@ -1,4 +1,4 @@
--- Behind the Screen: database setup for accounts, saved games and alpha feedback.
+-- Overmaster: database setup for accounts, saved games, unlocks and alpha feedback.
 -- Paste this whole file into Supabase: SQL Editor -> New query -> Run. Safe to run again.
 
 -- Saved games: one row per player per slot. Autosaves use slots that start with "a".
@@ -56,3 +56,52 @@ create or replace view public.feedback_inbox with (security_invoker = true) as
   from public.feedback f left join auth.users u on u.id = f.user_id
   order by f.created_at desc;
 revoke all on public.feedback_inbox from anon, authenticated;
+
+-- Unlocks (0.22): what each player owns. Players can read their own; only the server writes them
+-- (the stripe-webhook function, or you in the SQL Editor). There are no insert, update or delete
+-- policies on purpose: the game can never grant itself anything.
+create table if not exists public.entitlements (
+  user_id uuid not null references auth.users (id) on delete cascade,
+  sku text not null check (char_length(sku) between 1 and 60),
+  source text not null default 'stripe' check (source in ('stripe', 'steam', 'gift', 'promo')),
+  ref text,                       -- the Stripe Checkout Session that paid for it
+  created_at timestamptz not null default now(),
+  primary key (user_id, sku)
+);
+create index if not exists entitlements_ref on public.entitlements (ref);
+alter table public.entitlements enable row level security;
+drop policy if exists "Players read their own unlocks" on public.entitlements;
+create policy "Players read their own unlocks" on public.entitlements for select to authenticated using (auth.uid() = user_id);
+
+-- Every Stripe checkout, for your records. Written only by the checkout and stripe-webhook functions.
+create table if not exists public.purchases (
+  id text primary key,            -- Stripe Checkout Session id (cs_...)
+  user_id uuid references auth.users (id) on delete set null,
+  sku text not null,
+  amount integer,                 -- in cents
+  currency text,
+  status text not null default 'open' check (status in ('open', 'paid', 'refunded', 'expired')),
+  payment_intent text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists purchases_user on public.purchases (user_id, created_at desc);
+create index if not exists purchases_intent on public.purchases (payment_intent);
+alter table public.purchases enable row level security;
+drop policy if exists "Players read their own purchases" on public.purchases;
+create policy "Players read their own purchases" on public.purchases for select to authenticated using (auth.uid() = user_id);
+
+-- A tidy list of sales for the dashboard, newest first.
+create or replace view public.sales with (security_invoker = true) as
+  select p.created_at, p.status, p.sku, round(p.amount / 100.0, 2) as amount, p.currency, u.email, p.id as checkout_session
+  from public.purchases p left join auth.users u on u.id = p.user_id
+  order by p.created_at desc;
+revoke all on public.sales from anon, authenticated;
+
+-- To give someone an unlock for free (a tester, a streamer, a support case), run for example:
+--   insert into public.entitlements (user_id, sku, source)
+--   select id, 'villain-vampire', 'gift' from auth.users where email = 'player@example.com';
+-- A bundle's sku ('bundle-dark-court') unlocks everything in the bundle. To take a gift back:
+--   delete from public.entitlements where sku = 'villain-vampire'
+--     and user_id = (select id from auth.users where email = 'player@example.com');
+

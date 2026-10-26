@@ -11,5 +11,8 @@ window.BTS_CONFIG = {
   // Set to true after you turn on Google in Supabase -> Authentication -> Sign In / Providers
   googleSignIn: false,
   // Optional: shown to testers if the feedback form can't reach Supabase
-  feedbackEmail: ''
+  feedbackEmail: '',
+  // Set to true once Stripe and the two shop functions are set up (site/README.md, "The shop").
+  // While false, every villain is unlocked and there's no Shop.
+  store: false
 };

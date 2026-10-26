@@ -3,7 +3,7 @@
    players can also sign in and keep their saves in the cloud, and feedback reaches you. */
 const Store = (() => {
   'use strict';
-  const VERSION = '0.21.1-alpha';
+  const VERSION = '0.22.0-alpha';
   const CFG = window.BTS_CONFIG || {};
   const G = Game;
   const LOCAL = 'bts5-save:';           // + slot
@@ -129,6 +129,23 @@ const Store = (() => {
   }
   async function signOut() { await flush(); if (sb) await sb.auth.signOut(); user = null; emit('SIGNED_OUT'); }
 
+  /* ---------- unlocks and the shop's server function ---------- */
+  async function entitlements() {
+    if (!sb || !user) return { skus: [] };
+    const { data, error } = await sb.from('entitlements').select('sku');
+    return error ? { error: friendly(error) } : { skus: (data || []).map(r => r.sku) };
+  }
+  async function invoke(name, body) {
+    if (!sb) return { error: 'Accounts aren\'t set up on this site.' };
+    try {
+      const { data, error } = await sb.functions.invoke(name, { body });
+      if (!error) return { data };
+      let msg = friendly(error), extra = null;
+      try { extra = await error.context.json(); if (extra && extra.error) msg = extra.error; } catch (e) { /* no JSON body */ }
+      return { error: msg, data: extra };
+    } catch (e) { return { error: friendly(e) }; }
+  }
+
   /* ---------- the cloud ---------- */
   async function cloudList() {
     if (!sb || !user) return [];
@@ -244,7 +261,7 @@ const Store = (() => {
   return {
     VERSION, SLOTS, slotLabel, isAuto, autoSlot, cloudReady: () => cloudReady && !!sb, google: CFG.googleSignIn ? google : null, feedbackEmail: CFG.feedbackEmail || '',
     init, user: () => user, onAuth: cb => authCbs.push(cb), recovering: () => recovery,
-    signUp, signIn, magicLink, forgot, setPassword, rename, signOut,
+    signUp, signIn, magicLink, forgot, setPassword, rename, signOut, entitlements, invoke,
     list, save, load, remove, latest, autosave, flush, status: () => status,
     exportText, importText, download, feedback, reportError, settings, setSettings, meta
   };

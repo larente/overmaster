@@ -26,11 +26,12 @@ Cloudflare builds from this repository with `bash build.sh`. As a Pages project,
 | | |
 |---|---|
 | `part_map.js`, `part_core.js`, `part_battle.js`, `part_end.js` | The rules, with no page code (joined into `game.js` by the build) |
-| `ui.js`, `front.js`, `store.js` | The game screens, the title and setup screens, and saves and accounts |
+| `ui.js`, `front.js`, `store.js`, `shop.js` | The game screens, the title and setup screens, saves and accounts, and the shop's unlocks |
 | `world3d.js`, `models.js`, `art.js`, `dice.js`, `sound.js` | 3D map, battlefield and town views; models; icons; dice; sound |
 | `shell.html`, `*.css` | The page's markup and styles |
 | `art/` | Pixel art, portraits, voices, music and sound, listed in `art/manifest.json` |
 | `site/` | Website extras: config, favicon, hosting headers, Supabase schema, deploy guide |
+| `supabase/functions/` | The shop's server functions: `checkout` (opens Stripe) and `stripe-webhook` (unlocks after payment). Tested by `node tools/test_store_functions.mjs` |
 | `tools/` | Art and audio scripts (PixelLab, ElevenLabs). They read their keys from files outside the repository |
 | `docs/` | Roadmap, design notes, art guide and plans |
 | `fuzz*.js`, `sim*.js` | Balance simulations and fuzz tests (`node fuzz10.js`) |

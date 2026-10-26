@@ -21,6 +21,7 @@ game_scripts() {
   echo '<script>window.HERO_LINES = '; cat tools/hero_lines.json; echo ';</script>'
   echo '<script>'; cat ui.js; echo '</script>'
   echo '<script>'; cat store.js; echo '</script>'
+  echo '<script>'; cat shop.js; echo '</script>'
   echo '<script>'; cat front.js; echo '</script>'
 }
 

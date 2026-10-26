@@ -8,13 +8,20 @@ const Front = (() => {
   const randomOf = a => a[Math.floor(Math.random() * a.length)];
 
   /* ---------- small helpers ---------- */
-  function toast(text, tone) {
+  function toast(text, tone, ms) {
     if (UI.active()) { UI.toast(text, tone); return; }
     const box = $('ftoasts'); const el = document.createElement('div'); el.className = 'toast ' + (tone || ''); el.textContent = text; box.appendChild(el);
     while (box.children.length > 3) box.removeChild(box.firstChild);
-    setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 400); }, 3600);
+    setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 400); }, ms || 3600);
   }
   const heroKey = h => 'unit-hero-' + (h.rid || h.id);
+  const LOCK = '<svg class="lk" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 7V5a3.5 3.5 0 0 1 7 0v2" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="3" y="7" width="10" height="7.5" rx="1.4" fill="currentColor"/></svg>';
+  const GLOGO = '<svg class="glogo" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>';
+  const skuName = sku => { const c = Shop.CATALOG[sku]; return !c ? 'that' : c.villain ? 'the ' + c.name : c.name; };
+  const ssx = {
+    get: k => { try { return sessionStorage.getItem(k); } catch (e) { return null; } },
+    set: (k, v) => { try { if (v === null) sessionStorage.removeItem(k); else sessionStorage.setItem(k, v); } catch (e) { /* storage off */ } }
+  };
   const portraitOf = h => A.URI[heroKey(h)] || A.portrait(h);
   const ago = t => {
     if (!t) return '';
@@ -100,6 +107,7 @@ const Front = (() => {
           ${cont}
           <button class="tbtn${L ? '' : ' primary'}" data-fx="new"><span>New campaign</span>${L ? '' : '<small>Pick a villain and a party of four</small>'}</button>
           <button class="tbtn" data-fx="load"><span>Load game</span></button>
+          ${Shop.enabled() ? `<button class="tbtn" data-fx="shop"><span>Shop</span>${Shop.paidVillains().every(Shop.owns) ? '' : '<small>Unlock more villains</small>'}</button>` : ''}
           <button class="tbtn" data-fx="howto"><span>How to play</span></button>
           <button class="tbtn" data-fx="settings"><span>Settings</span></button>
         </nav>
@@ -128,8 +136,8 @@ const Front = (() => {
   }
   function villainHtml() {
     const V = F.villain; const T = G.BOSS_TYPES[V.type];
-    const cards = G.BOSS_ORDER.map(k => { const t = G.BOSS_TYPES[k]; return `<button class="vcard${k === V.type ? ' on' : ''}" data-fx="vtype" data-k="${k}" aria-pressed="${k === V.type}">
-        <img src="${A.URI[vIcon(k)]}" data-icon="${vIcon(k)}" alt="" draggable="false"><span class="vtxt"><b>${esc(t.label)}</b><span>${esc(t.blurb)}</span><i>${t.powers.map(p => esc(G.BOSS_POWERS[p].name)).join(' · ')}</i></span></button>`; }).join('');
+    const cards = G.BOSS_ORDER.map(k => { const t = G.BOSS_TYPES[k]; const lk = !Shop.villainOpen(k); return `<button class="vcard${k === V.type ? ' on' : ''}${lk ? ' locked' : ''}" data-fx="vtype" data-k="${k}" aria-pressed="${k === V.type}">
+        ${lk ? `<span class="lockchip" title="Unlock for ${esc(Shop.label(Shop.villainSku(k)))}">${LOCK}${esc(Shop.money(Shop.price(Shop.villainSku(k))))}</span>` : ''}<img src="${A.URI[vIcon(k)]}" data-icon="${vIcon(k)}" alt="" draggable="false"><span class="vtxt"><b>${esc(t.label)}</b><span>${esc(t.blurb)}</span><i>${t.powers.map(p => esc(G.BOSS_POWERS[p].name)).join(' · ')}</i></span></button>`; }).join('');
     const pr = Object.keys(G.PRON).map(k => `<button class="pill${V.pron === k ? ' on' : ''}" data-fx="vpron" data-k="${k}" aria-pressed="${V.pron === k}">${G.PRON[k].label}</button>`).join('');
     const full = V.title ? `${V.name || T.names[0]}, ${V.title}` : (V.name || T.names[0]);
     return `<div class="stitle"><h2>Who is your Big Bad?</h2><p>Every villain waits on the throne of the Dark Tower at level 20. Each kind fights differently, so the heroes will need different things from you to get ready.</p></div>
@@ -139,13 +147,25 @@ const Front = (() => {
           <img class="vbig" src="${A.URI[vIcon(V.type)]}" data-icon="${vIcon(V.type)}" alt="">
           <p class="vfull" id="v-full">${esc(full)}</p>
           <p class="vkind">A level 20 ${esc(T.label.toLowerCase())}</p>
+          ${Shop.villainOpen(V.type) ? '' : unlockPanel(V.type)}
           <label class="fld" for="v-name"><span>Name</span><span class="inrow"><input id="v-name" maxlength="28" autocomplete="off" value="${esc(V.name)}"><button class="btn sm" data-fx="vroll" title="Pick a random name and title">Roll</button></span></label>
           <label class="fld" for="v-title"><span>Title</span><input id="v-title" maxlength="40" autocomplete="off" list="v-titles" value="${esc(V.title)}"><datalist id="v-titles">${T.titles.map(t => `<option value="${esc(t)}">`).join('')}</datalist></label>
           <div class="fld"><span>Referred to as</span><div class="pills" role="group" aria-label="Pronouns">${pr}</div></div>
           <label class="fld" for="c-name"><span>Campaign name</span><input id="c-name" maxlength="48" autocomplete="off" placeholder="The Fall of ${esc(V.name || T.names[0])}" value="${esc(F.campaign)}"></label>
         </aside>
       </div>
-      <footer class="sfoot"><button class="btn" data-fx="title">Cancel</button><button class="btn big" data-fx="toparty">Next: choose the heroes</button></footer>`;
+      <footer class="sfoot"><button class="btn" data-fx="title">Cancel</button>${Shop.villainOpen(V.type) ? '<button class="btn big" data-fx="toparty">Next: choose the heroes</button>'
+        : `<button class="btn big" data-fx="buy" data-sku="${Shop.villainSku(V.type)}">${LOCK} Unlock to play · ${esc(Shop.money(Shop.price(Shop.villainSku(V.type))))}</button>`}</footer>`;
+  }
+  // what a locked villain offers, and the buttons to unlock it
+  function unlockPanel(type) {
+    const T = G.BOSS_TYPES[type], M = G.MINION_TYPES[type], sku = Shop.villainSku(type), bundle = 'bundle-dark-court';
+    const both = Shop.price(bundle) > Shop.price(sku);
+    return `<div class="unlock"><p class="ulead">${LOCK}Unlock the ${esc(T.label)} to play it</p>
+      <ul class="plain udiff">${T.signature ? `<li><b>On the map:</b> ${esc(T.signature)}</li>` : ''}<li><b>Minions:</b> ${esc(M.name)}. ${esc(M.text)}</li><li><b>In the final battle:</b> ${T.powers.map(p => esc(G.BOSS_POWERS[p].name)).join(' · ')}</li></ul>
+      <button class="btn big" data-fx="buy" data-sku="${sku}">Unlock · ${esc(Shop.label(sku))}</button>
+      ${both ? `<button class="btn" data-fx="buy" data-sku="${bundle}">All four paid villains · ${esc(Shop.label(bundle))}</button>` : ''}
+      <p class="hint">Yours for good, on every device you sign in on.</p></div>`;
   }
 
   /* ================= new campaign: party ================= */
@@ -182,6 +202,7 @@ const Front = (() => {
   }
   function begin(btn) {
     if (F.party.length !== 4 || F.busy) return;
+    if (!Shop.villainOpen(F.villain.type)) { showSetup('villain'); return; }
     F.busy = true; busy(btn, true, 'Rolling up the world…');
     setTimeout(() => {
       const state = G.newGame(null, { party: F.party, villain: F.villain, name: F.campaign });
@@ -264,14 +285,16 @@ const Front = (() => {
   }
 
   /* ================= account ================= */
-  function showAccount(mode) {
+  function showAccount(mode, note) {
     if (!Store.cloudReady()) { UI.modal(`<h1 class="dtitle">Accounts</h1><p>This copy of the game doesn't have accounts set up, so saves stay in this browser. Use <b>Export</b> in the Load screen to move a save to another computer.</p><div class="row end"><button class="btn" data-act="close">Close</button></div>`); return; }
     const u = Store.user();
     if (Store.recovering()) mode = 'reset';
     if (u && mode !== 'reset') {
+      const mine = Shop.paidVillains().filter(Shop.owns).map(k => Shop.CATALOG[k].name);
+      const unlocks = Shop.enabled() ? `<p class="hint">${mine.length ? `Unlocked: ${esc(mine.join(', '))}.` : 'No paid villains unlocked yet.'} <button type="button" class="lnk" data-fx="shop">Shop</button></p>` : '';
       UI.modal(`<h1 class="dtitle">Your account</h1><form class="form" id="acc-form" data-form="rename">
         <label class="fld" for="acc-name"><span>Name shown in the game</span><input id="acc-name" maxlength="40" value="${esc(u.name)}" autocomplete="nickname"></label>
-        <p class="hint">Signed in as ${esc(u.email)}. Your saves follow you to any device where you sign in.</p>
+        <p class="hint">Signed in as ${esc(u.email)}. Your saves${Shop.enabled() ? ' and unlocks' : ''} follow you to any device where you sign in.</p>${unlocks}
         <p class="msg" id="acc-msg" role="status"></p>
         <div class="row end"><button type="button" class="btn danger" data-fx="signout">Sign out</button><button type="submit" class="btn">Save name</button><button type="button" class="btn" data-act="close">Close</button></div></form>`);
       return;
@@ -284,10 +307,11 @@ const Front = (() => {
         <label class="fld" for="acc-email"><span>Email</span><input id="acc-email" type="email" required autocomplete="email"></label>
         <label class="fld" for="acc-pw"><span>Password${mode === 'signup' ? ' (at least 8 characters)' : ''}</span><input id="acc-pw" type="password" minlength="${mode === 'signup' ? 8 : 1}" required autocomplete="${mode === 'signup' ? 'new-password' : 'current-password'}"></label>`;
     const extra = mode === 'signin' ? `<div class="row alt"><button type="button" class="lnk" data-fx="magic">Email me a sign-in link instead</button><button type="button" class="lnk" data-fx="forgot">Forgot your password?</button></div>` : '';
-    const google = Store.google && mode !== 'reset' ? `<div class="or"><span>or</span></div><button type="button" class="btn wide" data-fx="google">Continue with Google</button>` : '';
-    UI.modal(`<h1 class="dtitle">${mode === 'reset' ? 'Set a new password' : 'Your account'}</h1>${tabs}<p class="hint">${mode === 'reset' ? '' : 'An account keeps your saves in the cloud, so you can pick up a campaign on any device.'}</p>
+    const google = Store.google && mode !== 'reset' ? `<button type="button" class="btn wide gbtn" data-fx="google">${GLOGO}Continue with Google</button><div class="or"><span>or use email</span></div>` : '';
+    const lead = note || (Shop.enabled() ? 'An account keeps your saves and unlocks in the cloud, so you can pick up a campaign on any device.' : 'An account keeps your saves in the cloud, so you can pick up a campaign on any device.');
+    UI.modal(`<h1 class="dtitle">${mode === 'reset' ? 'Set a new password' : 'Your account'}</h1>${mode === 'reset' ? '' : `<p class="hint${note ? ' note' : ''}">${esc(lead)}</p>`}${google}${tabs}
       <form class="form" id="acc-form" data-form="${mode}">${body}<p class="msg" id="acc-msg" role="status"></p>
-      <div class="row end"><button type="button" class="btn" data-act="close">Cancel</button><button type="submit" class="btn big">${mode === 'signup' ? 'Create account' : mode === 'reset' ? 'Save password' : 'Sign in'}</button></div>${extra}</form>${google}`);
+      <div class="row end"><button type="button" class="btn" data-act="close">Cancel</button><button type="submit" class="btn big">${mode === 'signup' ? 'Create account' : mode === 'reset' ? 'Save password' : 'Sign in'}</button></div>${extra}</form>`);
   }
   function accMsg(t, tone) { const el = $('acc-msg'); if (el) { el.textContent = t; el.className = 'msg ' + (tone || ''); } }
   async function submitAccount(form) {
@@ -315,6 +339,66 @@ const Front = (() => {
     accMsg(r.error || (kind === 'magic' ? `Check ${email} for a sign-in link. It brings you right back here.` : `Check ${email} for a link to choose a new password.`), r.error ? 'bad' : 'good');
   }
   function afterAuth() { if (!UI.active() && !$('front').hidden && !$('title').hidden) { renderTitle(); Store.latest().then(l => { F.latest = l; renderTitle(); }).catch(() => {}); } }
+
+  /* ================= the shop ================= */
+  function showShop() {
+    const u = Store.user(); const bundle = 'bundle-dark-court';
+    const btn = sku => Shop.ownsAll(sku) ? '<span class="owned">Owned</span>' : `<button class="btn${Shop.CATALOG[sku].bundle ? ' big' : ''}" data-fx="buy" data-sku="${sku}">${esc(Shop.label(sku))}</button>`;
+    const vs = Shop.paidVillains();
+    const rows = vs.map(sku => { const k = Shop.CATALOG[sku].villain, T = G.BOSS_TYPES[k];
+      return `<div class="sitem${Shop.owns(sku) ? ' have' : ''}"><img src="${A.URI[vIcon(k)]}" data-icon="${vIcon(k)}" alt=""><div><b>${esc(T.label)}</b><small>${esc(T.blurb)}</small></div>${btn(sku)}</div>`; }).join('');
+    const stack = vs.map(sku => { const k = Shop.CATALOG[sku].villain; return `<img src="${A.URI[vIcon(k)]}" data-icon="${vIcon(k)}" alt="">`; }).join('');
+    const save = Shop.price(bundle) && Shop.price(bundle) < vs.filter(v => !Shop.owns(v)).length * 299 ? ` <em>Save ${esc(Shop.money(vs.filter(v => !Shop.owns(v)).length * 299 - Shop.price(bundle)))}</em>` : '';
+    UI.modal(`<h1 class="dtitle">Shop</h1>
+      <p class="hint">Overmaster is free to play, and the Lich and the Ancient Dragon are always free. Unlock the other villains once and they're yours on every device you sign in on.</p>
+      <div class="shoplist">
+        <div class="sitem bundle${Shop.ownsAll(bundle) ? ' have' : ''}"><span class="stack">${stack}</span><div><b>${esc(Shop.CATALOG[bundle].name)}${save}</b><small>${esc(Shop.CATALOG[bundle].blurb)}</small></div>${btn(bundle)}</div>
+        ${rows}
+      </div>
+      ${u ? `<p class="hint">Signed in as ${esc(u.email)}. Prices in Canadian dollars; checkout is handled by Stripe.</p>` : '<p class="hint note">Sign in to buy. Your unlocks are kept with your account, so they follow you to any device.</p>'}
+      <p class="msg" id="shop-msg" role="status"></p>
+      <div class="row end">${u ? '<button class="lnk" data-fx="restore">Restore purchases</button>' : '<button class="btn" data-fx="account">Sign in</button>'}<button class="btn" data-act="close">Close</button></div>`, null, 'wide');
+  }
+  const shopOpen = () => !!document.querySelector('#modal .shoplist');
+  function shopMsg(t, tone) { const el = $('shop-msg'); if (el) { el.textContent = t; el.className = 'msg ' + (tone || ''); } else if (t) toast(t, tone); }
+  async function buyFlow(sku, btn) {
+    if (!Shop.enabled() || !Shop.CATALOG[sku]) return;
+    // remember the setup screen, so the player comes back to the villain they were looking at
+    if (!$('setup').hidden) ssx.set('om-setup', JSON.stringify({ villain: F.villain, campaign: F.campaign, party: F.party }));
+    if (!Store.user()) {
+      await Shop.buy(sku);
+      showAccount('signin', `Sign in to unlock ${skuName(sku)}. Your unlocks are kept with your account, so they follow you to any device.`);
+      return;
+    }
+    busy(btn, true, 'Opening checkout…');
+    const r = await Shop.buy(sku);
+    if (r.leaving) return;
+    busy(btn, false);
+    if (r.owned) { await Shop.refresh(); shopMsg('You already own that. It\'s unlocked now.', 'good'); return; }
+    if (r.error) shopMsg(r.error, 'bad');
+  }
+  // after signing in to buy: offer to carry on to checkout
+  function offerPending() {
+    const sku = Shop.pending(); if (!sku || !Store.user()) return;
+    if (Shop.ownsAll(sku)) { Shop.clearPending(); return; }
+    UI.modal(`<h1 class="dtitle">Signed in</h1><p>Carry on to unlock <b>${esc(skuName(sku))}</b> for ${esc(Shop.label(sku))}?</p>
+      <div class="row end"><button class="btn" data-fx="notnow">Not now</button><button class="btn big" data-fx="buy" data-sku="${sku}">Continue to checkout</button></div>`);
+  }
+  function rerenderFront() {
+    if (UI.active() || $('front').hidden) return;
+    if (!$('setup').hidden) renderSetup(); else if (!$('title').hidden) renderTitle();
+    if (shopOpen()) showShop();
+  }
+  async function afterCheckout(ret) {
+    const saved = ssx.get('om-setup'); ssx.set('om-setup', null);
+    if (saved) { try { const o = JSON.parse(saved); F.villain = o.villain; F.campaign = o.campaign || ''; F.party = o.party || G.DEFAULT_PARTY.slice(); F.filter = 'all'; showSetup('villain'); } catch (e) { /* stay on the title */ } }
+    if (ret.kind === 'cancel') { toast('Checkout cancelled. Nothing was charged.', 'sys'); return; }
+    toast('Payment received. Unlocking…', 'sys');
+    const got = await Shop.waitFor(ret.sku, 30000);
+    rerenderFront();
+    if (got) toast(`Unlocked: ${skuName(ret.sku)}. Thank you for supporting Overmaster!`, 'good', 8000);
+    else toast('Your payment went through, but the unlock hasn\'t arrived yet. In a minute, open the Shop and press Restore purchases.', 'warn', 12000);
+  }
 
   /* ================= settings, rules, feedback ================= */
   function showSettings() {
@@ -404,6 +488,10 @@ const Front = (() => {
       case 'fbkind': { for (const c of el.parentElement.children) { c.classList.toggle('on', c === el); c.setAttribute('aria-checked', c === el); } $('fb-kind').value = d.k; return; }
       case 'copyfb': { const t = $('fb-copy'); const fall = () => { t.focus(); t.select(); toast('Selected. Press Ctrl+C or Cmd+C to copy.', 'sys'); }; try { navigator.clipboard.writeText(t.value).then(() => toast('Copied.', 'good'), fall); } catch (er) { fall(); } return; }
       case 'account': showAccount(); return;
+      case 'shop': showShop(); return;
+      case 'buy': buyFlow(d.sku, el); return;
+      case 'notnow': Shop.clearPending(); UI.closeModal(); return;
+      case 'restore': busy(el, true, 'Checking…'); Shop.refresh().then(r => { busy(el, false); if (shopOpen()) showShop(); shopMsg(r.error || 'Your unlocks are up to date.', r.error ? 'bad' : 'good'); }); return;
       case 'acctab': showAccount(d.k); return;
       case 'magic': emailOnly('magic', el); return;
       case 'forgot': emailOnly('forgot', el); return;
@@ -414,7 +502,7 @@ const Front = (() => {
         V.type = d.k; if (wasDefault) V.name = T.names[0]; if (wasTitle) V.title = T.title; V.pron = T.pron; renderSetup(); return; }
       case 'vroll': { const T = G.BOSS_TYPES[F.villain.type]; F.villain.name = randomOf(T.names.filter(n => n !== F.villain.name)); F.villain.title = randomOf(T.titles); renderSetup(); return; }
       case 'vpron': F.villain.pron = d.k; renderSetup(); return;
-      case 'toparty': { const T = G.BOSS_TYPES[F.villain.type]; if (!F.villain.name.trim()) F.villain.name = T.names[0]; showSetup('party'); return; }
+      case 'toparty': { if (!Shop.villainOpen(F.villain.type)) { buyFlow(Shop.villainSku(F.villain.type), el); return; } const T = G.BOSS_TYPES[F.villain.type]; if (!F.villain.name.trim()) F.villain.name = T.names[0]; showSetup('party'); return; }
       case 'tovillain': showSetup('villain'); return;
       case 'pick': pick(d.id); return;
       case 'roll': F.party = G.rollParty(d.k); renderSetup(); return;
@@ -474,12 +562,20 @@ const Front = (() => {
     document.addEventListener('submit', onSubmit);
     window.addEventListener('error', e => Store.reportError(e.message, e.error && e.error.stack, UI.state()));
     window.addEventListener('unhandledrejection', e => Store.reportError('Unhandled: ' + (e.reason && e.reason.message || e.reason), e.reason && e.reason.stack, UI.state()));
-    Store.onAuth((u, ev) => { if (ev === 'PASSWORD_RECOVERY') showAccount('reset'); else { afterAuth(); if (ev === 'SIGNED_IN' && !UI.active()) toast(`Signed in as ${u ? u.name : 'you'}.`, 'good'); } });
+    Store.onAuth((u, ev) => {
+      if (ev === 'PASSWORD_RECOVERY') { showAccount('reset'); return; }
+      afterAuth(); if (ev === 'SIGNED_IN' && !UI.active()) toast(`Signed in as ${u ? u.name : 'you'}.`, 'good');
+      Shop.refresh().then(() => { if (u) offerPending(); });
+    });
+    Shop.onChange(rerenderFront);
     await Store.init().catch(() => null);
+    const ret = Shop.takeReturn();
+    Shop.refresh();
     const hot = window.claude && window.claude.hot && window.claude.hot.data;
     if (hot && hot.state && G.migrate(hot.state)) { $('front').hidden = true; UI.open(hot.state); }
-    else { showTitle(); showIntro(); }
+    else { showTitle(); if (!ret) showIntro(); }
     if (Store.recovering()) showAccount('reset');
+    if (ret) afterCheckout(ret); else if (Store.user()) offerPending();
   }
   return { start, menu, showTitle, showLoad, showFeedback };
 })();

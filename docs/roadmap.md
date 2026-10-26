@@ -1,5 +1,12 @@
 # Overmaster — roadmap
 
+## Delivered in alpha 0.22 (preview branch `store`)
+- **The shop, in test mode** (plan: `docs/monetization-plan.md`). The Lich and the Ancient Dragon are free. The Demon Prince, Archmage, Vampire Lord and Death Knight are $2.99 CAD each, or $7.99 for all four (the Dark Court). Owning some lowers the bundle's price to what's missing.
+- Locked villains show a price on the villain picker, with an unlock panel and **Unlock to play** in place of Next. The title screen has a **Shop** with **Restore purchases**.
+- Buying as a guest asks the player to sign in first (Google first, email as a backup), then offers to carry on to Stripe's checkout. Coming back from Stripe lands on the same villain and unlocks it in a few seconds.
+- Unlocks live in Supabase (`entitlements`, readable only by their owner, writable only by the server). Two Edge Functions, `checkout` and `stripe-webhook`, set prices on the server, check Stripe's signature, and take unlocks back on a full refund. `node tools/test_store_functions.mjs` tests both.
+- The store is off until `config.js` says `store: true`. Until then, and in the Claude preview, every villain is unlocked. Setup is step 6 of `site/README.md`.
+
 ## Delivered in alpha 0.21.1
 - **Pixel portraits on a first visit.** On a fresh visit to the website, the villain and hero pictures on the setup screens showed their old cartoon stand-ins and kept them, because those screens were drawn before the pixel art had downloaded. Every picture now swaps to its pixel art the moment that art arrives, on every screen.
 
@@ -160,7 +167,8 @@ Roughly in the order that would make the biggest difference.
 3. **Finish the art set.** The villain towers and the redone mine, Wolf Den and wrecked lair are in (0.17); the Forbidden Library is still to make (`pixellab_gen.py objects library`). Then trees, rocks and the ground in pixel art (the map still mixes 3D models with pixel sprites), and icons for the dark powers and servant research (they borrow the villain's and minions' tokens).
 4. **Character animation.** Sprites slide and hop. PixelLab walk, attack and hit animations, starting with the four default heroes and the commonest monsters.
 5. **Put the game online.** A private GitHub repository connected to Cloudflare Pages, plus Supabase, so accounts, cloud saves and tester feedback work (guide in `site/README.md`).
-6. **Steam.** A store page needs a capsule picture set (the emblem and wordmark are a start), a trailer, screenshots, the AI-content disclosure and the $100 Steam Direct fee. The game would be wrapped as a desktop app (for example Electron or Tauri).
+6. **Villain signatures** (plan in `docs/monetization-plan.md`): each villain plays differently on the map, starting with the Vampire Lord's Night Court.
+7. **Steam.** A store page needs a capsule picture set (the emblem and wordmark are a start), a trailer, screenshots, the AI-content disclosure and the $100 Steam Direct fee. The game would be wrapped as a desktop app (for example Electron or Tauri).
 
 ### Feel
 - Battles: damage and crit numbers, death and hit reactions, a little camera shake on big blows, spell effects.
@@ -205,5 +213,6 @@ Roughly in the order that would make the biggest difference.
 11. The DM gathers gold, lumber and ore with villain-specific minions who work sites each day; lairs are built on the map by minions and war parties march from lairs in reach; heroes can raid sites and lairs.
 12. The world is 3D and the characters are 2D painted sprites (alpha 0.11), with AI-made art dropped in as it is ready. The look is dark gothic painterly, original rather than copied from any one game.
 14. Towns open on their view (0.20): pixel-art buildings on plots in a small 3D scene, Heroes 3 style; the main building grows every few levels; the heroes and the villain appear when they're home.
+16. Free to play (0.22): the Lich and the Dragon are free; the other four villains are $2.99 CAD each or $7.99 together, sold through Stripe, with Alex as the seller. Google sign-in, with email as a backup. Future content comes as bundles (for example a Paladin hero pack).
 15. The game is called Overmaster (0.21), developed by Alex Larente. The artifact page keeps its old file name so its link doesn't change, and saves keep their old storage keys.
 13. The DM runs both sides (0.19): the Dark Tower and Millbrook, each a town with its own purse and buildings. Lore is cut. The goal is to power the heroes up until they destroy the villain; there's no clock, and the score rewards speed. The mood is a score, not a timer. Quests return as Millbrook's bounty board (decision 9 had cut them).

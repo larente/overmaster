@@ -3,7 +3,8 @@
 This folder is the whole website. It works in two modes:
 
 - **Without accounts.** Upload the folder as it is. Anyone can play, saves stay in each player's browser, and players can export a save to a file.
-- **With accounts.** Connect a free Supabase project (about 15 minutes). Players can sign up, keep their saves in the cloud and continue on any device. Feedback and automatic error reports land in a table you can read.
+- **With accounts.** Connect a free Supabase project (about 15 minutes). Players sign in with Google or email, keep their saves in the cloud and continue on any device. Feedback and automatic error reports land in a table you can read.
+- **With the shop.** Add Stripe (step 6) to sell the paid villains. Without it, every villain is unlocked.
 
 What's in the folder:
 
@@ -13,6 +14,7 @@ What's in the folder:
 | `config.js` | The only file you edit: your Supabase address and key |
 | `vendor/` | three.js (3D graphics) and the Supabase sign-in library |
 | `supabase/schema.sql` | The database setup you paste into Supabase |
+| `supabase/functions/` (in the repository) | The shop's two server functions, pasted into Supabase |
 | `_headers` | Hosting settings for Cloudflare Pages |
 | `netlify.toml` | The same settings for Netlify |
 | `favicon.svg` | The browser-tab icon |
@@ -80,11 +82,62 @@ Supabase's built-in email sender is meant for trying things out. It sends only a
 
 See [Supabase: Send emails with custom SMTP](https://supabase.com/docs/guides/auth/auth-smtp) for details.
 
-## Step 5 (optional): Google sign-in
+## Step 5: Google sign-in
 
-1. In the [Google Cloud console](https://console.cloud.google.com), create a project, then **APIs & Services → Credentials → Create credentials → OAuth client ID** (type: Web application).
-2. Supabase shows the **Callback URL** to paste into Google under **Authentication → Sign In / Providers → Google**. Paste Google's client ID and secret back into Supabase and turn Google on.
-3. In `config.js`, set `googleSignIn: true`, and upload the folder again.
+Players sign in with Google first, with email as a backup.
+
+1. In the [Google Cloud console](https://console.cloud.google.com), create a project. Open **Google Auth Platform** (or **APIs & Services → OAuth consent screen**) and fill in the app name (Overmaster), your support email and, before launch, links to your privacy policy and terms.
+2. Under **Clients** (or **Credentials → Create credentials → OAuth client ID**), create a **Web application** client.
+3. In Supabase, open **Authentication → Sign In / Providers → Google**. Supabase shows a **Callback URL**: paste it into the Google client's **Authorized redirect URIs**. Then paste Google's **client ID** and **client secret** into Supabase and turn Google on.
+4. In `config.js`, set `googleSignIn: true` and push (or upload) the site again.
+
+While Google's consent screen is in **Testing**, only the test users you list can sign in. Publish it (**Audience → Publish app**) when you're ready for everyone. Basic sign-in (name and email) doesn't need Google's full app review, but Google may check your app name and logo.
+
+## Step 6: The shop (Stripe)
+
+The shop sells the four paid villains ($2.99 CAD each, or $7.99 for all four). Two small server functions do the work: `checkout` opens Stripe's payment page, and `stripe-webhook` hears back from Stripe and unlocks the villains. Everything below starts in Stripe's **test mode**, where only test cards work and no real money moves.
+
+**A. The database.** In Supabase, open **SQL Editor**, paste the whole of `supabase/schema.sql` again and click **Run**. It's safe to re-run, and it adds the `entitlements` (unlocks) and `purchases` tables.
+
+**B. Stripe.**
+1. Sign up at [stripe.com](https://dashboard.stripe.com/register). You can test before activating the account.
+2. Make sure you're in a **sandbox** (test mode): the dashboard says so at the top.
+3. Open **Developers → API keys** and copy the **Secret key** (it starts with `sk_test_`). Keep it secret: it goes into Supabase only, never into `config.js` or GitHub.
+
+**C. The two functions.** In Supabase, open **Edge Functions**:
+1. Select **Deploy a new function → Via Editor**. Name it `checkout`, replace the sample code with the whole of `supabase/functions/checkout/index.ts` from the repository, and select **Deploy function**.
+2. Do the same for `stripe-webhook`, with `supabase/functions/stripe-webhook/index.ts`.
+3. Open each function's settings and **turn off JWT verification** (the toggle is called *Verify JWT* or *Enforce JWT verification*). Both functions check who's calling themselves: `checkout` asks Supabase who's signed in, and `stripe-webhook` checks Stripe's signature.
+4. Open **Edge Functions → Secrets** and add:
+   - `STRIPE_SECRET_KEY`: the `sk_test_…` key from Stripe.
+   - `SITE_URLS`: your game's address, for example `https://overmaster.example.workers.dev`. Add any other addresses it runs at, separated by commas.
+
+**D. The webhook.**
+1. In Stripe, open **Workbench → Webhooks** (or **Developers → Webhooks**) and select **Create an event destination**.
+2. Choose **Your account**, and for the payload choose **Snapshot** (not Thin).
+3. Select these events: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.expired` and `charge.refunded`.
+4. Choose **Webhook endpoint** and enter `https://YOUR-PROJECT.supabase.co/functions/v1/stripe-webhook`. Use your project address, the same one as in `config.js`.
+5. Reveal the **Signing secret** (it starts with `whsec_`) and add it in Supabase as one more secret: `STRIPE_WEBHOOK_SECRET`.
+
+**E. Switch the shop on.** In `config.js`, set `store: true` and push. The four paid villains now show a lock and a price, and the title screen has a **Shop**.
+
+**F. Try it.** Sign in, pick the Vampire Lord and select **Unlock**. On Stripe's page, pay with the test card `4242 4242 4242 4242`, any future date, any CVC and any postcode. You land back in the game and the lock comes off within a few seconds. In Supabase, `select * from sales;` lists the purchase. To test a refund, refund the payment in Stripe: the unlock is taken back.
+
+**G. Going live.**
+1. Activate your Stripe account: your identity, a bank account, and a website that shows what you sell, your refund policy, terms and how to reach you.
+2. Repeat B to D in live mode: a live secret key (`sk_live_…`), and a live webhook with its own signing secret. Replace both secrets in Supabase.
+3. Taxes are yours to handle, since you're the seller. To have Stripe Tax calculate and add sales tax at checkout, turn on Stripe Tax in Stripe, then add the secret `STRIPE_TAX` with the value `on`. Talk to an accountant about GST/HST, BC PST, and VAT on sales abroad.
+
+**Giving unlocks away.** For a tester, a streamer or a support case, run this in the SQL Editor with their email:
+
+```sql
+insert into public.entitlements (user_id, sku, source)
+select id, 'villain-vampire', 'gift' from auth.users where email = 'player@example.com';
+```
+
+Use `bundle-dark-court` to give all four. Stripe **promotion codes** also work on the checkout page. Create them in Stripe under **Product catalog → Coupons**.
+
+**If something goes wrong.** In Supabase, **Edge Functions → (function) → Logs** shows each call. In Stripe, open the webhook's **Event deliveries** to see whether Stripe reached it and what came back. A `400 Bad signature` means `STRIPE_WEBHOOK_SECRET` doesn't match the endpoint's secret: test mode and live mode have different secrets.
 
 ## Reading feedback and bug reports
 
