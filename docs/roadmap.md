@@ -1,6 +1,9 @@
 # Overmaster — roadmap
 
-## Delivered in alpha 0.22 (preview branch `store`)
+## Delivered in alpha 0.23
+- **The party sheet.** One window with all four heroes side by side. Each hero shows HP, mana and XP bars; to hit, AC, damage (with its average), speed and save; skills; abilities, with the next one due; and artifacts. Treasures the whole party shares are listed underneath, along with how ready the heroes are for the showdown. Bonuses from Millbrook's buildings are called out under each hero's stats. Open it with the **Party** button beside "Heading for", or the **P** key. A portrait opens that hero's full sheet, which now has a **Whole party** button back.
+
+## Delivered in alpha 0.22
 - **The shop, in test mode** (plan: `docs/monetization-plan.md`). The Lich and the Ancient Dragon are free. The Demon Prince, Archmage, Vampire Lord and Death Knight are $2.99 CAD each, or $7.99 for all four (the Dark Court). Owning some lowers the bundle's price to what's missing.
 - Locked villains show a price on the villain picker, with an unlock panel and **Unlock to play** in place of Next. The title screen has a **Shop** with **Restore purchases**.
 - Buying as a guest asks the player to sign in first (Google first, email as a backup), then offers to carry on to Stripe's checkout. Coming back from Stripe lands on the same villain and unlocks it in a few seconds.

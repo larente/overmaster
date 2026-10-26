@@ -1366,7 +1366,7 @@
     const goal = S.march ? 'the Dark Tower, for the final showdown' : P.goal ? P.goal : 'nowhere yet';
     el.innerHTML = `
       <section class="panel"><div class="heroes">${S.heroes.map(heroRow).join('')}</div>
-        <p class="heading" title="${esc(P.intent.join(' '))}"><span class="k">Heading for</span> <b>${esc(goal)}</b></p>
+        <div class="phead"><p class="heading" title="${esc(P.intent.join(' '))}"><span class="k">Heading for</span> <b>${esc(goal)}</b></p><button class="partybtn" data-act="party" title="All four heroes side by side: health, damage, skills and artifacts (P)">Party<kbd>P</kbd></button></div>
         ${waiting.length ? `<p class="hint">${waiting.map(h => esc(h.name)).join(' and ')} wait${waiting.length > 1 ? '' : 's'} at the Millbrook tavern to join the party.</p>` : ''}</section>
       <div id="selwrap">${selPanel()}</div>
       <button class="towerbtn" data-act="tower">${img(siteIcon({ id: 'tower' }), 'cicon')}<span><b>Your tower</b><small>${nl} lair${nl === 1 ? '' : 's'} · ${S.minions.length} ${esc(MT().name.toLowerCase())}${nb ? ` · ${nb} idle` : ''}${(S.summons || []).length ? ` · ${S.summons.length} summoning` : ''}${S.research.queue.length ? ` · studying ${esc(G.researchName(S.research.queue[0].k))}` : ''}${S.base.libBuild ? ' · library going up' : ''}</small></span>${nb ? `<i class="badge">${nb}</i>` : ''}</button>
@@ -1937,6 +1937,55 @@
     const rows = L.map(u => `<div class="lvrow">${heroImg(S.heroes.find(x => x.id === u.id) || { id: u.id, cls: u.cls }, 'port lg')}<div><b>${esc(u.name)}</b> reaches level ${u.level}.<br><span class="hint">+${u.gains.hp} HP${u.gains.hit ? ', +' + u.gains.hit + ' to hit' : ''}${u.gains.ac ? ', +' + u.gains.ac + ' AC' : ''}</span>${u.ability ? `<p><b class="gold">${esc(G.ABILITIES[u.ability].name)}.</b> ${esc(G.ABILITIES[u.ability].text)}</p>` : ''}</div></div>`).join('');
     modal(`<h1 class="dtitle">Level up</h1><p class="hint">Your war parties will need to be bigger now. Fights that are too easy give no experience.</p>${rows}<div class="row end"><button class="btn big" data-act="close">Onward</button></div>`, () => { renderSide(); if (then) then(); });
   }
+  /* --- the party sheet: all four heroes side by side --- */
+  const avgRoll = (n, sides) => n * (sides + 1) / 2;
+  const dmgText = st => `${st.dice[0]}d${st.dice[1]}${st.dice[2] ? '+' + st.dice[2] : ''}${st.extra.map(e => ' +' + e.n + 'd' + e.s).join('')}`;
+  const dmgAvg = st => Math.round(avgRoll(st.dice[0], st.dice[1]) + st.dice[2] + st.extra.reduce((a, e) => a + avgRoll(e.n, e.s), 0));
+  const GEM = '<svg class="gem" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h8l3 4-7 9-7-9z" fill="#d9b45e"/><path d="M4 2l2 4h4l2-4M1 6h14M6 6l2 9 2-9" fill="none" stroke="#6b4a14" stroke-width=".9"/></svg>';
+  function bar(cls, cur, max, label) {
+    const pct = max ? Math.max(0, Math.min(1, cur / max)) * 100 : 0;
+    return `<div class="statbar sb-${cls}"><i style="width:${pct.toFixed(0)}%"></i><span>${label}</span></div>`;
+  }
+  function partyCol(h, flags) {
+    const c = G.CLASSES[h.cls], st = G.heroStats(h, flags, S), tb = G.townBonus(S, h);
+    const dead = h.status === 'dead', waiting = h.status === 'waiting';
+    const next = G.XP_TABLE[h.level + 1], prev = G.XP_TABLE[h.level] || 0;
+    const xp = next ? bar('xp', h.xp - prev, next - prev, `${h.xp} XP · level ${h.level + 1} at ${next}`) : bar('xp', 1, 1, `${h.xp} XP · max level`);
+    const town = [tb.hit ? `+${tb.hit} to hit` : '', tb.ac ? `+${tb.ac} AC` : '', tb.dmg ? `+${tb.dmg} damage` : ''].filter(Boolean);
+    const skills = Object.keys(G.SKILL_NAMES).map(k => { const v = G.skillBonus(h, k); return `<div><span>${G.SKILL_NAMES[k]}</span><b>${v > 0 ? '+' + v : v}</b></div>`; }).join('');
+    const abil = h.ab.map(a => `<li title="${esc(G.ABILITIES[a].text)}">${esc(G.ABILITIES[a].name)}</li>`).join('');
+    const nextAb = c.ab[h.level + 1] ? `<li class="soon" title="${esc(G.ABILITIES[c.ab[h.level + 1]].text)}">Level ${h.level + 1}: ${esc(G.ABILITIES[c.ab[h.level + 1]].name)}</li>` : '';
+    const items = h.items.map(i => `<li>${GEM}<span><b>${esc(i.name)}</b><small>${esc(i.text)}</small></span></li>`).join('');
+    return `<article class="pcol${dead ? ' dead' : ''}">
+      <header class="phd"><button class="pport" data-act="hero" data-id="${h.id}" title="Open ${esc(h.name)}'s full sheet">${heroImg(h, 'port lg', h.name)}</button>
+        <div><h2>${esc(h.name)}</h2><p>Level ${h.level} ${esc(raceCls(h))}</p><p class="pdrive">Wants ${esc(G.DRIVES[h.drive].want)}</p></div></header>
+      ${dead ? '<p class="pstate bad">Fallen</p>' : waiting ? '<p class="pstate">Waiting at the Millbrook tavern</p>' : ''}
+      ${bar('hp', dead ? 0 : h.hp, h.maxHp, dead ? `0 / ${h.maxHp} HP` : `${h.hp} / ${h.maxHp} HP`)}
+      ${h.maxMana ? bar('mp', h.mana, h.maxMana, `${h.mana} / ${h.maxMana} mana`) : (flags.anyMana ? '<div class="statbar sb-gap" aria-hidden="true"></div>' : '')}
+      ${xp}
+      <div class="pstats"><div><span>To hit</span><b>+${st.hit}</b></div><div><span>AC</span><b>${st.ac}</b></div>
+        <div class="dmg"><span>Damage</span><b>${dmgText(st)}</b><small>about ${dmgAvg(st)} a hit${st.extra.length ? ` · ${esc(st.extra.map(e => e.label).join(', '))}` : ''}</small></div>
+        <div><span>Speed</span><b>${st.spd}</b></div><div><span>Save</span><b>+${st.save}</b></div></div>
+      ${town.length ? `<p class="ptown" title="From the buildings you've raised in Millbrook. Already counted above.">Millbrook: ${town.join(', ')}</p>` : ''}
+      <h3 class="cap">Skills</h3><div class="pskills">${skills}</div>
+      <h3 class="cap">Abilities</h3><ul class="ptags">${abil || '<li class="none">None yet</li>'}${nextAb}</ul>
+      <h3 class="cap">Artifacts</h3>${items ? `<ul class="pitems">${items}</ul>` : '<p class="hint none">None yet.</p>'}
+    </article>`;
+  }
+  function showParty() {
+    const flags = Object.assign({}, G.partyFlags(S.heroes), { anyMana: S.heroes.some(h => h.maxMana) });
+    const shared = G.ARTIFACTS.filter(a => a.party && ((a.id === 'crown' && S.crown) || (a.id === 'boots' && S.boots)));
+    const live = S.heroes.filter(h => h.status !== 'dead');
+    const hp = live.reduce((a, h) => a + h.hp, 0), maxHp = live.reduce((a, h) => a + h.maxHp, 0);
+    const P = S.party || {};
+    const goal = S.march ? 'the Dark Tower, for the final showdown' : P.goal ? P.goal : 'nowhere yet';
+    modal(`<h1 class="dtitle">The party</h1>
+      <p class="hint">Level ${G.avgLevel(S)} on average · ${hp} / ${maxHp} HP between them · heading for <b>${esc(goal)}</b>. Select a portrait for a hero's full sheet.</p>
+      <div class="pgrid">${S.heroes.map(h => partyCol(h, flags)).join('')}</div>
+      ${shared.length ? `<div class="pshared"><h3 class="cap">Shared by the party</h3><ul class="pitems">${shared.map(a => `<li>${GEM}<span><b>${esc(a.name)}</b><small>${esc(a.text)}</small></span></li>`).join('')}</ul></div>` : ''}
+      ${readinessHtml(false)}
+      <div class="row end"><button class="btn" data-act="close">Close</button></div>`, null, 'partysheet');
+  }
   function showHero(id) {
     const h = S.heroes.find(x => x.id === id); const c = G.CLASSES[h.cls];
     const st = G.heroStats(h, G.partyFlags(S.heroes), S);
@@ -1952,7 +2001,7 @@
       <div class="stats"><div><span>To hit</span><b>+${st.hit}</b></div><div><span>AC</span><b>${st.ac}</b></div><div><span>Damage</span><b>${dmg}</b></div><div><span>Speed</span><b>${st.spd}</b></div><div><span>HP</span><b>${h.hp}/${h.maxHp}</b></div><div><span>Mana</span><b>${h.maxMana ? h.mana + '/' + h.maxMana : '—'}</b></div></div>
       <h2 class="cap">Skills</h2><div class="stats">${skills}</div>
       <div class="cols"><div><h2 class="cap">Abilities</h2><ul class="plain">${abil}${nextAb}</ul></div><div><h2 class="cap">Artifacts</h2><ul class="plain">${items}</ul></div></div>
-      <div class="row end"><button class="btn" data-act="close">Close</button></div>`, null, 'wide');
+      <div class="row end"><button class="btn" data-act="party">Whole party</button><button class="btn" data-act="close">Close</button></div>`, null, 'wide');
   }
   function showRules(first) {
     const mt = G.minionType(S);
@@ -2669,6 +2718,7 @@
         case 'bskip': skipBattle(); return;
         case 'sound': { if (!window.SND) return; const st = typeof Store !== 'undefined' ? Store.setSettings({ muted: !SND.muted }) : { muted: !SND.muted }; SND.setVolumes(st); updateSoundBtn(); if (!SND.muted) sfx('chime'); return; }
         case 'hero': showHero(d.id); return;
+        case 'party': showParty(); return;
         case 'tower': ui.towerTab = d.k || 'view'; openScreen('tower'); return;
         case 'ttab': sfx('tab'); ui.towerTab = d.k; renderScreen(true); return;
         case 'town': if (!S.town) return; ui.townTab = d.k || 'view'; openScreen('town'); return;
@@ -2773,6 +2823,7 @@
       }
       if (ui.modal || ui.screen) return;
       const k = e.key.toLowerCase();
+      if (k === 'p' && S.phase === 'map') { showParty(); return; }
       if (S.phase === 'map') {
         if (k === 'e') { endDay(); return; }
         if (k === 'i' || k === '.') { if (!ui.moving) nextIdle(e.shiftKey); return; }
