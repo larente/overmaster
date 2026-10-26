@@ -388,7 +388,7 @@
     hold: { tree: 'brood', tier: 1, lair: true, needs: ['den'] },
     bonearmor: { tree: 'brood', tier: 2, ranks: 2, name: 'Bone Armour', text: 'Skeletons and wraiths: +1 AC and +15% hit points.', fx: { mod: { units: ['skeleton', 'wraith'], ac: 1, hp: 0.15 } } },
     keep: { tree: 'brood', tier: 2, lair: true, needs: ['barrow'] },
-    warbands: { tree: 'brood', tier: 2, name: 'War Bands', text: 'Each lair keeps three bands out instead of two, and holds half as many monsters again at home.', fx: { bands: 1, cap: 0.5 } },
+    warbands: { tree: 'brood', tier: 2, name: 'War Bands', text: 'Each lair can have two waves on the road at once instead of one, and holds half as many monsters again at home.', fx: { bands: 1, cap: 0.5 } },
     brutes: { tree: 'brood', tier: 3, ranks: 2, name: 'Brutes', text: 'Ogres, trolls and hill giants: +1 to hit and +2 damage.', fx: { mod: { units: BRUTES, hit: 1, dmg: 2 } } },
     bloodthirst: { tree: 'brood', tier: 3, name: 'Bloodthirst', text: 'Ogres, trolls and hill giants drink the life they spill: they heal when they hit.', fx: { mod: { units: BRUTES, drain: true } } },
     mire: { tree: 'brood', tier: 3, lair: true, needs: ['fens'] },
@@ -403,14 +403,14 @@
     overseers: { tree: 'dominion', tier: 1, name: 'Overseers', text: 'Minions cost a third less gold to summon, and the tower can feed 4 more.', fx: { summonCost: 1 / 3, minions: 4 } },
     tithe: { tree: 'dominion', tier: 1, name: 'Tithe of Fear', text: 'Every lair you\'ve built sends 1 gold to the tower each night.', fx: { perLair: { gold: 1 } } },
     warchest: { tree: 'dominion', tier: 2, name: 'War Chest', text: 'Levelling up a band costs a third less.', fx: { bandCost: 1 / 3 } },
-    march: { tree: 'dominion', tier: 2, name: 'Forced March', text: 'War parties from your lairs reach 2 tiles farther.', fx: { reach: 2 } },
+    march: { tree: 'dominion', tier: 2, name: 'Forced March', text: 'Your waves march half again as far each night.', fx: { reach: 2 } },
     spies: { tree: 'dominion', tier: 2, name: 'Spies', text: 'Your minions see 2 tiles farther, so the map clears faster.', fx: { sight: 2 } },
     vaults: { tree: 'dominion', tier: 3, name: 'Treasure Vaults', text: '+4 gold to the tower every night.', fx: { nightly: { gold: 4 } } },
     deep: { tree: 'dominion', tier: 3, name: 'Deep Mines', text: 'Lumber camps and ore mines yield 1 more a night.', fx: { yield: { lumber: 1, ore: 1 } } },
     empire: { tree: 'dominion', tier: 4, name: 'Dark Empire', text: 'Every lair goes up in a single night.', fx: { empire: true } },
     // --- Dread
     vigor: { tree: 'dread', tier: 0, ranks: 3, power: 'vigor' },
-    menace: { tree: 'dread', tier: 0, name: 'Menace', text: 'Close fights and fallen heroes earn half as much Infamy again, so talent points come faster.', fx: { infamy: 0.5 } },
+    menace: { tree: 'dread', tier: 0, name: 'Menace', text: 'Every bit of Infamy counts half again, so your villain levels up faster.', fx: { infamy: 0.5 } },
     raise: { tree: 'dread', tier: 1, power: 'raise' },
     dread: { tree: 'dread', tier: 1, power: 'dread' },
     traps: { tree: 'dread', tier: 2, ranks: 3, power: 'traps' },
@@ -435,7 +435,7 @@
     brimstone: { tree: 'v-demon', tier: 0, lair: true },
     pact: { tree: 'v-demon', tier: 0, ranks: 2, name: 'Infernal Pact', text: 'Every lair breeds 8% more monsters a night.', fx: { rate: { all: true, pct: 0.08 } } },
     hellfire: { tree: 'v-demon', tier: 1, ranks: 2, name: 'Hellfire', text: 'Hellhounds and pit demons: +2 damage.', fx: { mod: { units: ['hellhound', 'demon'], dmg: 2 } } },
-    burning: { tree: 'v-demon', tier: 2, name: 'Burning Roads', text: 'War parties from your lairs reach 3 tiles farther.', fx: { reach: 3 } },
+    burning: { tree: 'v-demon', tier: 2, name: 'Burning Roads', text: 'Your waves march three quarters again as far each night.', fx: { reach: 3 } },
     ninth: { tree: 'v-demon', tier: 3, ranks: 2, name: 'Fires of the Ninth Pit', text: 'Every monster: +1 damage.', fx: { mod: { units: 'all', dmg: 1 } } },
     unchained: { tree: 'v-demon', tier: 4, name: 'Unchained', text: 'In the finale the Demon Prince has +10% hit points and +2 to hit.', fx: { villain: { hp: 0.1, hit: 2 } } },
     // --- the Archmage
@@ -457,7 +457,7 @@
     discipline: { tree: 'v-deathknight', tier: 0, ranks: 2, name: 'Iron Discipline', text: 'Levelling up a band costs 20% less.', fx: { bandCost: 0.2 } },
     lances: { tree: 'v-deathknight', tier: 1, ranks: 2, name: 'Black Lances', text: 'Black riders: +1 to hit and +2 damage.', fx: { mod: { units: ['rider'], hit: 1, dmg: 2 } } },
     drill: { tree: 'v-deathknight', tier: 2, ranks: 2, name: 'Drilled Ranks', text: 'Skeletons and black riders: +1 AC and +10% hit points.', fx: { mod: { units: ['skeleton', 'rider'], ac: 1, hp: 0.1 } } },
-    veterans: { tree: 'v-deathknight', tier: 3, name: 'Veterans', text: 'Bands march out of your lairs a level higher.', fx: { vets: 1 } },
+    veterans: { tree: 'v-deathknight', tier: 3, name: 'Veterans', text: 'Waves march out of your lairs a level higher.', fx: { vets: 1 } },
     oath: { tree: 'v-deathknight', tier: 4, name: 'Lord of the Damned', text: 'In the finale the Death Knight has +10% hit points and +2 to hit.', fx: { villain: { hp: 0.1, hit: 2 } } }
   };
   const TALENT_ORDER = Object.keys(TALENTS);
@@ -484,7 +484,7 @@
   const LOOT = { tense: 0.55, harrowing: 0.8 };
   const LAIR_UP = { growth: 1.5, cap: [0, 2, 3] };
   const lairUpCost = k => Math.ceil(DUNGEONS[k].cost * 0.6);
-  const MAX_STACKS = 18, MAX_CONJURED = 24;
+  const MAX_STACKS = 30, MAX_CONJURED = 24;
   // the DM's citadel at the Dark Tower: one building a day, each unlocks monsters, lairs, traps or dark powers
   const TECH = {
     throne: { tier: 0, row: 1.5, name: 'Throne of Shadows', cost: 0, req: [], gives: 'Goblins, wolves, hidden pits and the Goblin Warren.', text: 'The seat of your power at the Dark Tower.' },
@@ -566,12 +566,9 @@
   ];
   const artTier = s => avgLevel(s) >= 14 ? 3 : avgLevel(s) >= 7 ? 2 : 1;
   const DM_SPELLS = {
-    // 0.19: spells that help the heroes are paid from Millbrook's purse, the one that helps your monsters from the tower's
-    pull: { name: 'Pull Punches', cost: 6, purse: 'town', rail: 12, mood: 4, text: 'Your monsters deal half damage for the rest of this round.' },
-    lucky: { name: 'Lucky Break', cost: 10, purse: 'town', rail: 18, mood: 6, text: 'A fallen hero gets back up with a quarter of their HP.' },
-    reinforce: { name: 'Reinforcements', cost: 10, purse: 'tower', rail: 0, mood: 0, text: 'A fresh stack joins the fight on your side. More danger, more XP. Once a fight.' },
-    retreat: { name: 'Sound the Retreat', cost: 0, purse: 'tower', rail: 8, mood: 3, text: 'Your monsters flee and the battle ends. Survivors go back to your garrison. Feels like an anticlimax.' },
-    deus: { name: 'Deus ex Machina', cost: 25, purse: 'town', rail: 30, mood: 10, text: 'Only when every hero has fallen: Millbrook\'s priests pray, and a stranger saves them.' }
+    // 0.30: you only play the villain now, so the spells that helped the heroes are gone
+    reinforce: { name: 'Reinforcements', cost: 10, purse: 'tower', rail: 0, mood: 0, text: 'A fresh stack joins the fight on your side. Once a fight.' },
+    retreat: { name: 'Sound the Retreat', cost: 0, purse: 'tower', rail: 0, mood: 0, text: 'Your monsters flee and the battle ends, to save what\'s left of them.' }
   };
   const LAIR = {
     vigor: { name: 'Dark Vigor', cost: 3, max: 3, text: '+10% HP for your villain, each time.' },
@@ -604,24 +601,24 @@
     const layout = opts.layout === 'classic' ? 'classic' : 'random'; // classic: the original fixed map (for comparisons)
     const L0 = { seed, layout }; const town = siteOf(L0, 'town'), tower = siteOf(L0, 'tower');
     const s = {
-      v: 15, layout, seed, week: 1, day: 1, name: String(opts.name || '').replace(/[<>]/g, '').trim().slice(0, 48) || `The Fall of ${vil.name}`, created: Date.now(), lore: 18, engagement: 60, railroad: 0, phase: 'map', result: null,
+      v: 16, layout, seed, week: 1, day: 1, name: String(opts.name || '').replace(/[<>]/g, '').trim().slice(0, 48) || `The Rise of ${vil.name}`, created: Date.now(), lore: 18, engagement: 60, railroad: 0, phase: 'map', result: null, infamyTotal: 0, wipes: 0, siegeCount: 0,
       citadel: { built: { throne: 1 }, day: 0 }, base: { library: 0, libBuild: null }, summons: [], talents: newTalents(), town: newTown(), res: { gold: 20, lumber: 12, ore: 6 }, nodes: [], minions: [], unlocked: {}, attackDay: 0, seen: {}, march: null, finaleTries: 0,
       heroes: ids.map(id => heroFrom(ROSTER_BY[id], 1)), rosterUsed: ids.slice(),
       party: { x: town.x, y: town.y, prev: { x: town.x, y: town.y }, mp: MP_PER_DAY, path: [], target: null, intent: [] },
       objects: [], uid: 1, explored: new Array(MW * MH).fill(0), visited: {}, weekFx: 'party', omens: 0, crown: false, boots: false,
       wk: newWeekLog(), todayActive: false, battle: null, enc: null, recap: null, log: [], history: [], deaths: 0, totalThrill: 0, pendingLevelUps: [], lastBattle: null,
       quests: [], townEvent: null,
-      villain: { type: vil.type, name: vil.name, title: vil.title, pron: vil.pron, state: 'lair', x: tower.x, y: tower.y, mp: VILLAIN_MP, banish: 0, army: [], up: { vigor: 0, dread: 0, raise: 0, traps: 0, ritual: 0 }, known: false, glimpsed: 0, movedDay: 0 }
+      villain: { type: vil.type, name: vil.name, title: vil.title, pron: vil.pron, state: 'lair', x: tower.x, y: tower.y, mp: VILLAIN_MP, banish: 0, army: [], up: { vigor: 0, dread: 0, raise: 0, traps: 0, ritual: 0 }, known: false, glimpsed: 0, movedDay: 0, level: 1, xp: 0 }
     };
     s.nodes = genNodes(s);
     for (let i = 0; i < STARTING_MINIONS; i++) spawnMinion(s);
     startingLair(s);
-    const w0 = myLairs(s)[0]; if (w0) releaseBand(s, w0, 8);
+    const w0 = myLairs(s)[0]; if (w0) releaseWave(s, w0, 8);
     reveal(s);
     s.dmSeen = new Array(MW * MH).fill(0); dmReveal(s);
     if (opts.wilds !== false) populateWilds(s);
     planRoute(s);
-    say(s, 'Day 1. Your players sit down with fresh character sheets. Their heroes set out from Millbrook.', 'sys');
+    say(s, `Day 1. ${vFull(s)} stirs in the Dark Tower, still weak. In Millbrook, four young heroes sharpen their swords.`, 'sys');
     return s;
   }
   // a Goblin Warren already stands in the hills near Millbrook, so there's a war party to send on day one
@@ -642,14 +639,28 @@
   // v11 (0.14): every campaign has its own map layout. Older saves keep the classic one they were played on.
   function migrate(s) {
     if (!s || typeof s !== 'object' || !Array.isArray(s.heroes)) return null;
-    if (s.v === 15) return s;
-    if (s.v === 14) return toV15(s);
-    if (s.v === 13) return toV15(toV14(s));
-    if (s.v === 12) return toV15(toV14(toV13(s)));
-    if (s.v === 11) return toV15(toV14(toV13(toV12(s))));
+    if (s.v === 16) return s;
+    if (s.v === 15) return toV16(s);
+    if (s.v === 14) return toV16(toV15(s));
+    if (s.v === 13) return toV16(toV15(toV14(s)));
+    if (s.v === 12) return toV16(toV15(toV14(toV13(s))));
+    if (s.v === 11) return toV16(toV15(toV14(toV13(toV12(s)))));
     if (!s.layout) s.layout = 'classic'; // before anything below looks up where the tower is
     const out = migrateTo10(s);
-    return out ? toV15(toV14(toV13(toV12(out)))) : null;
+    return out ? toV16(toV15(toV14(toV13(toV12(out))))) : null;
+  }
+  // v16 (0.30): you play only the villain. An older campaign carries on with a villain two levels above the party,
+  // Millbrook with a palisade, archers and a tavern, and its bands staying bands (only new ones march on the town)
+  function toV16(s) {
+    s.v = 16;
+    if (s.phase === 'over' && (s.result === 'victory' || s.result === 'tpk')) s.result = s.result === 'victory' ? 'defeat' : 'wiped';
+    const V = s.villain; if (!V.level) { V.level = clamp(avgLevel(s) + 2, 1, BOSS_LEVEL); V.xp = VXP[V.level]; }
+    if (!s.town) s.town = newTown();
+    const T = s.town; T.b = T.b || {}; for (const k of ['walls', 'watch', 'tavern']) if (!T.b[k]) T.b[k] = 1;
+    if (T.wallHp === undefined) T.wallHp = WALL_HP[T.b.walls]; if (T.hall === undefined) T.hall = hallMax(s); T.seen = T.seen || [];
+    if (s.talents) s.talents.lv = Math.max(s.talents.lv || 1, V.level);
+    s.infamyTotal = s.infamyTotal || V.xp || 0; s.wipes = s.wipes || 0; s.siegeCount = s.siegeCount || 0;
+    return s;
   }
   // v15 (0.24): research becomes talents. Everything researched stays learned, research waiting in line is refunded,
   // and the villain has as many points as a party of this level would have earned
@@ -908,7 +919,9 @@
   }
   const garrisonPower = o => forcePower(garrisonOf(o).map(([t, n]) => stackStats(t, n)));
   // the villain rides the map as a projection a little above the party; on the throne it is level 20
-  const mapBossLevel = s => Math.min(BOSS_LEVEL - 2, avgLevel(s) + 2);
+  const mapBossLevel = s => villainLevel(s);
+  // 0.30: the villain's level, from 1 to 20 (old saves without one fight at 20)
+  const villainLevel = s => clamp(Math.round((s && s.villain && s.villain.level) || BOSS_LEVEL), 1, BOSS_LEVEL);
   function villainPower(s) {
     const V = s.villain;
     return forcePower([bossStats(mapBossLevel(s), V.up, false, V.type)].concat(V.army.map(a => stackStats(a.type, a.count))));
@@ -916,7 +929,7 @@
   // the honor guard that stands with the villain in the throne room when there is no army
   function honorGuard(s) { const cmd = vType(s).powers.indexOf('command') >= 0; const n = Math.max(2, Math.round(partyPower(s) / 9 / stackPower('knight', 1) * (cmd ? 1.4 : 1))); return ['knight', n]; }
   function throneStacks(s) { const V = s.villain; const st = V.army.map(a => [a.type, a.count]); if (!st.length) st.push(honorGuard(s)); return st; }
-  function thronePower(s) { const cmd = vType(s).powers.indexOf('command') >= 0; return forcePower([bossStats(BOSS_LEVEL, s.villain.up, true, s.villain.type)].concat(throneStacks(s).map(([t, n]) => { const st = stackStats(t, n); if (cmd && t === 'knight') st.dpr *= 1.2; return st; }))); }
+  function thronePower(s) { const cmd = vType(s).powers.indexOf('command') >= 0; return forcePower([bossStats(villainLevel(s), s.villain.up, true, s.villain.type)].concat(throneStacks(s).map(([t, n]) => { const st = stackStats(t, n); if (cmd && t === 'knight') st.dpr *= 1.2; return st; }))); }
   // your citadel defends its gates with monsters from the highest buildings you've raised
   const GUARD_POSTS = [['gate', 'demon'], ['blood', 'vampire'], ['mire', 'hydra'], ['roost', 'dragon'], ['knights', 'knight'], ['giant', 'giant'], ['troll', 'troll'], ['altar', 'wraith'], ['ogre', 'ogre'], ['ossuary', 'skeleton'], ['barracks', 'orc'], ['throne', 'goblin']];
   function gateGuards(s) {
@@ -929,9 +942,11 @@
   // how the showdown would go today: from level 10 the party plays it out in its head (a quick simulation,
   // remembered until something that matters changes), so healers, items and the villain's kind all count
   const ODDS_NEED = 0.55;
+  const MARCH_LV = 10;
+  const TRAIN_XP = 0.03;   // of a level's experience, every day   // 0.30: before this the heroes don't think about the Dark Tower at all
   function finaleOdds(s) {
     const V = s.villain;
-    const key = [V.type, JSON.stringify(V.up), V.army.map(a => a.type + a.count).join(), Object.keys((s.base && s.base.b) || s.citadel.built).sort().join(), s.heroes.map(h => h.id + ':' + h.level + ':' + h.items.length).join(), s.crown ? 1 : 0].join('|');
+    const key = [V.type, villainLevel(s), JSON.stringify(V.up), V.army.map(a => a.type + a.count).join(), Object.keys((s.base && s.base.b) || s.citadel.built).sort().join(), s.heroes.map(h => h.id + ':' + h.level + ':' + h.items.length).join(), s.crown ? 1 : 0].join('|');
     if (s.odds && s.odds.key === key) return s.odds;
     const r = simulateFinale(s, 10);
     s.odds = { key, win: r.win, gate: r.gateLoss };
@@ -941,7 +956,8 @@
     const q = questOn(s, { kind: 'site', id: 'tower' });
     const ratio = partyPower(s) / thronePower(s);
     const L = avgLevel(s);
-    if (L < 10) {
+    // 0.30: well below the villain's level, the heroes don't even think about the tower yet
+    if (L < Math.max(MARCH_LV, villainLevel(s) - 6)) {
       const label = ratio < READY * 0.6 ? 'Hopeless' : 'Long odds';
       return { ratio, need: READY, win: null, label, ready: false };
     }
@@ -994,6 +1010,7 @@
   }
   function postQuest(s, ref, reward) {
     reward = Math.round(reward);
+    if (s.v >= 16) return 'Millbrook posts its own quests now.';
     if (s.phase !== 'map') return 'Quests are posted between days.';
     if (ref.kind === 'site' && ref.id === 'tower' && avgLevel(s) < 10) return 'The party is nowhere near ready to face a level 20 king. They need level 10 at least.';
     if (s.quests.filter(q => q.status === 'open').length >= MAX_QUESTS) return 'The board is full. Three quests at a time.';
@@ -1071,8 +1088,11 @@
       if (o.kind === 'stack') {
         const name = CREATURES[o.type].name;
         const fv = fightValue(fightRatio(s, o), q ? q.reward : 0, name);
+        // 0.30: a wave on its way to Millbrook: the heroes want to stop it before it gets there, more if the walls won't
+        let dv = 0, dwhy = null;
+        if (o.wave && fv.v > 0) { const out = siegeOutlook(s, o); const d = byDrive('duty'); dv = 3 + (d ? 3 : 0) + Math.min(8, (out.hallDmg * 2 + out.wallDmg * 0.5) / 20); dwhy = `${d ? d.name : 'The party'} won't let the ${name} reach Millbrook.`; }
         const t = bestZoneTile(o.x, o.y);
-        if (t) add(o.id, t[0], t[1], fv.v * rum + rb + (fv.v > 0 ? qb : 0), q ? `The quest board offers a reward for the ${name}. ${fv.why}` : fv.why, o, name);
+        if (t) add(o.id, t[0], t[1], fv.v * rum + rb + (fv.v > 0 ? qb : 0) + dv, q ? `The quest board offers a reward for the ${name}. ${fv.why}` : dwhy || fv.why, o, name);
         continue;
       }
       if (o.kind === 'dungeon' && o.mine && o.building) {
@@ -1084,7 +1104,8 @@
       if (o.kind === 'dungeon') {
         const name = DUNGEONS[o.dtype].name;
         const fv = fightValue(pp / garrisonPower(o), q ? q.reward : 0, name.toLowerCase() + '\'s garrison');
-        add(o.id, o.x, o.y, (fv.v > 0 ? (o.mine ? fv.v * 0.5 + (byDrive('duty') ? 1.5 : 0) : fv.v + 3 + (byDrive('duty') ? 2 : 0)) : fv.v) * rum + rb + (fv.v > 0 ? qb : 0), fv.v > 0 ? `They want to ${o.mine ? 'wreck' : 'destroy'} the ${name} before it spawns more monsters.` : fv.why, o, name);
+        const hb = o.mine && fv.v > 0 ? Math.min(6, (o.harm || 0) / 30) : 0;   // the lair whose waves hurt Millbrook
+        add(o.id, o.x, o.y, (fv.v > 0 ? (o.mine ? fv.v * 0.5 + (byDrive('duty') ? 1.5 : 0) : fv.v + 3 + (byDrive('duty') ? 2 : 0)) : fv.v) * rum + rb + (fv.v > 0 ? qb : 0) + hb, fv.v > 0 ? (hb > 1 ? `Millbrook wants the ${name} gone: its waves keep hitting the town.` : `They want to ${o.mine ? 'wreck' : 'destroy'} the ${name} before it spawns more monsters.`) : fv.why, o, name);
         continue;
       }
       const it = ITEMS[o.kind]; const h = it.drives.map(byDrive).find(Boolean);
@@ -1421,10 +1442,17 @@
     temple: { name: 'Temple', max: 2, kind: 'heroes', costs: [{ gold: 30, lumber: 15, ore: 5 }, { gold: 60, lumber: 20, ore: 20 }], days: [3, 5], levels: ['the heroes heal twice as fast between fights', 'once a week, a fallen hero comes back to life instead of being replaced'], text: 'Priests who keep the heroes alive.' },
     guild: { name: 'Mage Guild', max: 2, kind: 'heroes', costs: [{ gold: 35, lumber: 10, ore: 15 }, { gold: 60, lumber: 15, ore: 30 }], days: [3, 5], levels: ['wizards and clerics: +1 to hit, +2 damage', 'wizards and clerics: another +1 to hit, +2 damage'], text: 'Spellbooks and teachers for the casters.' },
     yard: { name: 'Training Yard', max: 2, kind: 'heroes', costs: [{ gold: 30, lumber: 20 }, { gold: 55, lumber: 30, ore: 10 }], days: [3, 4], levels: ['+15% experience from every fight', '+30% experience from every fight'], text: 'Drills and sparring between adventures.' },
-    tavern: { name: 'Tavern', max: 2, kind: 'heroes', costs: [{ gold: 20, lumber: 15 }, { gold: 40, lumber: 25, ore: 5 }], days: [2, 3], levels: ['the table\'s mood rises a little every day', 'the mood rises more, and new heroes arrive with a magic item'], text: 'Songs, ale and new faces.' }
+    tavern: { name: 'Tavern', max: 2, kind: 'heroes', costs: [{ gold: 20, lumber: 15 }, { gold: 40, lumber: 25, ore: 5 }], days: [2, 3], levels: ['new heroes come to take the place of the fallen', 'new heroes arrive with a magic item'], text: 'Songs, ale and new faces. While it stands, fallen heroes are replaced, and a wiped-out party is followed by a new one.' },
+    // 0.30: Millbrook's defences. The game runs Millbrook now and builds these to hold off your waves
+    walls: { name: 'Walls', max: 3, kind: 'defence', costs: [{ gold: 20, lumber: 20 }, { gold: 40, lumber: 25, ore: 20 }, { gold: 70, lumber: 35, ore: 40 }], days: [2, 4, 6], names: ['Palisade', 'Stone Walls', 'Great Walls'], levels: ['a wooden palisade', 'stone walls and a gatehouse', 'great walls with a keep'], text: 'Your monsters have to break through before they can burn anything. Flyers go straight over.' },
+    watch: { name: 'Archer Towers', max: 3, kind: 'defence', costs: [{ gold: 15, lumber: 15 }, { gold: 30, lumber: 20, ore: 5 }, { gold: 50, lumber: 30, ore: 15 }], days: [2, 3, 4], levels: ['archers shoot at everything on the way in', 'more archers', 'a ring of archer towers'], text: 'Archers on the walls. Good against anything, and they can hit flyers. Orc archers, bandits and giants shooting back pin them down.' },
+    ballista: { name: 'Ballista', max: 2, kind: 'defence', needs: { smith: 1 }, costs: [{ gold: 30, lumber: 20, ore: 15 }, { gold: 55, lumber: 25, ore: 30 }], days: [3, 4], levels: ['two great bolts a round', 'three great bolts a round'], text: 'Huge bolts that bring down one big monster at a time: ogres, trolls, giants and worse. Wasted on goblins.' },
+    arcane: { name: 'Arcane Tower', max: 2, kind: 'defence', needs: { guild: 1 }, costs: [{ gold: 35, lumber: 10, ore: 20 }, { gold: 60, lumber: 15, ore: 35 }], days: [3, 5], levels: ['fire rains on a whole crowd at once', 'hotter fire'], text: 'The Mage Guild\'s fire falls on a whole crowd at once. Deadly against swarms of goblins and skeletons.' },
+    bell: { name: 'Temple Bell', max: 1, kind: 'defence', needs: { temple: 1 }, costs: [{ gold: 30, lumber: 10, ore: 20 }], days: [3], levels: ['its ringing burns the undead'], text: 'A blessed bell. Its ringing burns skeletons, wraiths, vampires and every other undead thing, and makes every arrow count for more against them.' }
   };
   const TOWN_ORDER = ['market', 'sawmill', 'ironworks', 'smith', 'temple', 'guild', 'yard', 'tavern'];
-  const TOWN_TAX = { gold: 4, lumber: 1, ore: 1 }; // what Millbrook makes on its own every day
+  const DEF_ORDER = ['walls', 'watch', 'ballista', 'arcane', 'bell'];
+  const TOWN_TAX = { gold: 6, lumber: 2, ore: 2 }; // what Millbrook makes on its own every day (0.30: more, since it has walls to build)
   const QUEST_GOLD = 4; // town gold per point of quest reward
   const townLv = (s, k) => (s && s.town && s.town.b[k]) || 0;
   function townCost(s, k) { const B = TOWN_B[k]; const l = townLv(s, k); return B && l < B.max ? B.costs[l] : null; }
@@ -1434,6 +1462,7 @@
     const B = TOWN_B[k]; if (!B) return 'Unknown building.';
     if (townLv(s, k) >= B.max) return 'Fully built.';
     if (s.town.build) return `Millbrook's builders are busy with the ${TOWN_B[s.town.build.k].name}: ${s.town.build.days} day${s.town.build.days > 1 ? 's' : ''} to go.`;
+    const need = Object.keys(B.needs || {}).find(n => townLv(s, n) < B.needs[n]); if (need) return `Needs the ${TOWN_B[need].name} first.`;
     const P = townCost(s, k); if (!townAfford(s, P)) return `Millbrook needs ${priceText(P)}.`;
     return null;
   }
@@ -1442,7 +1471,7 @@
     const P = townCost(s, k); for (const r of Object.keys(P)) s.town.res[r] -= P[r];
     const l = townLv(s, k); const d = TOWN_B[k].days[l];
     s.town.build = { k, days: d, total: d, cost: P };
-    say(s, `Millbrook starts ${l ? 'enlarging its' : 'building a'} ${TOWN_B[k].name}. Ready in ${d} days.`, 'good');
+    say(s, k === 'walls' ? `Millbrook starts building ${TOWN_B.walls.names[l].toLowerCase()}. Ready in ${d} days.` : `Millbrook starts ${l ? 'enlarging its' : 'building a'} ${TOWN_B[k].name}. Ready in ${d} days.`, 'note');
     return null;
   }
   function townCancel(s) {
@@ -1460,19 +1489,22 @@
     return { hit: (sm >= 1 ? 1 : 0) + gu, ac: sm >= 2 ? 1 : 0, dmg: (sm >= 3 ? 2 : 0) + 2 * gu };
   }
   // the town's day: income comes in and the builders work
+  // the town's day: income comes in, the builders work, the walls are patched, and (0.30) Millbrook picks its next building
   function townDay(s) {
     const T = s.town; if (!T) return null;
     const inc = townIncome(s); for (const r of RES_KEYS) T.res[r] = (T.res[r] || 0) + (inc[r] || 0);
-    let built = null;
+    let built = null, started = null;
     if (T.build) {
       T.build.days -= 1;
       if (T.build.days <= 0) {
         built = T.build.k; T.b[built] = townLv(s, built) + 1; T.build = null; const B = TOWN_B[built];
-        say(s, `Millbrook's ${B.name} is ${T.b[built] > 1 ? 'enlarged' : 'finished'}: ${B.levels ? B.levels[T.b[built] - 1] : 'more ' + Object.keys(B.income[0])[0] + ' every day'}.`, 'good');
+        if (built === 'walls') T.wallHp = WALL_HP[T.b.walls];   // new walls stand whole
+        say(s, `Millbrook's ${built === 'walls' ? TOWN_B.walls.names[T.b.walls - 1] : B.name} ${T.b[built] > 1 && built !== 'walls' ? 'is enlarged' : 'is finished'}: ${B.levels ? B.levels[T.b[built] - 1] : 'more ' + Object.keys(B.income[0])[0] + ' every day'}.`, 'note');
       }
     }
-    if (townLv(s, 'tavern')) s.engagement = clamp(s.engagement + townLv(s, 'tavern'), 0, 100);
-    return { income: inc, built };
+    townRepairs(s);
+    if (!T.build) { const k = townPlan(s); if (k && !townBuild(s, k)) started = k; }
+    return { income: inc, built, started };
   }
   // 0.20: each town's main building grows as the town does, every few levels of building (Millbrook) or research (the tower)
   const HALL_STAGES = [{ at: 0, name: 'Hamlet Hall' }, { at: 3, name: 'Village Hall' }, { at: 7, name: 'Town Hall' }, { at: 12, name: 'City Hall' }, { at: 18, name: 'Capitol' }];
@@ -1489,7 +1521,264 @@
   // the heroes bring their loot home: a share of every fight they win goes to Millbrook
   const LOOT_SHARE = { Trivial: 0.3, Easy: 0.6, Tense: 1, Harrowing: 1.4 };
   const lootGold = (s, label) => Math.round((3 + 2 * avgLevel(s)) * (LOOT_SHARE[label] || 0.5));
-  const newTown = () => ({ res: { gold: 40, lumber: 20, ore: 10 }, b: {}, build: null, revived: 0 });
+  const newTown = () => ({ res: { gold: 40, lumber: 20, ore: 10 }, b: { walls: 1, watch: 1, tavern: 1 }, build: null, revived: 0, wallHp: WALL_HP[1], hall: HALL_BASE, seen: [], burned: 0 });
+
+  /* ================= the villain edition (0.30) =================
+     You play only the villain. It starts at level 1 and levels up on Infamy. Your lairs send waves down the roads
+     to Millbrook on their own; the game runs Millbrook, which builds walls and towers against them and sends its
+     heroes after your lairs. You win by razing Millbrook or wiping out its heroes; you lose if they beat you on your throne. */
+  // Infamy needed for each villain level, counted from the start
+  const VXP = [0, 0].concat(Array.from({ length: BOSS_LEVEL - 1 }, (_, i) => Math.round(1.8 * Math.pow(i + 1, 1.93))));
+  const villainNext = s => { const L = villainLevel(s); return L >= BOSS_LEVEL ? null : VXP[L + 1]; };
+  const powersAt = (s, L) => vType(s).powers.filter((k, i) => L >= (POWER_LV[i] || 1));
+  function addInfamy(s, n, why) {
+    const V = s.villain; if (!V || !(n > 0)) return 0;
+    if (!V.level) V.level = villainLevel(s);
+    // hurting famous heroes and a big town spreads your name further: Infamy counts more as the heroes level up
+    n = Math.round(n * (1 + talentFx(s).infamy) * (1 + 0.06 * (avgLevel(s) - 1)) * 10) / 10;
+    V.xp = (V.xp || 0) + n; s.infamyTotal = (s.infamyTotal || 0) + n;
+    if (s.wk) { s.wk.infamy = s.wk.infamy || []; if (why) s.wk.infamy.push({ label: why, v: n }); }
+    const L0 = V.level;
+    while (V.level < BOSS_LEVEL && V.xp >= VXP[V.level + 1]) V.level++;
+    if (V.level > L0) {
+      s.odds = null;
+      const fresh = powersAt(s, V.level).filter(k => powersAt(s, L0).indexOf(k) < 0).map(k => BOSS_POWERS[k].name);
+      say(s, `${vName(s)} grows stronger: level ${V.level}.${fresh.length ? ` ${capFirst(vP(s).he)} learns ${fresh.join(' and ')}.` : ''}`, 'boss');
+      s.vUps = (s.vUps || []).concat([{ from: L0, to: V.level, powers: fresh }]);
+      talentTick(s);
+    }
+    return n;
+  }
+
+  /* --- Millbrook's walls and towers --- */
+  const WALL_HP = [0, 160, 360, 640], HALL_BASE = 300, SACK_ROUNDS = 2, SACK_DMG = 0.6;
+  const ARROWS = [0, 16, 26, 38], BOLTS = [0, 2, 3], BOLT_DMG = 32, SPLASH = [0, 5, 9], SPLASH_N = 10, HOLY = 6;
+  // brutes break walls twice as fast
+  const SMASH = ['ogre', 'troll', 'giant', 'colossus', 'irongolem', 'hydra'];
+  const allTownLevels = s => TOWN_ORDER.concat(DEF_ORDER).reduce((t, k) => t + townLv(s, k), 0);
+  const hallMax = s => HALL_BASE + 15 * allTownLevels(s);
+  const militiaDpr = lv => 7 * (1 + lv('walls')) * (1 + 0.2 * lv('yard')) * (1 + 0.1 * lv('smith'));
+  const wallName = s => { const l = townLv(s, 'walls'); return l ? TOWN_B.walls.names[l - 1] : 'no walls'; };
+  // one monster of a wave against walls and towers
+  function waveUnit(s, w) {
+    const C = CREATURES[w.type]; const L = w.lvl || 1; const fx = talentFx(s); const m = fx.mod[w.type] || {}; const a = fx.modAll;
+    return {
+      hp: C.hp * (1 + (a.hp || 0) + (m.hp || 0)) * (1 + 0.3 * (L - 1)),
+      dmg: (avgDie(C.dice[0], C.dice[1], C.dice[2]) + (a.dmg || 0) + (m.dmg || 0) + (L - 1)) * (C.attacks || 1) * 0.5,
+      smash: SMASH.indexOf(w.type) >= 0 ? 2 : 1, fly: !!C.flyer, undead: !!C.undead, shooter: !!C.shooter, regen: !!(C.regen || m.regen || a.regen)
+    };
+  }
+  // a wave against Millbrook, worked out on average numbers (no dice): the towers shoot as it comes in, then it
+  // batters the walls; once it's through (or if it flies over) it sacks the town for three rounds and goes home
+  function simSiege(s, w, opts) {
+    opts = opts || {}; const lv = opts.lv || (k => townLv(s, k));
+    const U = waveUnit(s, w); const units = []; for (let i = 0; i < Math.max(0, Math.round(w.count)); i++) units.push(U.hp);
+    const wallMax = WALL_HP[lv('walls')] || 0; let wall = Math.min(wallMax, opts.wall !== undefined ? opts.wall : wallMax);
+    const alive = () => { let n = 0; for (const h of units) if (h > 0) n++; return n; };
+    const holy = U.undead && lv('bell') ? 1.5 : 1;
+    // the archers and militia finish off the weakest first, so damage kills rather than spreads
+    const pool = d => { if (d <= 0) return; const idx = []; units.forEach((h, i) => { if (h > 0) idx.push(i); }); idx.sort((a, b) => units[a] - units[b]); for (const i of idx) { if (d <= 0) break; const t = Math.min(d, units[i]); units[i] -= t; d -= t; } };
+    const volley = inside => {
+      const n = alive(); if (!n) return;
+      const pinned = 1 - Math.min(0.4, U.shooter ? 0.03 * n : 0);   // orc archers, bandits and giants shoot back
+      pool(ARROWS[lv('watch')] * pinned * holy);
+      for (let b = 0; b < (BOLTS[lv('ballista')] || 0); b++) { let bi = -1, bh = 0; units.forEach((h, i) => { if (h > bh) { bh = h; bi = i; } }); if (bi >= 0) units[bi] = Math.max(0, units[bi] - BOLT_DMG * holy); }
+      const sp = (SPLASH[lv('arcane')] || 0) * holy; let k = 0;
+      if (sp) for (let i = 0; i < units.length && k < SPLASH_N; i++) if (units[i] > 0) { units[i] = Math.max(0, units[i] - sp); k++; }
+      if (U.undead && lv('bell')) { let j = 0; for (let i = 0; i < units.length && j < 12; i++) if (units[i] > 0) { units[i] = Math.max(0, units[i] - HOLY); j++; } }
+      if (inside) pool(militiaDpr(lv) * pinned);
+      if (U.regen) for (let i = 0; i < units.length; i++) if (units[i] > 0) units[i] = Math.min(U.hp, units[i] + U.hp * 0.08);
+    };
+    let wallDmg = 0, hallDmg = 0, breached = U.fly || wall <= 0, rounds = 0;
+    for (let r = 0; r < 2 && alive(); r++) { volley(false); rounds++; }
+    for (let r = 0; r < 6 && !breached && alive(); r++) { volley(true); rounds++; const d = alive() * U.dmg * U.smash; const t = Math.min(d, wall); wall -= t; wallDmg += t; if (wall <= 0) breached = true; }
+    if (breached) for (let r = 0; r < SACK_ROUNDS && alive(); r++) { volley(true); rounds++; hallDmg += alive() * U.dmg * SACK_DMG; }
+    const left = alive();
+    return { left, killed: Math.round(w.count) - left, wallDmg: Math.round(wallDmg), hallDmg: Math.round(hallDmg), breached: breached && left > 0 || hallDmg > 0, wallLeft: Math.max(0, Math.round(wall)), fly: U.fly, rounds };
+  }
+  // how a wave would fare against Millbrook right now: Crushed, Repelled, Breaks in, Sacks the town
+  function siegeOutlook(s, o) {
+    const r = simSiege(s, { type: o.type, count: o.count, lvl: o.lvl }, { wall: s.town ? s.town.wallHp : undefined });
+    const label = r.hallDmg >= 140 ? 'Sacks the town' : r.hallDmg > 0 ? 'Breaks in' : r.left ? 'Repelled' : 'Crushed';
+    return Object.assign(r, { label });
+  }
+  const PLUNDER = { gold: 0.45, lumber: 0.15, ore: 0.15 };
+  // a building burns down a level (never the walls: those just take damage)
+  function burnBuilding(s) {
+    const T = s.town; const opts = TOWN_ORDER.concat(DEF_ORDER).filter(k => k !== 'walls' && townLv(s, k) > 0 && !(T.build && T.build.k === k));
+    if (!opts.length) return null;
+    const k = pick(opts); T.b[k]--; T.burned = (T.burned || 0) + 1;
+    return k;
+  }
+  const bName = (s, k) => k === 'walls' ? wallName(s) : TOWN_B[k].name;
+  function siegeText(s, r) {
+    const C = CREATURES[r.type]; const nm = (r.count > 1 ? C.name : C.one).toLowerCase(); const lz = r.lair ? ` from your ${DUNGEONS[r.lair].name}` : '';
+    if (!r.breached && !r.left) return `${r.count} ${nm}${lz} attack Millbrook. The towers and militia cut them all down${r.wallDmg ? ` after they hack ${r.wallDmg} off the walls` : ' before they reach the walls'}.`;
+    if (!r.breached) return `${r.count} ${nm}${lz} batter Millbrook's walls (−${r.wallDmg}) and fall back, ${r.left} still standing.`;
+    const pl = Object.keys(r.plunder).map(k => `${r.plunder[k]} ${k}`).join(', ');
+    return `${r.count} ${nm}${lz} ${r.fly ? 'fly over the walls' : 'break through the walls'} and sack Millbrook: the town hall takes ${r.hallDmg} damage${pl ? `, and they carry off ${pl}` : ''}${r.burned.length ? `. The ${r.burned.map(k => TOWN_B[k].name).join(' and the ')} burn${r.burned.length > 1 ? '' : 's'} down a level` : ''}. ${r.left} make it home.`;
+  }
+  function resolveSiege(s, o) {
+    const T = s.town; if (!T) return null;
+    const r = simSiege(s, { type: o.type, count: o.count, lvl: o.lvl }, { wall: T.wallHp });
+    const lair = o.lair ? myLairs(s).find(z => z.id === o.lair) : null;
+    const rep = { type: o.type, count: o.count, lvl: o.lvl || 1, killed: r.killed, left: r.left, wallDmg: r.wallDmg, hallDmg: r.hallDmg, breached: r.breached, fly: r.fly, plunder: {}, burned: [], lair: lair ? lair.dtype : null, x: o.x, y: o.y };
+    T.wallHp = r.wallLeft;
+    if (r.hallDmg > 0) {
+      T.hall = Math.max(0, (T.hall === undefined ? hallMax(s) : T.hall) - r.hallDmg);
+      for (const k of RES_KEYS) { const g = Math.min(Math.floor(T.res[k] || 0), Math.round(r.hallDmg * PLUNDER[k])); if (g > 0) { T.res[k] -= g; s.res[k] += g; rep.plunder[k] = g; } }
+      const n = r.hallDmg >= 300 ? 3 : r.hallDmg >= 170 ? 2 : r.hallDmg >= 70 ? 1 : 0;
+      for (let i = 0; i < n; i++) { const k = burnBuilding(s); if (k) rep.burned.push(k); }
+      T.hall = Math.min(T.hall, hallMax(s));
+    }
+    // Millbrook remembers what hit it, and the survivors' tracks lead its heroes back to the lair
+    T.seen = [{ type: o.type, count: o.count, lvl: o.lvl || 1, day: dayIndex(s) }].concat(T.seen || []).slice(0, 4);
+    if (lair) { lair.known = true; lair.rumored = true; lair.harm = (lair.harm || 0) + r.hallDmg + r.wallDmg * 0.4 + 5; }
+    s.objects = s.objects.filter(z => z !== o);
+    if (lair && r.left) { const u = DUNGEONS[lair.dtype].unit; lair.pool[u] = Math.min(lairCap(s, lair) * 1.5, (lair.pool[u] || 0) + r.left); }
+    const C = CREATURES[o.type]; const nm = (o.count > 1 ? C.name : C.one).toLowerCase();
+    const inf = (r.wallDmg || r.hallDmg ? 1 : 0) + r.wallDmg / 50 + r.hallDmg / 10 + 3 * rep.burned.length + (rep.plunder.gold || 0) / 8;
+    rep.infamy = addInfamy(s, inf, r.breached ? `Your ${nm} broke into Millbrook` : `Your ${nm} battered Millbrook's walls`);
+    rep.text = siegeText(s, rep);
+    say(s, rep.text, r.breached ? 'big' : 'dm');
+    s.todayActive = true;
+    (s.nightSieges = s.nightSieges || []).push(rep);
+    s.siegeCount = (s.siegeCount || 0) + 1;
+    if (s.wk) { s.wk.sieges = (s.wk.sieges || 0) + 1; if (r.breached) s.wk.breaches = (s.wk.breaches || 0) + 1; s.wk.plunder = (s.wk.plunder || 0) + (rep.plunder.gold || 0); s.wk.burned = (s.wk.burned || 0) + rep.burned.length; }
+    if (T.hall <= 0) s.razed = true;
+    return rep;
+  }
+  // the town patches its walls and hall every day, and decides what to build next
+  function townRepairs(s) {
+    const T = s.town; if (T.wallHp === undefined) T.wallHp = WALL_HP[townLv(s, 'walls')]; if (T.hall === undefined) T.hall = hallMax(s);
+    const wm = WALL_HP[townLv(s, 'walls')] || 0; T.wallHp = Math.min(wm, T.wallHp + Math.ceil(wm * 0.2));
+    T.hall = Math.min(hallMax(s), T.hall + Math.ceil(hallMax(s) * 0.03));
+  }
+  // what Millbrook expects to face: the waves that hit it lately (a little bigger), and the ones its heroes have seen coming
+  function townThreat(s) {
+    const T = s.town; const now = dayIndex(s);
+    const seen = (T.seen || []).filter(w => now - w.day <= 10).map(w => ({ type: w.type, count: w.count * 1.15, lvl: w.lvl }));
+    const coming = s.objects.filter(o => o.kind === 'stack' && o.wave && o.known).map(o => ({ type: o.type, count: o.count, lvl: o.lvl || 1 }));
+    return seen.concat(coming);
+  }
+  const siegeHarm = r => r.hallDmg * 2 + r.wallDmg * 0.5 + (r.breached ? 30 : 0);
+  // its plan when nothing is hitting it: trade, the heroes' buildings and defences, in turn
+  const TOWN_PLAN = [['market', 1], ['smith', 1], ['sawmill', 1], ['yard', 1], ['watch', 2], ['temple', 1], ['ironworks', 1], ['walls', 2], ['market', 2], ['guild', 1], ['smith', 2], ['yard', 2], ['tavern', 2],
+    ['sawmill', 2], ['temple', 2], ['watch', 3], ['ironworks', 2], ['guild', 2], ['ballista', 1], ['smith', 3], ['market', 3], ['walls', 3], ['arcane', 1], ['bell', 1], ['ballista', 2], ['arcane', 2], ['sawmill', 3], ['ironworks', 3]];
+  function townPlan(s) {
+    const lv = k => townLv(s, k);
+    const can = k => { const B = TOWN_B[k]; if (!B || lv(k) >= B.max) return false; return !Object.keys(B.needs || {}).some(n => lv(n) < B.needs[n]); };
+    const afford = k => townAfford(s, townCost(s, k));
+    // a burned tavern comes first: without it, nobody replaces fallen heroes
+    if (!lv('tavern')) return afford('tavern') ? 'tavern' : null;
+    // then whatever would have stopped the waves best, for its price
+    const threat = townThreat(s);
+    if (threat.length) {
+      const harmWith = over => sum(threat, w => siegeHarm(simSiege(s, w, { lv: k => over[k] !== undefined ? over[k] : lv(k) })));
+      const base = harmWith({});
+      if (base > 20) {
+        const opts = [];
+        for (const k of DEF_ORDER) { if (!can(k)) continue; const o = {}; o[k] = lv(k) + 1; const gain = base - harmWith(o); const c = townCost(s, k); if (gain > 5) opts.push({ k, gain, v: gain / (c.gold + 0.7 * (c.lumber || 0) + (c.ore || 0)) }); }
+        opts.sort((a, b) => b.v - a.v);
+        // the best value it can pay for now, if it does real good; otherwise it saves up for the best, when the danger is real
+        const now = opts.find(o => afford(o.k) && o.gain >= opts[0].gain * 0.4);
+        if (now) return now.k;
+        if (opts.length && base > 60) return null;
+      }
+    }
+    for (const [k, n] of TOWN_PLAN) { if (lv(k) >= n || !can(k)) continue; return afford(k) ? k : null; }
+    return TOWN_ORDER.concat(DEF_ORDER).filter(can).sort((a, b) => townCost(s, a).gold - townCost(s, b).gold).find(afford) || null;
+  }
+  // Millbrook's quest board: a reward for the lair whose waves have hurt it most, once its heroes know where it is
+  function townQuests(s) {
+    if (s.march || !s.town) return null;
+    if (s.quests.filter(q => q.status === 'open').length >= 2) return null;
+    const gold = s.town.res.gold || 0; if (gold < 24) return null;
+    const t = myLairs(s).filter(o => !o.building && o.known && !lairWrecked(s, o) && (o.harm || 0) > 0 && !questOn(s, { kind: 'obj', id: o.id })).sort((a, b) => b.harm - a.harm)[0];
+    if (!t) return null;
+    return townPost(s, { kind: 'obj', id: t.id }, clamp(Math.floor((gold - 24) / QUEST_GOLD / 3), 1, 4));
+  }
+  function townPost(s, ref, reward) {
+    const t = refTarget(s, ref); if (!t) return null;
+    s.town.res.gold -= reward * QUEST_GOLD;
+    const q = { id: 'q' + (s.uid++), ref: { kind: ref.kind, id: ref.id }, name: questName(s, ref), reward, week: s.week, status: 'open' };
+    s.quests.push(q);
+    if (ref.kind === 'obj') { t.known = true; t.rumored = true; }
+    say(s, `Millbrook posts a new quest: "${q.name}." Reward: ${rewardText(s, reward)}.`, 'dm');
+    return q;
+  }
+
+  /* --- waves: your lairs send their brood down the road to Millbrook --- */
+  const WAVE_NIGHTS = 3, WAVE_SPEED = 0.6;
+  const wavesPerLair = s => 1 + talentFx(s).bands;
+  const wavesOf = (s, o) => s.objects.filter(z => z.kind === 'stack' && z.wave && z.lair === o.id).length;
+  const waveAt = (s, o) => Math.max(1, Math.round(lairRate(s, o) * WAVE_NIGHTS));
+  const atGates = (s, x, y) => { const tw = siteOf(s, 'town'); return Math.abs(x - tw.x) <= 1 && Math.abs(y - tw.y) <= 1 && !(x === tw.x && y === tw.y); };
+  const partyHome = s => { const tw = siteOf(s, 'town'); return s.party.x === tw.x && s.party.y === tw.y && living(s).length > 0; };
+  function releaseWave(s, o, count) {
+    const b = releaseBand(s, o, count || Math.max(1, Math.floor(lairCount(o) * 0.8)), true);
+    if (!b) return null;
+    b.wave = true; b.home = null;
+    return b;
+  }
+  // a wave's road to Millbrook's gates: around the heroes (they never march into them at night) and anything else in the way
+  function wavePath(s, o) {
+    const P = s.party; const tw = siteOf(s, 'town');
+    const enter = (x, y) => {
+      if (x === tw.x && y === tw.y) return tileCost(s, x, y);
+      if (siteAt(s, x, y) || nodeAt(s, x, y) || s.objects.some(z => z !== o && z.x === x && z.y === y)) return Infinity;
+      if (Math.abs(x - P.x) <= 1 && Math.abs(y - P.y) <= 1 && !atGates(s, x, y)) return Infinity;
+      return tileCost(s, x, y);
+    };
+    const D = dijkstra(o.x, o.y, enter, null, tIdx(tw.x, tw.y));
+    const path = tracePath(D.prev, tIdx(o.x, o.y), tIdx(tw.x, tw.y));
+    if (path && path.length) path.pop();
+    return path;
+  }
+  // nights until a wave reaches the gates, if nothing stops it
+  function waveEta(s, o) {
+    if (atGates(s, o.x, o.y)) return 0;
+    const path = wavePath(s, o); if (!path) return null;
+    let c = 0, px = o.x, py = o.y; for (const [x, y] of path) { c += stepCost(s, px, py, x, y); px = x; py = y; }
+    return Math.max(1, Math.ceil(c / waveMP(s, o) - 0.001));
+  }
+  // after the night's marching: waves at the gates lay siege tonight, unless the heroes are home and up to the fight
+  function wavesArrive(s) {
+    s.nightSieges = [];
+    const home = partyHome(s);
+    for (const o of s.objects.slice()) {
+      if (o.kind !== 'stack' || !o.wave) continue;
+      if (!atGates(s, o.x, o.y)) { o.atGates = false; continue; }
+      o.known = true;
+      if (home && !o.noFight && judge(fightRatio(s, o), 0) !== 'avoid') { o.atGates = true; continue; }
+      resolveSiege(s, o);
+    }
+  }
+  // the heroes are dead. While the tavern stands, a new and greener party takes up the sword
+  function hireParty(s) {
+    const A = avgLevel(s); const L = Math.max(1, Math.floor(A * 0.75), Math.min(A, 1 + Math.floor(s.week / 2)));
+    s.rosterUsed = s.rosterUsed || [];
+    const fresh = ROSTER.filter(r => s.rosterUsed.indexOf(r.id) < 0);
+    const ids = [];
+    for (const c of CLASS_ORDER) { const r = fresh.find(z => z.cls === c && ids.indexOf(z.id) < 0); if (r) ids.push(r.id); }
+    for (const r of fresh) if (ids.length < 4 && ids.indexOf(r.id) < 0) ids.push(r.id);
+    const gen = (s.wipes || 0) + 1;
+    const heroes = ids.map(id => { s.rosterUsed.push(id); return heroFrom(ROSTER_BY[id], L, gen); });
+    while (heroes.length < 4) { const c = CLASS_ORDER[heroes.length]; const base = ROSTER.find(r => r.cls === c); let id = c + '-w' + gen; while (heroes.some(x => x.id === id)) id += 'x'; heroes.push(heroFrom(Object.assign({}, base, { id, rid: base.id, name: CLASSES[c].names[gen % CLASSES[c].names.length] }), L, gen)); }
+    for (const h of heroes) { h.xp = XP_TABLE[L] || 0; h.status = 'ok'; }
+    s.heroes = heroes; s.wipes = gen; s.crown = false; s.boots = false;
+    const tw = siteOf(s, 'town'); const P = s.party; P.x = tw.x; P.y = tw.y; P.prev = { x: tw.x, y: tw.y }; P.path = []; P.pending = null; P.mp = 0;
+    s.march = null; s.odds = null;
+    say(s, `Word of the slaughter reaches Millbrook. In the tavern, a new party takes up the sword: ${heroes.map(h => h.name).join(', ')}, level ${L}.`, 'boss');
+    return heroes;
+  }
+  function partyWiped(s) {
+    for (const h of s.heroes) if (h.status === 'ok' || h.status === 'waiting') h.status = 'dead';
+    if (townLv(s, 'tavern') > 0) { hireParty(s); return false; }
+    s.result = 'wiped'; s.phase = 'over';
+    say(s, `The last of Millbrook's heroes is dead, and with the tavern in ashes nobody is left to take up the sword. ${vFull(s)} has won.`, 'boss');
+    return true;
+  }
 
   /* --- talents (0.24) --- */
   const tRank = (s, k) => (s.talents && s.talents.r && s.talents.r[k]) || 0;
@@ -1528,7 +1817,7 @@
     fx.bandCost = Math.min(0.7, fx.bandCost); fx.summonCost = Math.min(0.7, fx.summonCost);
     FX_MEMO.key = key; FX_MEMO.fx = fx; return fx;
   }
-  // points: one to start, one for every level the party gains, Infamy from close fights, the Forbidden Library and some talents
+  // points: one to start, one for every level the villain gains, the Forbidden Library and some talents
   const talentEarned = s => ((s.talents && s.talents.earned) || 0) + libraryLevel(s) + talentFx(s).points;
   const talentFree = s => Math.max(0, talentEarned(s) - talentSpent(s));
   function talentCheck(s, k) {
@@ -1567,16 +1856,14 @@
     for (const k of TALENT_ORDER) { const P = TALENTS[k].power; if (P) V.up[P] = Math.min(LAIR[P].max, tRank(s, k)); }
     const fx = talentFx(s); V.up.hpPct = fx.villain.hp; V.up.hitBonus = fx.villain.hit;
   }
-  // earning: a point for every party level gained, and one for every INFAMY_STEP Infamy
+  // earning (0.30): a point for every level the villain gains
   function talentTick(s) {
     const T = s.talents; if (!T) return 0;
-    const L = avgLevel(s); let got = 0;
+    const L = villainLevel(s); let got = 0;
     if (L > (T.lv || 1)) { got += L - (T.lv || 1); T.earned += L - (T.lv || 1); T.lv = L; }
-    while (T.inf >= INFAMY_STEP) { T.inf -= INFAMY_STEP; T.earned++; got++; }
     if (got) say(s, `${got > 1 ? got + ' talent points' : 'A talent point'} for ${vName(s)}. Spend ${got > 1 ? 'them' : 'it'} at the Dark Tower.`, 'dm');
     return got;
   }
-  function addInfamy(s, n) { if (!s.talents || !(n > 0)) return; s.talents.inf += n * (1 + talentFx(s).infamy); talentTick(s); }
   const summonDays = s => Math.max(1, SUMMON_DAYS - talentFx(s).summonDays);
   const lairDays = (s, k) => talentFx(s).empire ? 1 : Math.max(1, buildDays(k) - talentFx(s).buildDays);
   const siteYield = (s, n) => { const K = NODE_KINDS[n.kind]; return K.per + (minionType(s).perk === K.res ? 1 : 0) + (talentFx(s).yield[K.res] || 0); };
@@ -1609,7 +1896,7 @@
   const lairCap = (s, o) => Math.max(lairRate(s, o) * GARRISON_DAYS, CREATURES[DUNGEONS[o.dtype].unit].base * 2) * (1 + talentFx(s).cap);
   const bandsPerLair = s => BANDS_PER_LAIR + talentFx(s).bands;
   const lairWrecked = (s, o) => !!o.wrecked && o.wrecked > dayIndex(s);
-  function wreckLair(s, o) { const d = talentFx(s).warded ? 1 : 4; o.wrecked = dayIndex(s) + d; for (const k of Object.keys(o.pool)) o.pool[k] = 0; o.known = false; say(s, `The heroes wreck the ${DUNGEONS[o.dtype].name}. It will take your minions ${d > 1 ? 'four days' : 'a day'} to dig it out.`, 'big'); }
+  function wreckLair(s, o) { const d = talentFx(s).warded ? 1 : 3; o.wrecked = dayIndex(s) + d; for (const k of Object.keys(o.pool)) o.pool[k] = 0; o.known = false; say(s, `The heroes wreck the ${DUNGEONS[o.dtype].name}. It will take your minions ${d > 1 ? 'three days' : 'a day'} to dig it out.`, 'big'); }
   const lairCount = o => Math.floor((o.pool && o.pool[DUNGEONS[o.dtype].unit]) || 0);
   function lairsProduce(s) {
     const out = []; out.released = [];
@@ -1618,8 +1905,8 @@
       const u = DUNGEONS[o.dtype].unit; const before = lairCount(o); const cap = lairCap(s, o);
       if ((o.pool[u] || 0) < cap) o.pool[u] = Math.min(cap, (o.pool[u] || 0) + lairRate(s, o));
       const n = lairCount(o) - before; if (n > 0) out.push([u, n]);
-      // two nights' brood marches out as a band and waits by the lair
-      if (lairCount(o) >= bandAt(s, o) && bandsOf(s, o) < bandsPerLair(s)) { const b = releaseBand(s, o); if (b) out.released.push(b.id); }
+      // 0.30: when the lair is full, three nights' brood marches on Millbrook as a wave; the rest stays home to guard it
+      if (lairCount(o) >= Math.min(Math.floor(lairCap(s, o)), waveAt(s, o) + Math.max(1, Math.round(lairRate(s, o)))) && wavesOf(s, o) < wavesPerLair(s)) { const b = releaseWave(s, o, waveAt(s, o)); if (b) out.released.push(b.id); }
     }
     return out;
   }
@@ -1647,22 +1934,23 @@
   }
   const bandsOf = (s, o) => s.objects.filter(z => z.kind === 'stack' && z.lair === o.id).length;
   const bandLevel = o => o.lvl || 1;
-  function releaseBand(s, o, count) {
+  function releaseBand(s, o, count, wave) {
     if (s.objects.filter(z => z.kind === 'stack').length >= MAX_STACKS) return null;
     const u = DUNGEONS[o.dtype].unit; const c = Math.min(Math.floor(o.pool[u] || 0), count || Infinity); if (c < 1) return null;
-    const P = s.party; const spots = [];
+    const P = s.party; const spots = []; const tw = siteOf(s, 'town');
     for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
       const x = o.x + dx, y = o.y + dy; if ((!dx && !dy) || x < 0 || y < 0 || x >= MW || y >= MH) continue;
       if (!isFinite(tileCost(s, x, y)) || objAt(s, x, y) || siteAt(s, x, y) || nodeAt(s, x, y) || !mapOf(s).reach[tIdx(x, y)]) continue;
       if (Math.abs(x - P.x) <= 1 && Math.abs(y - P.y) <= 1) continue;
       if (villainOnMap(s) && s.villain.x === x && s.villain.y === y) continue;
-      spots.push([x, y, Math.hypot(dx, dy) + (mapOf(s).road[tIdx(x, y)] ? 0.6 : 0)]);
+      // a wave steps out on the side facing Millbrook; a band keeps off the road
+      spots.push([x, y, wave ? Math.hypot(x - tw.x, y - tw.y) * 0.5 + Math.hypot(dx, dy) : Math.hypot(dx, dy) + (mapOf(s).road[tIdx(x, y)] ? 0.6 : 0)]);
     }
     if (!spots.length) return null;
     spots.sort((a, b) => a[2] - b[2]);
     o.pool[u] -= c;
     const b = spawnStack(s, o, u, c, spots[0][0], spots[0][1]); b.lvl = Math.min(BAND_MAX_LEVEL, 1 + talentFx(s).vets);
-    say(s, `${c} ${c > 1 ? CREATURES[u].name : CREATURES[u].one} march${c > 1 ? '' : 'es'} out of your ${DUNGEONS[o.dtype].name}.`, 'dm');
+    say(s, `${c} ${c > 1 ? CREATURES[u].name : CREATURES[u].one} march${c > 1 ? '' : 'es'} out of your ${DUNGEONS[o.dtype].name}${wave ? ' toward Millbrook' : ''}.`, 'dm');
     return b;
   }
   function bandCheck(s, id) {
@@ -1694,6 +1982,7 @@
     const e2 = patrolCheck(s, o, x, y); if (e2) return e2;
     if (!bandPath(s, o, x, y)) return 'They can\'t get there.';
     o.patrol = { a: [o.x, o.y], b: [x, y], to: 1 };
+    if (o.wave) { o.wave = false; o.atGates = false; }   // a wave you set to patrol stops its march on Millbrook
     say(s, `You send ${bandName(o).toLowerCase()} to patrol toward ${regionName(s, x, y)}.`, 'dm');
     return null;
   }
@@ -1715,12 +2004,24 @@
     planRoute(s); return null;
   }
   // the night: patrols walk their legs; bands without orders prowl near their lair; wild ones stay put
+  const waveMP = (s, o) => stackMP(o) * WAVE_SPEED * (1 + 0.25 * talentFx(s).reach);
   function bandsMove(s) {
     const P = s.party; const today = dayKey(s);
     const closeToHeroes = (x, y) => Math.abs(x - P.x) <= 1 && Math.abs(y - P.y) <= 1;
     for (const o of s.objects.slice()) {
       if (o.kind !== 'stack') continue; o.trail = null;
       let path = null;
+      if (o.wave) {
+        // a wave marches on Millbrook, round the heroes, and stops at the gates
+        path = wavePath(s, o); if (!path || !path.length) continue;
+        let left = waveMP(s, o), px = o.x, py = o.y; const trail = [[px, py]];
+        for (const [nx, ny] of path) { const c = stepCost(s, px, py, nx, ny); if (c > left || (closeToHeroes(nx, ny) && !atGates(s, nx, ny))) break; left -= c; px = nx; py = ny; trail.push([px, py]); }
+        while (trail.length > 1) { const [lx, ly] = trail[trail.length - 1]; if (!siteAt(s, lx, ly) && !nodeAt(s, lx, ly) && !s.objects.some(z => z !== o && z.x === lx && z.y === ly)) break; trail.pop(); }
+        if (trail.length < 2) continue;
+        [o.x, o.y] = trail[trail.length - 1]; o.trail = trail;
+        if (!o.known) o.known = inSight(s, o.x, o.y);
+        continue;
+      }
       if (o.patrol) {
         let tgt = o.patrol.to ? o.patrol.b : o.patrol.a;
         if (o.x === tgt[0] && o.y === tgt[1]) { o.patrol.to = o.patrol.to ? 0 : 1; tgt = o.patrol.to ? o.patrol.b : o.patrol.a; }
@@ -2246,6 +2547,16 @@
     const P = s.party;
     if (s.phase !== 'map') return { t: 'none' };
     if (!living(s).length) return { t: 'stop', why: 'dead' };
+    // 0.30: a wave at Millbrook's gates while the heroes are home: they man the walls before anything else
+    if (partyHome(s)) {
+      const g = s.objects.find(o => o.kind === 'stack' && o.wave && o.atGates);
+      if (g) {
+        g.atGates = false; g.noFight = true; P.path = []; P.pending = null;
+        say(s, `${quantityWord(g.count)} ${CREATURES[g.type].name} storm Millbrook! The heroes run to the walls.`, 'big');
+        startBattle(s, g, { siege: true });
+        return { t: 'battle', from: { x: P.x, y: P.y }, x: P.x, y: P.y };
+      }
+    }
     if (P.pending && P.pending.x === P.x && P.pending.y === P.y) {
       P.pending = null;
       const r = arrive(s, P.x, P.y, { x: P.x, y: P.y }, []);
@@ -2419,7 +2730,6 @@
     // heirlooms (0.16): as their fame grows (party level 10, 12, 14, 16, 18) someone hands the heroes a magic item
     const L = avgLevel(s); s.heirloom = s.heirloom || 8;
     while (s.heirloom < 18 && L >= s.heirloom + 2) { s.heirloom += 2; say(s, `Word of the heroes spreads. ${pick(HEIRLOOM_GIVERS)} gives them ${grantArtifact(s, randomArtifact(s))}`, 'good'); }
-    talentTick(s);   // 0.24: the villain earns a talent point for every level the party gains
   }
   const HEIRLOOM_GIVERS = ['An old knight in Millbrook', 'A grateful merchant', 'The temple of Millbrook', 'A retired adventurer', 'A mysterious patron', 'The lord of the realm'];
   function grantArtifact(s, a) {
@@ -2504,8 +2814,10 @@
       s.town.revived = s.week; h.status = 'ok'; h.hp = Math.ceil(h.maxHp / 2); h.mana = h.maxMana;
       say(s, `The priests of Millbrook's temple call ${h.name} back from the dead.`, 'good'); return h;
     }
+    // 0.30: only while Millbrook's tavern stands does anyone come to take a fallen hero's place
+    if (!townLv(s, 'tavern')) { if (!h.noTavern) { h.noTavern = true; say(s, `With Millbrook's tavern in ashes, nobody comes to take ${h.name}'s place.`, 'dm'); } return h; }
     const c = CLASSES[h.cls]; const gen = (h.gen || 0) + 1;
-    // the player rolls up someone from the roster who hasn't played yet, same class if possible
+    // someone from the roster who hasn't played yet, same class if possible
     s.rosterUsed = s.rosterUsed || s.heroes.map(x => x.rid || x.id);
     const fresh = ROSTER.filter(r => s.rosterUsed.indexOf(r.id) < 0 && !s.heroes.some(x => x.id === r.id));
     const pickR = fresh.find(r => r.cls === h.cls);
@@ -2519,7 +2831,7 @@
     nh.xp = Math.max(XP_TABLE[h.level] || 0, h.xp); nh.status = 'waiting';
     s.heroes = s.heroes.map(x => x === h ? nh : x);
     const gift = townLv(s, 'tavern') >= 2 ? grantArtifact(s, randomArtifact(s)) : null;
-    say(s, `${h.name}'s player rolls up ${nh.name}, a level ${nh.level} ${RACES[nh.race].label.toLowerCase()} ${c.label.toLowerCase()}, who waits at the Millbrook tavern${gift ? ' with a gift from the regulars: ' + gift : ' with no magic items.'}`, 'level');
+    say(s, `${nh.name}, a level ${nh.level} ${RACES[nh.race].label.toLowerCase()} ${c.label.toLowerCase()}, comes to the Millbrook tavern to take ${h.name}'s place${gift ? ', with a gift from the regulars: ' + gift : ', with no magic items.'}`, 'level');
     return nh;
   }
   function recruitDead(s) {
@@ -2762,15 +3074,23 @@
     s.townToday = townDay(s);
     const regen = (s.weekFx === 'harvest' ? 0.3 : 0.15) * (townLv(s, 'temple') ? 2 : 1);
     for (const h of living(s)) { h.hp = Math.min(h.maxHp, h.hp + Math.ceil(h.maxHp * regen)); h.mana = Math.min(h.maxMana, h.mana + Math.ceil(h.maxMana * 0.25)); }
+    // 0.30: the heroes train, run errands and take small jobs, so they keep growing a little even on quiet days
+    if (living(s).length) giveXp(s, Math.round(xpStep(avgLevel(s)) * TRAIN_XP));
+    const lv0 = villainLevel(s);
     bandsMove(s);
+    wavesArrive(s);
     for (const o of s.objects.slice()) if (o.kind === 'dungeon' && !o.mine) { lairGrow(s, o); lairSpawn(s, o); }
     if (s.minions) {
       // your side of the night: minions walk, dig and build, the tower pays its tithe, and every lair raises its brood
       const md = minionDay(s); s.res.gold += 2; md.res.gold += 2;
       const lp = lairsProduce(s);
-      s.lastDay = { res: md.res, built: md.built, opened: md.opened, yields: md.yields, plot: md.plot, raised: lp, released: lp.released, summoned: md.summoned, library: md.library, researched: md.researched, town: s.townToday || null };
+      // 0.30: every lair standing (and not wrecked) spreads dread through the countryside
+      { const n = builtLairs(s).filter(o => !lairWrecked(s, o)).length; if (n) addInfamy(s, 0.5 * n, 'Your lairs spread dread'); }
+      s.lastDay = { res: md.res, built: md.built, opened: md.opened, yields: md.yields, plot: md.plot, raised: lp, released: lp.released, summoned: md.summoned, library: md.library, researched: md.researched, town: s.townToday || null, sieges: s.nightSieges || [], level: villainLevel(s) > lv0 ? villainLevel(s) : 0 };
       dmReveal(s);
     }
+    townQuests(s);
+    if (s.razed) { s.result = 'razed'; s.phase = 'over'; say(s, `Millbrook burns. Its hall falls in on itself, and the road to the Dark Tower is open to the whole realm. ${vFull(s)} has won.`, 'boss'); return; }
     const V = s.villain; V.mp = VILLAIN_MP;
     if (V.state === 'banished') { V.banish--; if (V.banish <= 0) { V.state = 'lair'; say(s, `${vName(s)} has recovered in the Dark Tower.`, 'dm'); } }
     if (!s.march && readiness(s).ready) startMarch(s, 'ready');
@@ -2781,26 +3101,21 @@
     planRoute(s);
   }
   function weekEnd(s) {
-    for (const q of s.quests) if (q.status === 'open' && q.week <= s.week) { q.status = 'failed'; thrill(s, `Quest left unfinished: ${q.name}`, -2); }
-    const lines = s.wk.thrill.filter(l => l.v !== 0 || /fled/.test(l.label));
-    const thr = sum(s.wk.thrill, l => l.v);
-    const eng = [];
-    eng.push({ label: 'Thrill this week', v: thr });
-    eng.push({ label: 'Players expect more every week', v: -weeklyDrain(s) });
-    if (s.wk.idle) eng.push({ label: `${s.wk.idle} day${s.wk.idle > 1 ? 's' : ''} with nothing happening`, v: -s.wk.idle });
-    const dead = s.heroes.filter(h => h.status === 'dead');
-    const delta = sum(eng, e => e.v);
-    const before = s.engagement;
-    s.engagement = clamp(s.engagement + delta, 0, 100);
-    s.totalThrill += thr;
-    const railBefore = s.railroad; s.railroad = Math.max(0, s.railroad - 15);
+    for (const q of s.quests) if (q.status === 'open' && q.week <= s.week) q.status = 'failed';
+    // 0.30: the week in Infamy: what your villain earned, the sieges, and how the race stands
+    const lines = []; for (const l of (s.wk.infamy || [])) { const e = lines.find(x => x.label === l.label); if (e) { e.v = Math.round((e.v + l.v) * 10) / 10; e.n++; } else lines.push({ label: l.label, v: l.v, n: 1 }); }
+    for (const l of lines) if (l.n > 1) l.label += ` (×${l.n})`;
+    lines.sort((a, b) => b.v - a.v);
+    const inf = Math.round(sum(s.wk.infamy || [], l => l.v) * 10) / 10;
     const fxC = WEEKS_FX[s.weekFx].creature; let grew = 0;
-    for (const o of s.objects) if (o.kind === 'stack') { const g = o.type === fxC ? 1.5 : 1.12; const n = Math.ceil(o.count * g); if (n > o.count) grew++; o.count = n; }
-    const recruits = [];
-    s.history.push({ week: s.week, thrill: thr, eng: s.engagement, level: avgLevel(s) });
-    const march = false; // 0.19: the table's mood is a score; at zero the players grumble, but nobody marches early
+    for (const o of s.objects) if (o.kind === 'stack' && !o.wave) { const g = o.type === fxC ? 1.5 : 1.12; const n = Math.ceil(o.count * g); if (n > o.count) grew++; o.count = n; }
+    const dead = s.heroes.filter(h => h.status === 'dead');
+    s.history.push({ week: s.week, infamy: inf, level: avgLevel(s), vlevel: villainLevel(s), hall: s.town ? s.town.hall : 0 });
     const nextFx = pick(['goblin', 'wolf', 'skeleton', 'orc', 'moon', 'harvest', 'storms'].filter(k => k !== s.weekFx));
-    s.recap = { week: s.week, lines, thrill: thr, eng, before, after: s.engagement, delta, railBefore, railAfter: s.railroad, grew, recruits, dead: dead.map(h => h.name), nextFx, result: null, march, level: avgLevel(s), ready: readiness(s) };
+    const T = s.town || {};
+    s.recap = { week: s.week, lines: lines.slice(0, 10), infamy: inf, vlevel: villainLevel(s), xp: s.villain.xp || 0, next: villainNext(s), heroLevel: avgLevel(s), sieges: s.wk.sieges || 0, breaches: s.wk.breaches || 0, plunder: s.wk.plunder || 0, burned: s.wk.burned || 0,
+      hall: T.hall || 0, hallMax: s.town ? hallMax(s) : 0, wall: T.wallHp || 0, wallMax: WALL_HP[townLv(s, 'walls')] || 0, grew, dead: dead.map(h => h.name), nextFx, result: null, march: false, level: avgLevel(s), ready: readiness(s),
+      thrill: inf, eng: [], before: 0, after: 0, delta: 0, recruits: [] };
     s.phase = 'week';
   }
   function startNextWeek(s) {
@@ -2829,19 +3144,22 @@
     say(s, why === 'bored' ? 'The players have had enough of waiting around. "Let\'s just go fight the boss!" The party marches on the Dark Tower, ready or not.' : why === 'maxed' ? `The heroes can't grow any stronger. Ready or not, they march on the Dark Tower to face ${vName(s)}.` : `The heroes feel ready. They march on the Dark Tower to end ${vName(s)}'s reign. ${vName(s)} returns to the throne to meet them.`, 'boss');
     planRoute(s);
   }
-  // 0.19: there's no clock, but the sooner the heroes win the better. The table's thrill and mood add to the score; lost heroes cost.
+  // 0.30: the villain's score: a quick win is worth the most; Infamy, the villain's level and fallen heroes add to it.
+  // A reign that ends on the throne still scores for how long it lasted.
   const campaignDays = s => (s.week - 1) * 7 + s.day;
-  const SCORE = { par: 140, perDay: 10, mood: 3, death: 30 };
+  const SCORE = { par: 140, perDay: 10, win: 400, perDayHeld: 4, level: 20, death: 30 };
+  const villainWon = s => s.result === 'razed' || s.result === 'wiped';
   function campaignScore(s) {
-    const days = campaignDays(s); const won = s.result === 'victory';
+    const days = campaignDays(s); const won = villainWon(s);
     const rows = [];
-    if (won) rows.push({ label: `Won on day ${days} (week ${s.week})`, v: Math.max(0, (SCORE.par - days) * SCORE.perDay) });
-    rows.push({ label: 'Thrill over the campaign', v: s.totalThrill || 0 });
-    rows.push({ label: `The table's mood at the end (${s.engagement})`, v: s.engagement * SCORE.mood });
-    if (s.deaths) rows.push({ label: `${s.deaths} hero${s.deaths > 1 ? 'es' : ''} lost`, v: -s.deaths * SCORE.death });
+    if (won) rows.push({ label: s.result === 'razed' ? `Razed Millbrook on day ${days} (week ${s.week})` : `Wiped out the heroes on day ${days} (week ${s.week})`, v: SCORE.win + Math.max(0, (SCORE.par - days) * SCORE.perDay) });
+    else rows.push({ label: `Your reign lasted ${days} days`, v: days * SCORE.perDayHeld });
+    rows.push({ label: 'Infamy earned', v: Math.round(s.infamyTotal || 0) });
+    rows.push({ label: `${vName(s)} reached level ${villainLevel(s)}`, v: villainLevel(s) * SCORE.level });
+    if (s.deaths) rows.push({ label: `${s.deaths} hero${s.deaths > 1 ? 'es' : ''} slain`, v: s.deaths * SCORE.death });
     const total = rows.reduce((t, r) => t + r.v, 0);
-    const tier = !won ? null : s.week <= 8 ? 'Legendary campaign' : s.week <= 10 ? 'Great campaign' : s.week <= 13 ? 'Solid campaign' : 'Long campaign';
-    return { days, rows, total, tier };
+    const tier = !won ? 'Fallen' : s.week <= 6 ? 'Legendary reign' : s.week <= 8 ? 'Dread reign' : s.week <= 11 ? 'Dark reign' : 'Long reign';
+    return { days, rows, total, tier, won };
   }
   // a failed assault sends them home to regroup; the epic attempt rekindles the table's interest
   function endMarch(s) { s.march = null; s.engagement = Math.max(s.engagement, 45); s.finaleTries = (s.finaleTries || 0) + 1; }

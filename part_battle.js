@@ -60,20 +60,26 @@
   }
   // on the throne the villain fights in its true, level 20 form (FINAL is the classic baseline the types are tuned against)
   const FINAL = { hp: 3000, hit: 17, ac: 21, dice: [2, 10, 20], attacks: 3, rend: [6, 10, 20], rendDC: 20, spd: 7, sv: 8 };
+  // 0.30: the villain starts at level 1 and levels up on Infamy. In the throne room it fights at the level it has
+  // reached: the level 20 form scaled down (q = 0 at level 1, 1 at level 20). Its signature powers come one at a time.
+  const POWER_LV = [1, 6, 11, 16];
+  const throneScale = L => { const q = clamp((L - 1) / 19, 0, 1); return { q, hp: 0.12 + 0.88 * Math.pow(q, 1.45) }; };
   function bossUnit(L, up, final, type, name) {
     up = up || {};
     const T = BOSS_TYPES[type] || BOSS_TYPES.lich; const F = T.F; const tk = BOSS_TYPES[type] ? type : 'lich';
+    L = clamp(Math.round(L || BOSS_LEVEL), 1, BOSS_LEVEL); const Q = throneScale(L);
     // the map form keeps the classic projection's scale, shifted by how this type differs from the baseline
-    const hpBase = final ? F.hp : (50 + 45 * L) * (F.hp / 2700);
+    const hpBase = final ? F.hp * Q.hp : (50 + 45 * L) * (F.hp / 2700);
     const hp = Math.round(hpBase * (1 + 0.1 * (up.vigor || 0)) * (up.ritual ? 1.1 : 1) * (1 + (up.hpPct || 0))); // (0.16: halved; 0.24: talents add hpPct)
-    const P = {}; for (const k of T.powers) P[k] = true;
-    const u = { id: 'boss', side: 'dm', type: 'king', btype: tk, icon: T.icon, name: name || T.names[0], one: name || T.names[0], boss: true, count: 1, hp, maxHp: hp, level: final ? BOSS_LEVEL : L,
-      hit: (final ? F.hit : 5 + Math.floor(L / 2) + (F.hit - 17)) + (up.ritual ? 1 : 0) + (up.hitBonus || 0), ac: final ? F.ac : 14 + Math.floor(L / 3) + (F.ac - 21),
-      dice: final ? F.dice.slice() : [2, 8, Math.round((2 + L) * F.dice[2] / 18)], extra: [], sv: final ? F.sv : 4 + (F.sv - 8), spd: final ? F.spd : Math.max(5, F.spd - 1),
-      attacks: final ? F.attacks : Math.min(2, F.attacks), ranged: !!F.ranged, shots: F.ranged ? 99 : 0, flyer: !!F.flyer, undead: tk === 'lich' || tk === 'vampire' || tk === 'deathknight', drain: !!F.drain,
+    const P = {}; T.powers.forEach((k, i) => { if (L >= (POWER_LV[i] || 1)) P[k] = true; });
+    const fDice = [F.dice[0], F.dice[1], Math.round(F.dice[2] * (0.3 + 0.7 * Q.q))];
+    const u = { id: 'boss', side: 'dm', type: 'king', btype: tk, icon: T.icon, name: name || T.names[0], one: name || T.names[0], boss: true, count: 1, hp, maxHp: hp, level: L,
+      hit: (final ? F.hit - Math.round((1 - Q.q) * 9) : 5 + Math.floor(L / 2) + (F.hit - 17)) + (up.ritual ? 1 : 0) + (up.hitBonus || 0), ac: final ? F.ac - Math.round((1 - Q.q) * 7) : 14 + Math.floor(L / 3) + (F.ac - 21),
+      dice: final ? fDice : [2, 8, Math.round((2 + L) * F.dice[2] / 18)], extra: [], sv: final ? F.sv - Math.round((1 - Q.q) * 4) : 4 + (F.sv - 8), spd: final ? F.spd : Math.max(5, F.spd - 1),
+      attacks: final ? (L < 6 ? 1 : L < 13 ? Math.min(2, F.attacks) : F.attacks) : Math.min(2, F.attacks), ranged: !!F.ranged, shots: F.ranged ? 99 : 0, flyer: !!F.flyer, undead: tk === 'lich' || tk === 'vampire' || tk === 'deathknight', drain: !!F.drain,
       alive: true, down: false, retal: true, defending: false, pos: 0, startCount: 1, turns: 0, final: !!final,
-      // the signature powers: area damage dice and DC scale with level; final forms use the full strength
-      aoe: final ? [6, 10, 20] : [2, 8, L], aoeDC: final ? 20 : 11 + Math.floor(L / 2), P, cd: {}, used: {},
+      // the signature powers: area damage dice and DC scale with level
+      aoe: final ? [2 + Math.round(4 * Q.q), 10, Math.round(20 * Q.q)] : [2, 8, L], aoeDC: final ? 11 + Math.floor(L / 2) : 11 + Math.floor(L / 2), P, cd: {}, used: {},
       servants: !!(P.servants || up.raise), servantsBoost: !!(P.servants && up.raise), raised: false, dread: !!up.dread || !!P.fear,
       images: P.images ? 3 : 0, phyl: !!(P.phylactery && final) };
     // powers on a cooldown start partly charged: soul rend and meteors need two turns, breath starts ready
@@ -169,7 +175,7 @@
     const command = opts.boss && vType(s).powers.indexOf('command') >= 0;
     const lvl = opts.lvl || (stackObj && stackObj.lvl) || 1;
     for (const [t, n, src] of splitStacks(stacks, MAX_GROUPS - k)) { if (k >= DM_POS.length) break; const u = talentMod(s, stackUnit(t, n, 'm' + k)); u.src = src; if (command && u.type === 'knight') { u.hit += 2; u.commanded = true; } if (lvl > 1) veteran(u, lvl); u.pos = DM_POS[k++]; units.push(u); }
-    const terrain = opts.finale ? 'waste' : terrainAt(s, s.party.x, s.party.y);
+    const terrain = opts.finale ? 'waste' : opts.siege ? 'grass' : terrainAt(s, s.party.x, s.party.y);
     const fr = mulberry((s.seed + s.week * 97 + s.day * 13 + s.party.x * 7 + s.party.y + (s.uid || 0) * 31) | 0);
     const tiles = makeField(fr, terrain);
     for (const u of units) if (tiles[u.pos] && TILE_INFO[tiles[u.pos]].block) delete tiles[u.pos];
@@ -178,6 +184,7 @@
     if (!party.some(u => u.cls === 'cleric')) for (const u of party) u.potions = 2;
     const b = {
       tstate: { talents: { r: Object.assign({}, (s.talents && s.talents.r) || {}) } },   // the DM's talents, for monsters that join mid-fight
+      siege: !!opts.siege, towers: opts.siege && s.town ? { arrows: ARROWS[townLv(s, 'watch')] || 0, bolts: BOLTS[townLv(s, 'ballista')] || 0, splash: SPLASH[townLv(s, 'arcane')] || 0, bell: townLv(s, 'bell') > 0 } : null,
       objId: stackObj ? stackObj.id : null, dungeonId: opts.dungeonId || null, guardLair: opts.guardLair || null, raidNode: opts.raidNode || null, attack: !!opts.attack, sent: opts.attack ? stacks.map(x => [x[0], x[1]]) : null, villain: !!opts.boss, finale: !!opts.finale, stage: opts.stage || 0, terrain, boss: !!opts.boss,
       round: 1, units, tiles, traps: [], freeTraps: opts.dungeonId ? 2 : opts.stage === 1 ? 1 + (hasTech(s, 'forge') ? 2 : 0) : opts.finale ? 1 + (s.villain.up.traps || 0) : 0, boughtTraps: 0,
       hallowed: party.some(u => conscious(u) && u.ab.indexOf('hallowed') >= 0), intervention: party.some(u => u.ab.indexOf('intervention') >= 0), intervened: false,
@@ -194,8 +201,9 @@
     b.ratio = partyPower(s) / Math.max(1, ePow); b.challenge = judge(b.ratio, 0);
     s.battle = b; s.phase = 'battle';
     const intro = opts.stage === 1 ? 'The citadel gates grind open. Your monsters pour out to defend the Dark Tower!'
-      : opts.finale ? `${vFull(s)} rises from the throne. Level 20, and ready. This is the final battle.`
+      : opts.finale ? `${vFull(s)} rises from the throne. Level ${villainLevel(s)}, and ready. This is the final battle.`
       : opts.boss ? `${vName(s)} and ${vP(s).his} army block the road!`
+      : opts.siege ? `Your ${stackObj ? CREATURES[stackObj.type].name.toLowerCase() : 'monsters'} storm Millbrook. The heroes man the walls, and the towers take aim.`
       : opts.dungeonId ? `The garrison of the ${DUNGEONS[(s.objects.find(o => o.id === opts.dungeonId) || {}).dtype || 'warren'].name} pours out to meet them!`
       : opts.guardLair ? 'Your monsters rush out to guard the site!'
       : opts.attack ? (siteAt(s.party.x, s.party.y) && siteAt(s.party.x, s.party.y).kind === 'town' ? 'Your war party waits on the road outside Millbrook!' : `Your war party falls on the heroes in ${regionName(s, s.party.x, s.party.y)}!`)
@@ -206,7 +214,7 @@
   function startVillainBattle(s, finale) {
     const V = s.villain;
     const stacks = finale ? throneStacks(s) : V.army.map(a => [a.type, a.count]);
-    return startBattle(s, null, { boss: true, finale: !!finale, stage: finale ? 2 : 0, stacks, bossL: finale ? BOSS_LEVEL : mapBossLevel(s) });
+    return startBattle(s, null, { boss: true, finale: !!finale, stage: finale ? 2 : 0, stacks, bossL: finale ? villainLevel(s) : mapBossLevel(s) });
   }
   // the showdown at your citadel: the gate garrison first, then the throne room
   function startFinale(s) {
@@ -249,7 +257,20 @@
   }
 
   /* --- turns --- */
+  // 0.30: when the heroes defend Millbrook, its towers shoot at your monsters at the start of every round
+  function towerVolley(b) {
+    const T = b.towers; if (!T) return;
+    const foes = () => b.units.filter(u => u.side === 'dm' && u.alive);
+    const hits = []; const holyMul = u => u.undead && T.bell ? 1.5 : 1;
+    if (T.arrows) { const f = foes().sort((a, z) => totalHp(a) - totalHp(z)); if (f.length) { applyDamage(b, f[0], Math.round(T.arrows * holyMul(f[0])), null, 'ranged'); hits.push(f[0].id); } }
+    for (let i = 0; i < T.bolts; i++) { const f = foes().sort((a, z) => z.maxHp - a.maxHp); if (!f.length) break; applyDamage(b, f[0], Math.round(BOLT_DMG * holyMul(f[0])), null, 'ranged'); hits.push(f[0].id); }
+    if (T.splash) for (const u of foes().slice(0, 4)) { applyDamage(b, u, Math.round(T.splash * Math.min(u.count, 3) * holyMul(u)), null, 'aoe'); hits.push(u.id); }
+    if (T.bell) for (const u of foes().filter(x => x.undead)) { applyDamage(b, u, HOLY * Math.min(u.count, 3), null, 'aoe'); hits.push(u.id); }
+    if (hits.length) { b.events.push({ t: 'spell', name: 'Millbrook\'s towers', fx: 'arrow', targets: hits.filter((id, i, a) => a.indexOf(id) === i) }); blog(b, 'Millbrook\'s towers loose a volley at your monsters.', 'note'); }
+    if (!b.units.some(u => u.side === 'dm' && u.alive)) b.over = 'win';
+  }
   function newRound(b) {
+    if (b.towers) { towerVolley(b); if (b.over) return; }
     const alive = b.units.filter(conscious);
     alive.sort((x, y) => y.spd - x.spd || (x.side === 'party' ? -1 : 1) || (x.id < y.id ? -1 : 1));
     b.queue = alive.map(u => u.id); b.waitQ = [];
@@ -315,7 +336,7 @@
   function checkEnd(b) {
     if (b.over) return;
     if (!b.units.some(u => u.side === 'dm' && u.alive)) { b.over = 'win'; return; }
-    if (!b.units.some(u => u.side === 'party' && conscious(u))) { b.over = 'tpk'; }
+    if (!b.units.some(u => u.side === 'party' && conscious(u))) tpkNow(b);
   }
 
   /* --- movement --- */
@@ -805,16 +826,16 @@
     for (const g of addGroups(b, type, n, hexNeighbors(u.pos))) b.events.push({ t: 'summon', id: g.id });
     blog(b, type === 'skeleton' ? `${u.name} raises a hand and ${n} skeletons claw out of the earth!` : `${u.name} calls, and ${n} ${T.servantName} answer!`, 'boss');
   }
-  function softball(s, b, u) {
-    b.softball++;
-    if (b.softball <= 3) { s.engagement = clamp(s.engagement - 1, 0, 100); blog(b, `The players exchange glances. Why didn't the ${u.name} attack? (−1 mood)`, 'dm'); }
+  function softball(s, b, u) { b.softball++; }
+  // 0.30: no rescue from behind the screen any more: when the last hero falls, your monsters finish the job
+  function tpkNow(b) {
+    for (const u of b.units) if (u.side === 'party' && u.alive) { u.alive = false; u.dead = true; if (b.died.indexOf(u.hero) < 0) b.died.push(u.hero); }
+    b.over = 'tpk'; b.pendingTPK = false; blog(b, 'The last hero falls, and your monsters close in. Total party kill.', 'death');
   }
   function afterAction(s, b) {
     checkEnd(b);
-    if (b.over === 'tpk') { b.over = null; b.pendingTPK = true; blog(b, 'The last hero falls. The monsters close in...', 'death'); return; }
     if (b.over) return;
     nextTurn(b);
-    if (b.over === 'tpk') { b.over = null; b.pendingTPK = true; blog(b, 'The last hero falls. The monsters close in...', 'death'); }
   }
 
   /* --- hero spells --- */
@@ -1101,7 +1122,7 @@
 
   /* --- the DM's spellbook --- */
   function canDmSpell(s, key) {
-    const b = s.battle; const sp = DM_SPELLS[key];
+    const b = s.battle; const sp = DM_SPELLS[key]; if (!sp) return 'Not a spell you know.';
     if (!b || s.phase !== 'battle' || b.phase === 'deploy') return 'Not in battle.';
     if ((spellPurse(s, sp).gold || 0) < sp.cost) return sp.purse === 'town' ? `Millbrook needs ${sp.cost} gold.` : `Your tower needs ${sp.cost} gold.`;
     if (key === 'reinforce' && b.reinforced) return 'Once a fight.';
@@ -1175,52 +1196,34 @@
     const firstFoe = b.units.find(u => u.side === 'dm' && !u.boss);
     const dungeon = b.dungeonId ? s.objects.find(o => o.id === b.dungeonId) : null;
     const name = b.boss ? vName(s) : dungeon ? `the ${DUNGEONS[dungeon.dtype].name}` : b.attack ? 'your war party' : firstFoe ? `the ${firstFoe.name}` : 'the monsters';
-    const tline = (l, v, hid) => { lines.push({ label: l, v }); thrill(s, l, v, hid); };
-    if (b.over !== 'tpk') {
-      const flawless = label === 'Trivial' && (b.challenge === 'worthy' || b.challenge === 'avoid');
-      tline(flawless ? `${cap(name)}: a flawless victory against real danger` : label === 'Trivial' ? `${cap(name)}: way too easy. The players yawned` : `${cap(name)}: ${label === 'Easy' ? 'an' : 'a'} ${label.toLowerCase()} fight`, flawless ? 2 : val);
-      const downs = Math.min(2, b.downed.length);
-      if (downs) tline(downs > 1 ? 'Two heroes dropped and came back' : 'A hero dropped and came back', downs * 2);
-      // 0.24: Infamy for the villain: close fights and fallen heroes earn bonus talent points
-      addInfamy(s, (label === 'Tense' ? 1 : label === 'Harrowing' ? 2 : 0) + downs);
-      const g = s.heroes.find(h => h.status === 'ok' && h.drive === 'glory');
-      const bigFight = b.boss || b.dungeonId || b.units.some(u => u.side === 'dm' && ['ogre', 'wraith', 'troll', 'giant', 'dragon', 'vampire', 'hydra', 'demon', 'knight'].indexOf(u.type) >= 0) || label === 'Harrowing';
-      if (g && bigFight) tline(`${g.name} got the big fight they wanted`, db(s, g, 3), g.id);
-      else if (g && label !== 'Trivial') s.wk.spot[g.id] = true;
-      const c = s.heroes.find(h => h.status === 'ok' && h.drive === 'duty');
-      if (c && b.healedFallen) tline(`${c.name} pulled a friend back from the brink`, 2, c.id);
-      const w = s.heroes.find(h => h.status === 'ok' && h.drive === 'curiosity');
-      if (w && b.aoeBig) tline(`${w.name}'s spell hit a whole crowd`, 1, w.id);
-      if (b.traps.some(t => t.sprung)) tline('Your hidden traps caught them off guard', 1);
-      s.seen = s.seen || {};
-      const fresh = b.units.filter(u => u.side === 'dm' && !u.boss && CREATURES[u.type]).map(u => u.type).filter((t, i, a) => a.indexOf(t) === i && !s.seen[t]);
-      for (const t of fresh) { s.seen[t] = 1; if (t !== 'goblin' && t !== 'wolf') tline(`Something new: the first ${CREATURES[t].name} they've ever faced`, 2); }
-    }
-    for (const id of b.died) { const h = s.heroes.find(x => x.id === id); if (!h) continue; tline(`${h.name} died. The table goes silent`, 4); s.deaths++; s.engagement = clamp(s.engagement - 10, 0, 100); }
-    if (b.over === 'retreat') tline('The party retreated from the field', -3);
-    if (b.over === 'fled') tline('The monsters suddenly ran off', -2);
-    if (b.over === 'saved') tline('Saved by a mysterious stranger', -2);
+    // 0.30: Infamy for the villain: every bit of the heroes' blood your monsters spill, heroes downed and slain
+    const tline = (l, v) => { const n = addInfamy(s, v, l); if (n) lines.push({ label: l, v: n }); };
+    s.todayActive = true;
+    if (frac >= 0.06) tline(`${cap(name)} cost the heroes ${Math.round(Math.min(1, frac) * 100)}% of their health`, Math.round(Math.min(1, frac) * 12));
+    const downs = b.downed.filter(id => b.died.indexOf(id) < 0).length;
+    if (downs) tline(downs > 1 ? `${downs} heroes went down` : 'A hero went down', 3 * downs);
+    for (const id of b.died) { const h = s.heroes.find(x => x.id === id); if (!h) continue; tline(`${h.name} died`, 10); s.deaths++; }
+    if (b.over === 'tpk') tline('The whole party fell', 15);
+    if (b.traps.some(t => t.sprung)) tline('Your hidden traps caught them', 1);
+    s.seen = s.seen || {};
+    for (const t of b.units.filter(u => u.side === 'dm' && !u.boss && CREATURES[u.type]).map(u => u.type)) s.seen[t] = 1;
     const survivors = b.units.filter(u => u.side === 'dm' && !u.boss && u.alive && u.count > 0);
     const byKind = []; for (const u of survivors) { const e = byKind.find(x => x.type === u.type); if (e) e.count += u.count; else byKind.push({ type: u.type, count: u.count }); }
     // a lone monster stack from the map
     const obj = b.objId ? s.objects.find(o => o.id === b.objId) : null;
     if (obj) {
       if (won || b.over === 'fled' || b.over === 'saved') { s.objects = s.objects.filter(o => o !== obj); if (won) questCheck(s, { kind: 'obj', id: obj.id }); }
-      else if (b.over === 'retreat') { const left = sum(b.units.filter(u => u.side === 'dm' && !u.boss && u.src === 0 && u.alive), u => u.count); if (left) obj.count = left; else s.objects = s.objects.filter(o => o !== obj); }
+      else if (b.over === 'retreat' || b.over === 'tpk') { const left = sum(b.units.filter(u => u.side === 'dm' && !u.boss && u.src === 0 && u.alive), u => u.count); if (left) obj.count = left; else s.objects = s.objects.filter(o => o !== obj); }
     }
     // hard-won loot (0.16): a close fight often leaves a magic item among the fallen
     if (won && !b.boss && (label === 'Tense' || label === 'Harrowing') && avgLevel(s) >= 3 && chance(label === 'Harrowing' ? LOOT.harrowing : LOOT.tense)) { const t = grantArtifact(s, randomArtifact(s)); say(s, 'Among the fallen they find ' + t, 'good'); }
     if (dungeon) {
       if (won && dungeon.mine) {
         // your lairs are wrecked, not erased: four days to dig out and start breeding again
-        wreckLair(s, dungeon);
-        const g = byDriveLive(s, 'glory');
-        tline(`Wrecked the ${DUNGEONS[dungeon.dtype].name}`, 4 + db(s, g, 2), g && g.id);
+        wreckLair(s, dungeon); questCheck(s, { kind: 'obj', id: dungeon.id });
         if (chance(0.25)) { const t = grantArtifact(s, randomArtifact(s)); say(s, 'In the rubble they find ' + t, 'good'); }
       } else if (won) {
         s.objects = s.objects.filter(o => o !== dungeon);
-        const g = byDriveLive(s, 'glory');
-        tline(`Destroyed the ${DUNGEONS[dungeon.dtype].name}`, 4 + db(s, g, 2), g && g.id);
         if (chance(0.4)) { const t = grantArtifact(s, randomArtifact(s)); say(s, 'In the ruins they find ' + t, 'good'); }
         questCheck(s, { kind: 'obj', id: dungeon.id });
       } else if (b.over === 'retreat' || b.over === 'fled' || b.over === 'saved') {
@@ -1237,8 +1240,6 @@
       const V = s.villain; const boss = b.units.find(u => u.boss);
       if (won || (boss && boss.escaped && b.over !== 'tpk')) {
         V.state = 'banished'; V.banish = 3; V.known = false; V.army = won ? [] : byKind;
-        const g = byDriveLive(s, 'glory');
-        tline(`Drove ${vName(s)} off the field`, 6 + db(s, g, 3), g && g.id);
         questCheck(s, { kind: 'villain' });
       } else if (b.over === 'fled' || b.over === 'saved') { V.state = 'lair'; V.known = false; V.army = byKind; }
       else V.army = byKind;
@@ -1249,14 +1250,10 @@
     const xpMult = b.attack ? ATTACK_XP[label] : Math.max({ trivial: 0, beatable: 0.6, worthy: 1, avoid: 1.3 }[b.challenge || 'worthy'], label === 'Harrowing' ? 1.2 : 0);
     const xp = b.over === 'tpk' ? 0 : Math.round(b.killedHp * xpMult);
     let bossWin = false, next = null;
-    if (b.finale && b.stage === 1 && won) { tline('Broke through the citadel gates', 4); next = 'throne'; }
-    if (b.finale && b.stage === 2 && won) {
-      bossWin = true; tline(`${vName(s)} falls! The realm is saved`, 15);
-      if (s.omens) tline(`${Math.min(3, s.omens)} omen${s.omens > 1 ? 's' : ''} paid off`, 5 * Math.min(3, s.omens));
-      if (s.villain.up.ritual) tline(`They beat ${vName(s)} after the Dark Ritual`, 6);
-    }
+    if (b.finale && b.stage === 1 && won) next = 'throne';
+    if (b.finale && b.stage === 2 && won) bossWin = true;
     const failedAssault = b.finale && !won && b.over !== 'tpk';
-    if (failedAssault) tline('The assault on the Dark Tower failed. They\'ll be back', 2);
+    if (failedAssault) tline('The heroes failed to take the Dark Tower', 12);
     let bounty = 0, home = [];
     if (b.attack) {
       // whatever survives marches home to your garrison, and a close fight fills your coffers
@@ -1275,8 +1272,12 @@
     s.lastBattle = summary;
     s.battle = null;
     s.todayActive = true;
-    if (b.over === 'tpk') { s.result = 'tpk'; s.phase = 'over'; }
-    else if (bossWin) { s.result = 'victory'; s.phase = 'over'; const t = sum(s.wk.thrill, l => l.v); s.history.push({ week: s.week, thrill: t, eng: s.engagement, level: avgLevel(s), final: true }); s.totalThrill += t; }
+    if (b.over === 'tpk') {
+      // 0.30: a wiped-out party. While Millbrook's tavern stands, a new one takes its place; otherwise you've won
+      summary.wiped = true; summary.newParty = !partyWiped(s) ? s.heroes.map(h => h.name) : null;
+      if (s.phase !== 'over') { s.phase = 'map'; planRoute(s); }
+    }
+    else if (bossWin) { s.result = 'defeat'; s.phase = 'over'; s.history.push({ week: s.week, level: avgLevel(s), vlevel: villainLevel(s), final: true }); say(s, `${vFull(s)} falls on the throne. The heroes of Millbrook have saved the realm.`, 'boss'); }
     else if (next === 'throne') {
       // a breather at the inner doors, then the throne room
       for (const h of living(s)) { h.hp = Math.min(h.maxHp, h.hp + Math.ceil(h.maxHp * 0.3)); h.mana = Math.min(h.maxMana, h.mana + Math.ceil(h.maxMana * 0.3)); }
@@ -1296,7 +1297,7 @@
   function simulateFinale(s, n, opts) {
     n = n || 16; opts = opts || {}; let tpk = 0, fracSum = 0, wins = 0, gateLoss = 0;
     for (let i = 0; i < n; i++) {
-      const t = { seed: s.seed + i, uid: i, week: s.week, day: 1, heroes: clone(s.heroes), party: clone(s.party), crown: s.crown, villain: clone(s.villain), citadel: clone(s.citadel || { built: { throne: 1 } }), base: clone(s.base || null), railroad: 0, lore: 0, objects: [], phase: 'map', wk: newWeekLog(), log: [], quests: [], seen: {} };
+      const t = { seed: s.seed + i, uid: i, week: s.week, day: 1, heroes: clone(s.heroes), party: clone(s.party), crown: s.crown, villain: clone(s.villain), citadel: clone(s.citadel || { built: { throne: 1 } }), base: clone(s.base || null), town: clone(s.town || null), talents: clone(s.talents || null), unlocked: clone(s.unlocked || {}), railroad: 0, lore: 0, objects: [], phase: 'map', wk: newWeekLog(), log: [], quests: [], seen: {} };
       for (const h of t.heroes) { h.status = 'ok'; h.hp = h.maxHp; h.mana = h.maxMana; }
       const startMax = sum(t.heroes, h => h.maxHp);
       let lost = 0, dead = false;
@@ -1321,7 +1322,7 @@
   }
   // one practice run of a fight against these stacks (i picks the dice), for the balance meter
   function simAttackRun(s, stacks, i, lvl) {
-    const t = { seed: s.seed + i * 7919, uid: i, week: s.week, day: s.day, heroes: clone(s.heroes), party: clone(s.party), crown: s.crown, villain: clone(s.villain), base: null, railroad: 0, lore: 0, engagement: 50, objects: [], phase: 'map', wk: newWeekLog(), log: [], quests: [], seen: clone(s.seen || {}), deaths: 0, pendingLevelUps: [], heroesUsed: [] };
+    const t = { seed: s.seed + i * 7919, uid: i, week: s.week, day: s.day, heroes: clone(s.heroes), party: clone(s.party), crown: s.crown, villain: clone(s.villain), base: null, town: clone(s.town || null), talents: clone(s.talents || null), railroad: 0, lore: 0, engagement: 50, objects: [], phase: 'map', wk: newWeekLog(), log: [], quests: [], seen: clone(s.seen || {}), deaths: 0, pendingLevelUps: [], heroesUsed: [] };
     if (!t.heroes.some(h => h.status === 'ok')) return null;
     startBattle(t, null, { stacks: stacks.map(x => [x[0], x[1]]), lvl: lvl || 1 });
     beginBattle(t);
