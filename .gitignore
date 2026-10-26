@@ -17,3 +17,6 @@ __pycache__/
 *.pyc
 .DS_Store
 node_modules/
+
+# Wrangler (Cloudflare) local state
+.wrangler/

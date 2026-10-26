@@ -1,0 +1,9 @@
+// Cloudflare Workers settings: the site is static, so this only says where build.sh puts it.
+// Workers Builds runs `bash build.sh`, then `npx wrangler deploy` publishes dist/site.
+{
+  "name": "overmaster",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist/site"
+  }
+}

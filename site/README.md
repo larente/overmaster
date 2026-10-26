@@ -50,6 +50,8 @@ Cloudflare's free plan doesn't meter normal website traffic and allows 500 build
    - **Build output directory:** `dist/site`
 5. Select **Save and Deploy**. From now on, every push to `main` publishes the game, and a push to any other branch makes a preview at its own address.
 
+If Cloudflare made a **Worker** instead of a Pages project (its build settings show a deploy command, `npx wrangler deploy`), that works too: leave the build command as `bash build.sh` and the deploy command as `npx wrangler deploy`. `wrangler.jsonc` in the repository tells it to publish `dist/site`. The address ends in `.workers.dev` instead of `.pages.dev`.
+
 ### Option B: drag and drop the folder
 
 1. Sign up at [cloudflare.com](https://dash.cloudflare.com/sign-up).

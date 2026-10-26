@@ -19,7 +19,7 @@ This makes two things from the same sources:
 
 ## Deploy
 
-Cloudflare Pages builds from this repository. Build command `bash build.sh`, build output directory `dist/site`. Every push to `main` goes live; other branches get a preview address. Accounts and cloud saves need the two public Supabase values in `site/config.js`. The full guide is `site/README.md`.
+Cloudflare builds from this repository with `bash build.sh`. As a Pages project, the build output directory is `dist/site`; as a Worker, the deploy command `npx wrangler deploy` reads `wrangler.jsonc`, which points at the same folder. Every push to `main` goes live; other branches get a preview address. Accounts and cloud saves need the two public Supabase values in `site/config.js`. The full guide is `site/README.md`.
 
 ## What's where
 
