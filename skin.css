@@ -1,0 +1,282 @@
+/* ==========================================================================
+   Fantasy skin. Loaded last; restyles the whole UI with original procedural assets (ui-assets.css).
+   Materials carry meaning:
+     carved oak  = the frames around what you look at, and what you click
+     forged iron = rims, channels and brackets that hold information
+     dark stone  = panel interiors
+     parchment   = in-world documents (the party's plan, the chronicle)
+     enamel/gems = state: teal secondary, sapphire on, ruby danger, amethyst villain powers, amber/emerald markers
+   The one bold piece is the oak frame with iron brackets around the map, the battlefield and the full screens.
+   ========================================================================== */
+:root {
+  --bg: #08111f;
+  --frame: #8a7550;
+  --frame-hi: #e0b860;
+  --gold: #f1cb6e;
+  --ink: #efe6d2;
+  --muted: #b8ab92;
+  --dim: #8c8170;
+  --iron: #5d6168;
+  --iron-hi: #9aa0a8;
+  --engrave: 0 1px 0 rgba(18,9,2,.95), 0 -1px 0 rgba(255,226,160,.14), 0 0 6px rgba(0,0,0,.55);
+  --stone: linear-gradient(180deg, rgba(255,238,200,.035), rgba(0,0,0,.28)), var(--ui-stone) 0 0 / 384px 384px;
+  --inset-ring: 0 0 0 1px #0a0907, 0 0 0 2px #4c5056, inset 0 1px 0 rgba(255,255,255,.06), inset 0 0 14px rgba(0,0,0,.55);
+  --gold-ring: 0 0 0 1px #0a0907, 0 0 0 2px #e0b860, 0 0 14px rgba(240,200,100,.28), inset 0 0 14px rgba(0,0,0,.45);
+  --gem-amber: radial-gradient(circle at 34% 30%, #fff3c4 0, #f4c84a 22%, #c07a14 62%, #5e3406 100%);
+  --gem-emerald: radial-gradient(circle at 34% 30%, #e8ffe0 0, #6ee07a 22%, #1f8a3a 62%, #0a3a18 100%);
+  --gem-ruby: radial-gradient(circle at 34% 30%, #ffe0dc 0, #f06a5a 22%, #a8201a 62%, #4a0806 100%);
+  --gem-sapphire: radial-gradient(circle at 34% 30%, #e8f0ff 0, #7aa0ff 22%, #2a4ab8 62%, #0c1648 100%);
+  --divider: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 20'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23b8ffc8'/%3E%3Cstop offset='.45' stop-color='%2333b552'/%3E%3Cstop offset='1' stop-color='%230b4a1e'/%3E%3C/linearGradient%3E%3ClinearGradient id='m' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23c9ced6'/%3E%3Cstop offset='1' stop-color='%23454a52'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M2 10 C14 10 18 4 26 6 C31 7 31 12 27 12 C24 12 24 9 27 9 M94 10 C82 10 78 4 70 6 C65 7 65 12 69 12 C72 12 72 9 69 9' fill='none' stroke='url(%23m)' stroke-width='1.6' stroke-linecap='round'/%3E%3Cpath d='M30 10 L40 7 L48 10 L40 13Z M66 10 L56 7 L48 10 L56 13Z' fill='url(%23m)' stroke='%23181a1e' stroke-width='.6'/%3E%3Cpath d='M48 3 L54 10 L48 17 L42 10Z' fill='url(%23g)' stroke='%23162a16' stroke-width='.8'/%3E%3Cpath d='M48 4.5 L51 10 L48 9 L45 10Z' fill='%23ffffff' opacity='.55'/%3E%3C/svg%3E");
+}
+html, body { background: #08111f; }
+body { background: #08111f var(--ui-sky) center / cover no-repeat; }
+:focus-visible { outline: 2px solid #f6d77e; outline-offset: 2px; }
+
+/* ---------- the night sky behind everything ---------- */
+.app, .setup { background: #08111f var(--ui-sky) center / cover no-repeat; }
+.app { padding-block: 12px; gap: 10px; }
+.adv { gap: 10px; }
+
+/* ---------- the big oak frame: map, battlefield, full screens ---------- */
+/* keep the 2px border: the canvas sizing code relies on it (without it the battlefield can lock up resizing) */
+.mapwrap, .bfield, .screen { border: 2px solid #0a0806; border-radius: 0; box-shadow: 0 14px 36px rgba(0,0,0,.65); }
+.mapwrap::after, .bfield::after, .screen::after {
+  content: ""; position: absolute; inset: 0; z-index: 4; pointer-events: none;
+  border: 22px solid transparent; border-image: var(--ui-frame-oak) 80 / 46px stretch;
+}
+.screen::after { z-index: 8; }
+.screen { padding: 22px; background: #120f0b; }
+.screen .scr { background: var(--stone); }
+
+/* ---------- panels: thin oak, stone inside ---------- */
+.panel {
+  border: 9px solid transparent; border-radius: 0;
+  border-image: var(--ui-frame-thin) 26 / 18px stretch;
+  background: var(--stone); background-clip: border-box; background-origin: border-box;
+  box-shadow: 0 6px 16px rgba(0,0,0,.45); padding: 5px 8px;
+}
+.sidebody { gap: 6px; }
+.panel.placing, .panel.sel.placing { border-image: var(--ui-frame-thin) 26 / 18px stretch; box-shadow: 0 0 0 1px rgba(240,200,100,.55), 0 0 22px rgba(240,200,100,.22), 0 6px 16px rgba(0,0,0,.45); }
+.sel.vil { box-shadow: 0 0 0 1px rgba(170,110,255,.5), 0 0 22px rgba(140,80,230,.25), 0 6px 16px rgba(0,0,0,.45); }
+.plan.march { box-shadow: 0 0 0 1px rgba(170,110,255,.6), 0 0 22px rgba(140,80,230,.3); }
+.cap { color: var(--gold); text-shadow: var(--engrave); letter-spacing: .14em; }
+
+/* ---------- parchment documents: the party's plan and the chronicle ---------- */
+.panel.plan, .chron {
+  --ink: #2b1b0b; --muted: #65502f; --dim: #85704e; --gold: #6a3c0c; --good: #2a6418; --danger: #962314; --warn: #84500a; --lore: #55288a;
+  color: var(--ink); background: var(--ui-parch) 0 0 / 384px 384px;
+}
+.panel.plan {
+  border: 8px solid transparent; border-image: var(--ui-frame-iron) 12 / 10px stretch;
+  background-clip: padding-box; box-shadow: inset 0 0 16px rgba(110,64,16,.45), 0 6px 16px rgba(0,0,0,.45); padding: 9px 12px;
+}
+.panel.plan .cap { text-shadow: none; color: #6a3c0c; }
+.panel.plan .hint { color: #65502f; }
+.panel.plan li:first-child { font-style: italic; }
+.chron { padding: 18px 22px; border: 10px solid transparent; border-image: var(--ui-frame-iron) 12 / 10px stretch; background-clip: padding-box; box-shadow: inset 0 0 26px rgba(110,64,16,.5); font-size: 15px; }
+.chron .lday { color: #6a3c0c; border-bottom-color: rgba(106,60,12,.35); }
+.chron .l-good, .chron .l-heal { color: #2a5a18; }
+.chron .l-hurt, .chron .l-death, .chron .l-down { color: #8a2014; }
+.chron .l-level, .chron .l-boss { color: #55288a; }
+.chron .l-sys, .chron .l-quirk, .chron .l-spot { color: #6a3c0c; }
+.chron .l-dm { color: #55288a; }
+.chron .l-idle, .chron .when { color: #85704e; }
+
+/* ---------- iron rims ---------- */
+.side-top { border: 8px solid transparent; border-image: var(--ui-frame-iron) 12 / 10px stretch; box-shadow: 0 6px 16px rgba(0,0,0,.5); background: #000; background-clip: padding-box; border-radius: 0; }
+.toast, .rollcard, .bdeploy, .btpk {
+  border: 8px solid transparent; border-image: var(--ui-frame-iron) 12 / 10px stretch; border-radius: 0;
+  background: var(--stone); background-clip: padding-box; box-shadow: 0 10px 28px rgba(0,0,0,.6);
+}
+.toast { padding: 7px 12px; }
+.toast.good { box-shadow: 0 0 0 1px rgba(110,220,120,.4), 0 10px 28px rgba(0,0,0,.6); }
+.toast.bad { box-shadow: 0 0 0 1px rgba(240,100,80,.45), 0 10px 28px rgba(0,0,0,.6); }
+.toast.warn { box-shadow: 0 0 0 1px rgba(240,180,80,.45), 0 10px 28px rgba(0,0,0,.6); }
+.rollcard { padding: 8px 12px; }
+.rollcard.k-attack.r-crit, .rollcard.r-success.k-check { box-shadow: 0 0 0 1px rgba(240,200,100,.6), 0 0 24px rgba(240,200,100,.3), 0 10px 28px rgba(0,0,0,.6); }
+.btpk { box-shadow: 0 0 0 2px rgba(200,70,50,.7), 0 20px 50px rgba(0,0,0,.7); }
+
+/* ---------- resource bar, battle header and footer ---------- */
+.bar, .bhead, .bfoot {
+  border: 9px solid transparent; border-image: var(--ui-frame-thin) 26 / 18px stretch; border-radius: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,.15), rgba(0,0,0,.45)), var(--ui-wood) 0 0 / 256px 128px; background-clip: padding-box;
+  box-shadow: 0 8px 20px rgba(0,0,0,.5);
+}
+.bar { padding: 5px 12px; }
+.bar .k, .bar .week { text-shadow: 0 1px 0 #000; }
+.bar .status { color: #f2e6c8; text-shadow: 0 1px 0 #000; }
+.date { text-shadow: var(--engrave); }
+
+/* ---------- oak buttons ---------- */
+.btn {
+  border: 7px solid transparent; border-image: var(--ui-btn-oak) 13 / 7px stretch; border-radius: 0;
+  background: linear-gradient(180deg, rgba(255,220,150,.1), rgba(20,8,0,.45)), var(--ui-wood) center / 256px 128px; background-clip: padding-box;
+  box-shadow: 0 2px 4px rgba(0,0,0,.5); padding: 3px 12px; color: var(--gold); text-shadow: var(--engrave); letter-spacing: .07em;
+  transition: filter .12s ease;
+}
+.btn:hover:not(:disabled) { background: linear-gradient(180deg, rgba(255,220,150,.18), rgba(20,8,0,.3)), var(--ui-wood) center / 256px 128px; background-clip: padding-box; color: #fff0c2; filter: brightness(1.12); }
+.btn:active:not(:disabled) { transform: translateY(1px); filter: brightness(.95); }
+.btn:disabled { opacity: .78; filter: grayscale(.85) brightness(.62); color: #d8ccb0; }
+.btn.big { padding: 7px 18px; font-size: 15px; }
+/* enamel variants: secondary teal, toggled on sapphire, danger ruby, villain amethyst */
+.btn.sm, .btn.on, .btn.danger, .btn.pw {
+  border: 1px solid #07090b; border-image: none; padding: 4px 10px; background-clip: border-box;
+  box-shadow: 0 0 0 1px var(--rim, #7e868c), inset 0 1px 0 rgba(255,255,255,.28), inset 0 -3px 6px rgba(0,0,0,.45), 0 2px 4px rgba(0,0,0,.5);
+}
+.btn.sm { background: linear-gradient(180deg, #2f6d6c 0%, #1a4547 48%, #102d2e 100%); color: #ead7a0; }
+.btn.sm:hover:not(:disabled) { background: linear-gradient(180deg, #3a8582 0%, #215658 48%, #143838 100%); color: #fff2c8; }
+.btn.on { --rim: #aebcd8; background: linear-gradient(180deg, #4a72c0 0%, #24408a 50%, #142554 100%); color: #f6d985; }
+.btn.on:hover:not(:disabled) { background: linear-gradient(180deg, #5682d0 0%, #2c4ca0 50%, #182c60 100%); color: #fff2c8; }
+.btn.danger { --rim: #d88a7a; background: linear-gradient(180deg, #b8402e 0%, #7a1c12 50%, #4a0c08 100%); color: #ffe6d8; }
+.btn.danger:hover:not(:disabled) { background: linear-gradient(180deg, #cc4a36 0%, #8c2216 50%, #560e0a 100%); }
+.btn.pw { --rim: #a88ad0; background: linear-gradient(180deg, #6a42a0 0%, #3e2270 50%, #22103e 100%); color: #f0e2ff; }
+.btn.pw.ready { box-shadow: 0 0 0 1px #d8c0ff, 0 0 14px rgba(200,160,255,.45), inset 0 1px 0 rgba(255,255,255,.28), inset 0 -3px 6px rgba(0,0,0,.45); }
+.btn.pw:hover:not(:disabled) { background: linear-gradient(180deg, #7c50b8 0%, #4a2a84 50%, #2a1448 100%); color: #fff; }
+.btn.sm.on { --rim: #aebcd8; background: linear-gradient(180deg, #4a72c0 0%, #24408a 50%, #142554 100%); color: #f6d985; }
+
+/* ---------- end day: the big oak button ---------- */
+.endday {
+  border: 10px solid transparent; border-image: var(--ui-btn-oak-hi) 13 / 10px stretch; border-radius: 0;
+  background: linear-gradient(180deg, rgba(255,226,160,.16), rgba(20,8,0,.4)), var(--ui-wood-light) center / 256px 128px; background-clip: padding-box;
+  box-shadow: 0 8px 20px rgba(0,0,0,.55); padding: 0 12px; color: #ffe08a; text-shadow: 0 2px 0 #2a1504, 0 0 10px rgba(0,0,0,.5);
+}
+.endday:hover:not(:disabled) { background: linear-gradient(180deg, rgba(255,226,160,.22), rgba(20,8,0,.3)), var(--ui-wood-light) center / 256px 128px; background-clip: padding-box; color: #fff3c8; filter: brightness(1.08); }
+.endday:disabled { filter: grayscale(.7) brightness(.7); opacity: .85; }
+
+/* ---------- command menu: oak planks ---------- */
+.cmdb {
+  border: 7px solid transparent; border-image: var(--ui-btn-oak) 13 / 7px stretch; border-radius: 0;
+  background: linear-gradient(180deg, rgba(255,220,150,.08), rgba(20,8,0,.5)), var(--ui-wood) center / 256px 128px; background-clip: padding-box;
+  box-shadow: 0 3px 6px rgba(0,0,0,.5); padding: 1px 5px;
+}
+.cmd { gap: 5px; }
+.cmdb:hover { background: linear-gradient(180deg, rgba(255,220,150,.16), rgba(20,8,0,.35)), var(--ui-wood) center / 256px 128px; background-clip: padding-box; box-shadow: 0 3px 6px rgba(0,0,0,.5); filter: brightness(1.1); }
+.cmdb b { text-shadow: var(--engrave); }
+.cmdb small { color: #cdbd9c; text-shadow: 0 1px 0 #000; }
+
+/* ---------- gems: badges, markers, toggles ---------- */
+.badge { background: var(--gem-amber); color: #2a1504; border: 1px solid #2a1806; box-shadow: 0 1px 3px rgba(0,0,0,.7), inset 0 0 0 1px rgba(255,240,190,.25); text-shadow: 0 1px 0 rgba(255,240,190,.4); }
+.badge.warn { background: var(--gem-ruby); color: #fff; text-shadow: 0 1px 0 #3a0604; }
+.spot { border-color: #6a6f76; background: #15171a; }
+.spot.on { background: var(--gem-amber); border-color: #3a2404; box-shadow: 0 0 6px rgba(244,200,74,.7); }
+.seat { background: var(--gem-amber); border: 1px solid #2a1806; box-shadow: 0 1px 3px rgba(0,0,0,.7); }
+.tog input[type=checkbox], .tog input[type=radio] {
+  appearance: none; -webkit-appearance: none; width: 20px; height: 20px; margin: 2px 0 0; border-radius: 3px; cursor: pointer;
+  background: linear-gradient(180deg, #3a3e44, #1a1c20); border: 1px solid #07080a; box-shadow: 0 0 0 1px #7a8088, inset 0 1px 2px rgba(0,0,0,.8); display: grid; place-items: center;
+}
+.tog input:checked::after { content: ""; width: 12px; height: 12px; border-radius: 50%; background: var(--gem-amber); box-shadow: 0 0 6px rgba(244,200,74,.7); }
+
+/* ---------- channels: health, mana, engagement, readiness ---------- */
+.track, .bars, .readymeter { background: #0a0a0b; border: 1px solid #000; box-shadow: 0 0 0 1px #6a7078, inset 0 1px 3px rgba(0,0,0,.95); border-radius: 1px; }
+.bars { height: 7px; }
+.bars.thin { box-shadow: none; border: 0; background: transparent; }
+.track i, .bars .hp, .gauge .track i { background: linear-gradient(180deg, #a8f59a 0%, #3cbf48 40%, #17742a 100%); }
+.bars .mp, .bars.thin i { background: linear-gradient(180deg, #a8c8ff 0%, #4a7ae8 40%, #1a3a9a 100%); }
+.gauge.low .track i { background: linear-gradient(180deg, #ffb0a0 0%, #e24a36 40%, #8a1a10 100%); }
+.gauge.rail .track i { background: linear-gradient(180deg, #ffe0a0 0%, #e6a038 40%, #8a5410 100%); }
+.hpb { background: #0a0a0b; box-shadow: 0 0 0 1px #5a6068; border-radius: 1px; }
+.hpb i { background: linear-gradient(180deg, #a8f59a 0%, #3cbf48 40%, #17742a 100%); }
+
+/* ---------- inset items: heroes, cards, list rows, slots ---------- */
+.hero, .bh, .q, .tool, .size, .stats div, .spell, .dlist, .quest, .qt, .choice, .card, .vcard, .hcard, .pslot, .tnode, .sclore, .cdetail {
+  background: var(--stone); border: 0; border-radius: 2px; box-shadow: var(--inset-ring);
+}
+.hero:hover, .tool:hover:not(:disabled), .spell:hover:not(:disabled), .dlist:hover, .choice:hover, .vcard:hover, .hcard:hover, .tnode.avail:hover { box-shadow: 0 0 0 1px #0a0907, 0 0 0 2px #b8954a, inset 0 0 14px rgba(0,0,0,.45); }
+.vcard.on, .hcard.on, .tool.on, .size.on, .bh.cur, .q.now, .tnode.sel { box-shadow: var(--gold-ring); }
+.vcard.on, .hcard.on { background: linear-gradient(180deg, rgba(240,200,110,.12), rgba(0,0,0,.25)), var(--ui-stone) 0 0 / 384px 384px; }
+.bh.down { box-shadow: 0 0 0 1px #0a0907, 0 0 0 2px #a8301e, inset 0 0 14px rgba(0,0,0,.5); }
+.q.party { border-bottom: 3px solid #c0392b; }
+.q.dm { border-bottom: 3px solid #3a6ad8; }
+.tnode.built { background: linear-gradient(180deg, rgba(240,200,110,.14), rgba(0,0,0,.3)), var(--ui-stone) 0 0 / 384px 384px; box-shadow: var(--gold-ring); }
+.tnode.avail { box-shadow: 0 0 0 1px #0a0907, 0 0 0 2px #7a5ab0, inset 0 0 14px rgba(0,0,0,.5); }
+.cbody h3, .vtxt b, .htxt b, .choice b, .tnode b { text-shadow: var(--engrave); }
+
+/* ---------- dialogs: oak frame, stone inside ---------- */
+.veil { background: rgba(4,8,16,.72); }
+.dialog {
+  border: 19px solid transparent; border-image: var(--ui-frame-oak) 80 / 40px stretch; border-radius: 0;
+  background: var(--stone); background-clip: padding-box; box-shadow: 0 26px 70px rgba(0,0,0,.8); padding: 14px 20px 16px;
+  scrollbar-width: thin; scrollbar-color: #7a8088 transparent;
+}
+.dtitle { text-shadow: 0 2px 0 #1a0c02, 0 0 14px rgba(0,0,0,.6); padding-bottom: 20px; margin-bottom: 10px;
+  background: var(--divider) center bottom / 96px 20px no-repeat, linear-gradient(90deg, transparent, rgba(150,156,166,.6) 18%, rgba(150,156,166,.6) 82%, transparent) center bottom 9px / 100% 1px no-repeat; }
+.enc-head .dtitle, .schd .dtitle { background: none; padding-bottom: 0; }
+.ledger div, .lvrow, .srow { border-bottom-color: rgba(140,146,156,.22); }
+
+/* ---------- full screens ---------- */
+.snav { background: linear-gradient(180deg, rgba(0,0,0,.25), rgba(0,0,0,.55)), var(--ui-wood) 0 0 / 256px 128px; border-right: 2px solid #0a0806; box-shadow: inset -1px 0 0 rgba(255,220,150,.12); padding: 16px 12px; }
+.snavb { color: #d8c8a4; text-shadow: 0 1px 0 #000; border: 7px solid transparent; padding: 1px 4px; }
+.snavb:hover { background: rgba(255,220,150,.08); color: #fff0c8; }
+.snavb.on { border-image: var(--ui-btn-oak) 13 / 7px stretch; background: linear-gradient(180deg, rgba(255,220,150,.12), rgba(20,8,0,.4)), var(--ui-wood-light) center / 256px 128px; background-clip: padding-box; color: #ffe08a; box-shadow: 0 3px 6px rgba(0,0,0,.5); text-shadow: var(--engrave); }
+.snavb.back { border-image: var(--ui-btn-oak) 13 / 7px stretch; background: var(--ui-wood) center / 256px 128px; background-clip: padding-box; box-shadow: 0 3px 6px rgba(0,0,0,.5); color: var(--gold); }
+.schd { border-bottom: 0; padding-bottom: 22px;
+  background: var(--divider) center bottom / 96px 20px no-repeat, linear-gradient(90deg, transparent, rgba(150,156,166,.55) 12%, rgba(150,156,166,.55) 88%, transparent) center bottom 9px / 100% 1px no-repeat; }
+.scbody { scrollbar-color: #7a8088 transparent; }
+
+/* ---------- title screen ---------- */
+.front { background: #08111f; }
+.fbg::after { background: linear-gradient(90deg, rgba(6,11,22,.96) 0%, rgba(6,11,22,.86) 28%, rgba(6,11,22,.25) 62%, rgba(6,11,22,.45) 100%), linear-gradient(0deg, rgba(6,11,22,.85) 0%, rgba(6,11,22,0) 30%); }
+.fbg.flat { background: #08111f var(--ui-sky) center / cover no-repeat; }
+.tbtn {
+  border: 8px solid transparent; border-image: var(--ui-btn-oak) 13 / 8px stretch; border-radius: 0; padding: 6px 14px;
+  background: linear-gradient(180deg, rgba(255,220,150,.08), rgba(20,8,0,.5)), var(--ui-wood) center / 256px 128px; background-clip: padding-box;
+  box-shadow: 0 6px 16px rgba(0,0,0,.5);
+}
+.tbtn span { text-shadow: var(--engrave); }
+.tbtn small { color: #cdbd9c; text-shadow: 0 1px 0 #000; }
+.tbtn:hover, .tbtn:focus-visible { box-shadow: 0 6px 16px rgba(0,0,0,.5), 0 0 22px rgba(240,200,100,.18); filter: brightness(1.1); }
+.tbtn.primary { border-image: var(--ui-btn-oak-hi) 13 / 8px stretch; background: linear-gradient(180deg, rgba(255,226,160,.16), rgba(20,8,0,.35)), var(--ui-wood-light) center / 256px 128px; background-clip: padding-box; box-shadow: 0 8px 22px rgba(0,0,0,.55); }
+.tbtn.primary span { color: #fff0bc; text-shadow: 0 2px 0 #2a1504, 0 0 10px rgba(0,0,0,.5); }
+.tbtn.primary small { color: #f0e0b8; }
+.acct, .acct-note { border-top: 0; padding-top: 22px;
+  background: var(--divider) center top / 96px 20px no-repeat, linear-gradient(90deg, transparent, rgba(150,156,166,.5) 15%, rgba(150,156,166,.5) 85%, transparent) center top 9px / 100% 1px no-repeat; }
+.av { background: var(--gem-sapphire); box-shadow: 0 0 0 1px #0a0d18, 0 0 0 2px #8a929c; text-shadow: 0 1px 0 #000; }
+.ver { color: #f4c84a; border: 1px solid #07090b; box-shadow: 0 0 0 1px #7e868c; background: linear-gradient(180deg, #2f6d6c, #102d2e); }
+
+/* ---------- new-campaign setup ---------- */
+.shead { border-bottom: 0; padding-bottom: 24px;
+  background: var(--divider) center bottom / 96px 20px no-repeat, linear-gradient(90deg, transparent, rgba(150,156,166,.55) 10%, rgba(150,156,166,.55) 90%, transparent) center bottom 9px / 100% 1px no-repeat; }
+.steps b { background: linear-gradient(180deg, #3a3e44, #1a1c20); border: 1px solid #07080a; box-shadow: 0 0 0 1px #7a8088; color: #d8d0c0; }
+.steps .on b { background: var(--gem-amber); color: #2a1504; box-shadow: 0 0 0 1px #3a2404, 0 0 8px rgba(244,200,74,.5); }
+.stitle h2 { text-shadow: 0 2px 0 #1a0c02, 0 0 14px rgba(0,0,0,.6); }
+.stitle p { color: #cfc3aa; }
+.vform { border: 19px solid transparent; border-image: var(--ui-frame-oak) 80 / 40px stretch; border-radius: 0; background: var(--stone); background-clip: padding-box; box-shadow: 0 18px 40px rgba(0,0,0,.6); padding: 10px 14px; }
+.pbar { border: 9px solid transparent; border-image: var(--ui-frame-thin) 26 / 18px stretch; border-radius: 0; background: var(--stone); background-clip: border-box; background-origin: border-box; box-shadow: 0 10px 24px rgba(0,0,0,.5); padding: 8px 10px; }
+.pslot.empty { box-shadow: 0 0 0 1px #0a0907, 0 0 0 2px #3a3d42, inset 0 0 14px rgba(0,0,0,.55); }
+.pslot .ring { border-color: #6a7078; }
+.sfoot { background: linear-gradient(180deg, rgba(6,11,22,0), rgba(6,11,22,.97) 24%); }
+.races summary { text-shadow: var(--engrave); }
+
+/* pills: small iron-rimmed enamel tokens */
+.pill { border: 1px solid #07090b; border-radius: 999px; background: linear-gradient(180deg, #2a2e34, #15171b); box-shadow: 0 0 0 1px #6a7078, inset 0 1px 0 rgba(255,255,255,.12); color: #d0c6b2; }
+.pill:hover { color: #fff0c8; }
+.pill.on { background: linear-gradient(180deg, #2f6d6c 0%, #1a4547 48%, #102d2e 100%); color: #f4d888; box-shadow: 0 0 0 1px #c9a24a, inset 0 1px 0 rgba(255,255,255,.25); }
+
+/* inputs: recessed, iron-rimmed */
+.fld input, .fld textarea, .copybox { background: #0b0d10; border: 1px solid #000; box-shadow: 0 0 0 1px #5a6068, inset 0 2px 6px rgba(0,0,0,.85); border-radius: 1px; }
+.fld input:focus, .fld textarea:focus { box-shadow: 0 0 0 1px #e0b860, 0 0 0 4px rgba(240,200,100,.16), inset 0 2px 6px rgba(0,0,0,.85); }
+.fld > span:first-child, .stats span, h3.sub, .eyebrow { color: #c4b694; text-shadow: 0 1px 0 #000; }
+.tog { background: var(--stone); box-shadow: var(--inset-ring); }
+.atabs { border-bottom-color: rgba(140,146,156,.3); }
+.atab.on { border-bottom-color: #e0b860; }
+
+/* ---------- scrollbars ---------- */
+.sidebody, .scbody, .dialog, .setup, .title { scrollbar-width: thin; scrollbar-color: #7a8088 rgba(0,0,0,.25); }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: rgba(0,0,0,.35); }
+::-webkit-scrollbar-thumb { background: linear-gradient(90deg, #8a9098, #4a4f56); border: 2px solid rgba(0,0,0,.6); border-radius: 5px; }
+
+/* ---------- 3D labels on the map: iron plaques ---------- */
+.l3.l-stack b, .l3.b-count b { background: linear-gradient(180deg, #2a3a6a, #121a36); border: 1px solid #07090b; box-shadow: 0 0 0 1px #c9a24a; }
+.l3 .k { background: var(--gem-amber); border-color: #2a1806; }
+.l3 .k.r { background: radial-gradient(circle at 34% 30%, #f4e8ff 0, #b88aff 22%, #6a3ac0 62%, #2a1050 100%); }
+
+/* ---------- small screens ---------- */
+@media (max-width: 900px) {
+  .screen { padding: 0; }
+  .screen::after { display: none; }
+  .mapwrap::after, .bfield::after { border-image-width: 30px; }
+}
+@media (prefers-reduced-motion: reduce) { .btn, .tbtn { transition: none; } }
+.endday { grid-template-columns: 38px 1fr; }
+.endday img { width: 38px; height: 38px; }

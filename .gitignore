@@ -1,0 +1,19 @@
+# Built by build.sh: never commit these, Cloudflare Pages rebuilds them on every push
+dist/
+game.js
+behind-the-screen.html
+
+# Keys and tokens live in ~/Documents/bts-art on Alex's Mac, never in this repository
+*.rtf
+*token*
+*secret*
+.env
+.env.*
+*.pem
+
+# Downloads and local clutter
+*.zip
+__pycache__/
+*.pyc
+.DS_Store
+node_modules/

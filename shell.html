@@ -1,0 +1,61 @@
+<div class="intro" id="intro" hidden></div>
+<div class="front" id="front">
+  <div class="fbg" id="fbg" aria-hidden="true"></div>
+  <section class="title" id="title" aria-label="Title screen"></section>
+  <section class="setup" id="setup" hidden aria-label="New campaign"></section>
+  <div class="toasts ftoasts" id="ftoasts" aria-live="polite"></div>
+</div>
+<div class="app" id="app" hidden>
+  <div class="adv" id="adv">
+    <div class="mapwrap" id="mapwrap"><canvas id="map" aria-label="Adventure map. Drag to look around, scroll to zoom."></canvas><div class="toasts" id="toasts" aria-live="polite"></div><div class="tray" id="maptray" hidden aria-live="polite"></div><div class="minimap" id="minimap"><canvas id="mini" aria-label="Minimap. Click or drag to look there; right-click to send selected minions."></canvas><button class="minitog" id="minitog" data-act="minimap" title="Hide the minimap" aria-pressed="true">–</button></div></div>
+    <aside class="side" aria-label="Dungeon master's tools">
+      <div class="sidebody" id="sidebody"></div>
+      <button class="endday" id="endday" data-act="endday" title="End the day (E)"><img data-icon="obj-hourglass" alt=""><span>End day</span></button>
+    </aside>
+    <div class="screen" id="screen" hidden></div>
+  </div>
+  <section class="battle" id="battle" hidden aria-label="Battle">
+    <header class="bhead">
+      <div class="bparty" id="bparty"></div>
+      <div class="bmid"><b id="bround">Round 1</b><span id="bterrain"></span></div>
+      <div class="bdmwrap"><div id="bdm"></div><img class="port sm" data-icon="obj-res-gold" alt=""></div>
+    </header>
+    <div class="bfield" id="bfield"><canvas id="bcv" aria-label="Hex battlefield"></canvas><div class="bdeploy" id="bdeploy" hidden></div><div class="tray" id="btray" hidden aria-live="polite"></div><div class="btpk" id="btpk" hidden role="alert"></div></div>
+    <footer class="bfoot">
+      <div class="bqueue" id="bqueue" aria-label="Turn order"></div>
+      <div class="bctrl"><div class="bturn" id="bturn" hidden></div><p class="bstatus" id="bstatus" aria-live="polite"></p>
+        <div class="bpowers" id="bpowers" hidden aria-label="Villain powers"></div>
+        <div class="bbtns">
+          <button class="btn cmdonly step" id="bmove" data-act="bmode" data-m="move" title="M: walk with the movement this monster has left">Move</button>
+          <button class="btn cmdonly step" id="batk" data-act="bmode" data-m="attack" title="F: this turn's one attack">Attack</button>
+          <button class="btn cmdonly step" id="bbonus" data-act="bmode" data-m="bonus" title="B: this monster's bonus action">Bonus</button>
+          <button class="btn cmdonly" id="bend" data-act="endturn" title="E: end this monster's turn">End turn</button>
+          <button class="btn cmdonly sm2" id="bw" data-act="wait" title="W: act later this round">Wait</button>
+          <button class="btn cmdonly sm2" id="bd" data-act="defend" title="D: spend the action on a defensive stance">Defend</button>
+          <button class="btn cmdonly" id="ba" data-act="autoturn" title="A: let the monster AI play this turn">Auto turn</button>
+          <button class="btn cmdonly" id="bspell" data-act="spellbook">Spellbook</button>
+          <button class="btn" id="bauto" data-act="autobattle" aria-pressed="false">Take command</button>
+          <button class="btn" id="bfast" data-act="fast" aria-pressed="false" title="Shorter animations">Fast</button>
+          <button class="btn" id="bskip" data-act="bskip" title="Skip to the end of this fight and see how it went">Skip</button>
+        </div></div>
+      <div class="blogwrap" id="blogwrap"><ul id="blog"></ul></div>
+    </footer>
+  </section>
+  <footer class="bar">
+    <button class="purse p-tower" data-act="tower" title="The Dark Tower's purse. Click to open the tower."><img class="pic" id="b-tpic" data-icon="obj-tower" alt=""><span class="pn">Tower</span>
+      <span class="res gold" title="Tower gold: dug by your minions at gold mines, plus 2 a day from the tower. Pays for lairs, research, minions and levelling bands."><img data-icon="obj-res-gold" alt=""><b id="b-gold">0</b></span>
+      <span class="res lumber" title="Tower lumber: cut by your minions at lumber camps. Pays for lairs and the library."><img data-icon="obj-res-lumber" alt=""><b id="b-lumber">0</b></span>
+      <span class="res ore" title="Tower ore: hauled by your minions from ore veins. Pays for research and the stronger lairs."><img data-icon="obj-res-ore" alt=""><b id="b-ore">0</b></span></button>
+    <button class="purse p-town" data-act="town" title="Millbrook's purse. Click to open the town."><img class="pic" data-icon="obj-town" alt=""><span class="pn">Millbrook</span>
+      <span class="res gold" title="Millbrook gold: taxes, the market, and the loot the heroes bring home from every fight they win. Pays for the town's buildings and bounties on the quest board."><img data-icon="obj-res-gold" alt=""><b id="b-mgold">0</b></span>
+      <span class="res lumber" title="Millbrook lumber: a little in taxes, more from a sawmill. Pays for the town's buildings."><img data-icon="obj-res-lumber" alt=""><b id="b-mlumber">0</b></span>
+      <span class="res ore" title="Millbrook ore: from an ironworks. Pays for the blacksmith and the bigger buildings."><img data-icon="obj-res-ore" alt=""><b id="b-more">0</b></span><i class="busy" id="b-townbusy" hidden></i></button>
+    <span class="gauge" id="g-eng" title="How much fun the players are having. Close fights lift it; stomps and quiet days sink it. It counts toward your final score."><span class="k">Mood</span><span class="track"><i id="b-engbar"></i></span><b id="b-eng">0</b></span>
+    <span class="res lvl" id="b-lvlwrap" title="The party's average level, and how ready they are to face your level 20 villain at the Dark Tower."><span class="k">Party</span><b id="b-lvl">Lv 1</b><span class="ready" id="b-ready"></span></span>
+    <span class="spacer"></span>
+    <span class="week" id="b-week"></span>
+    <span class="date" id="b-date"></span>
+    <span class="menu"><button class="sndbtn" id="b-sound" data-act="sound" aria-label="Sound" title="Sound is on. Click to mute (volumes are in Settings)."><svg viewBox="0 0 24 24" aria-hidden="true"><path class="spk" d="M4 9h4l5-4v14l-5-4H4z"/><path class="wav" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12"/><path class="x" d="M16 9l6 6M22 9l-6 6"/></svg></button><button class="btn sm" data-act="gamemenu">Menu</button></span>
+  </footer>
+</div>
+<div class="veil" id="modal" hidden></div>

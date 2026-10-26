@@ -1,0 +1,401 @@
+{
+ "about": "Hero voice lines for Overmaster. elevenlabs_gen.py heroes speaks them; pixellab_gen.py talk lip-syncs the portraits; tools/voice_import.py brings both into the game. Edit the text here and redo a line with --redo.",
+ "categories": [
+  "start",
+  "danger",
+  "hard",
+  "easy",
+  "down",
+  "rest",
+  "explore1",
+  "explore2",
+  "levelup",
+  "loot",
+  "town",
+  "march",
+  "boss",
+  "win"
+ ],
+ "heroes": {
+  "brakka": {
+   "voice": "A big, booming male voice in his thirties, a northern raider with a rough Nordic accent, boisterous and full of laughter, loud and confident like a warrior bragging in a tavern.",
+   "lines": {
+    "start": "Ha! Finally, something worth swinging at!",
+    "danger": "Now this is a fight they'll sing about!",
+    "hard": "That was a difficult battle. The bards had better get every detail.",
+    "easy": "Bah! That wasn't even a warm-up.",
+    "down": "On your feet! Nobody dies before the song is written!",
+    "rest": "Even I need sleep. Let's make camp and take a long rest.",
+    "explore1": "When we're done, every tavern in the north will know my name.",
+    "explore2": "I smell adventure. Or wet dog. Hard to tell.",
+    "levelup": "I feel stronger! Bring me a bigger monster!",
+    "loot": "A fine prize! It will look good in my legend.",
+    "town": "Millbrook! Ale, a fire, and an audience.",
+    "march": "To the Dark Tower! This is the verse they'll remember!",
+    "boss": "So you're the villain. You'll make a fine last chorus!",
+    "win": "Victory! Sing it loud, sing it forever!"
+   }
+  },
+  "thrain": {
+   "voice": "A gravelly, deep male dwarf voice, older, with a thick Scottish accent, gruff and solemn, a warrior bound by an oath, slow and determined.",
+   "lines": {
+    "start": "For my grandfather's axe! Stand fast!",
+    "danger": "Steady now. This one could be the death of us.",
+    "hard": "That was a hard-fought battle. The hills will remember it.",
+    "easy": "Barely worth the sharpening of my blade.",
+    "down": "Hold on, friend! I'll not lose another to the dark!",
+    "rest": "We're battered and bleeding. Time we took a long rest.",
+    "explore1": "These hills were green once. We'll make them green again.",
+    "explore2": "Keep your eyes open. The dark has eyes too.",
+    "levelup": "My oath grows stronger, and so do I.",
+    "loot": "Good dwarven craft, this. It'll serve us well.",
+    "town": "Millbrook still stands. Good. That's why we fight.",
+    "march": "The Dark Tower. My oath ends where it began.",
+    "boss": "I swore to drive you out, and a dwarf keeps his word!",
+    "win": "It's done. Grandfather, rest easy now."
+   }
+  },
+  "grukka": {
+   "voice": "A deep, rough, gravelly male voice, a huge pit fighter, cheerful and blunt, loud with a growl in it, simple and direct.",
+   "lines": {
+    "start": "Ha! Now we're fighting!",
+    "danger": "Big ones. Good. I hate a small crowd.",
+    "hard": "That one hurt. Good fight, though. Good fight.",
+    "easy": "That's it? The pit crowd would have thrown cabbages.",
+    "down": "Up! Get up! The fight's not over!",
+    "rest": "My arms feel like lead. Time for a long rest.",
+    "explore1": "This whole land is one big arena. I love it.",
+    "explore2": "Walking, walking. When do we hit something?",
+    "levelup": "Stronger! I was already strong, and now I'm stronger!",
+    "loot": "Ooh, shiny. I'll wear it into the next fight.",
+    "town": "Town! Food first. Then more fighting.",
+    "march": "The Dark Tower. The biggest arena of all.",
+    "boss": "So you're the champion here. Not for long!",
+    "win": "We won! Champions of the whole realm!"
+   }
+  },
+  "sylvaine": {
+   "voice": "A young woman's voice, bright, breathy and fierce, a wild elf from the deep forest, curious and excitable, with a light lilting accent.",
+   "lines": {
+    "start": "Something new to fight! Let's see what you are!",
+    "danger": "I've never seen anything like that. Wonderful. Terrifying.",
+    "hard": "That was a difficult battle. I learned a lot. Mostly about pain.",
+    "easy": "Hm. Their kind are less interesting than I hoped.",
+    "down": "No, no! Stay with us! There's still so much to see!",
+    "rest": "Even the wolves rest after a hunt. Let's take a long rest.",
+    "explore1": "The forest never told me the world was this big.",
+    "explore2": "What's past that ridge? I have to know.",
+    "levelup": "I feel the wild in me growing stronger!",
+    "loot": "Ooh! What does it do? Can I try it?",
+    "town": "So many people in one place. How do they breathe?",
+    "march": "Whatever lives in that tower, I want to see it.",
+    "boss": "So you're the end of the road. Show me what you are!",
+    "win": "We did it! And there's still a whole world past this one!"
+   }
+  },
+  "bramble": {
+   "voice": "A small, scrappy male voice, fast-talking and hot-tempered, slightly nasal and higher pitched, a feisty little mercenary who is always haggling, comic.",
+   "lines": {
+    "start": "Right! That's double rate for monsters!",
+    "danger": "Oh, this'll cost extra. A lot extra.",
+    "hard": "That was a difficult battle, and I'm billing for every bruise!",
+    "easy": "Easy money. I like easy money.",
+    "down": "Don't you die on me! You owe me wages!",
+    "rest": "I'm not paid enough to bleed this much. Long rest. Now.",
+    "explore1": "Short legs, long walks. I'm adding a walking fee.",
+    "explore2": "Anyone else hear coins? I always hear coins.",
+    "levelup": "Stronger and fiercer! My rates just went up.",
+    "loot": "Mine! Well, ours. Mostly mine.",
+    "town": "Millbrook! Time to collect what I'm owed.",
+    "march": "The Dark Tower. Danger pay, triple. Not negotiable.",
+    "boss": "You're the big boss? Good. Big boss, big bounty!",
+    "win": "We won! Now, about my payment..."
+   }
+  },
+  "vex": {
+   "voice": "A smooth, sultry, low female voice, sly and amused, with a refined upper-class accent, an elegant cat burglar who finds everything slightly beneath her.",
+   "lines": {
+    "start": "Let's make this quick. I just had this cleaned.",
+    "danger": "Oh, darling, this is going to be expensive.",
+    "hard": "That was a difficult battle. I broke a nail. Two, actually.",
+    "easy": "Child's play. I've picked harder locks.",
+    "down": "Get up! I can't carry you, it would ruin my coat.",
+    "rest": "I need a long rest and a hot bath. In that order.",
+    "explore1": "Every castle we pass, I'm counting the windows.",
+    "explore2": "Such a dreary countryside. Nothing worth stealing.",
+    "levelup": "Faster, sharper, and still fabulous.",
+    "loot": "Now that is exquisite. I'll take good care of it.",
+    "town": "Millbrook. Quaint. Nothing worth stealing, sadly.",
+    "march": "The Dark Tower. I hear the treasury is enormous.",
+    "boss": "Nice throne. I'll be taking it with me.",
+    "win": "We saved the realm. Now, who's paying for dinner?"
+   }
+  },
+  "pip": {
+   "voice": "A young, cheerful, chirpy male voice, quick and playful, higher pitched, a mischievous halfling thief who is curious about everything.",
+   "lines": {
+    "start": "Ooh, what have they got in their pockets?",
+    "danger": "That's bigger than I expected. Much bigger.",
+    "hard": "That was a difficult battle. I'd like to lie down for a week.",
+    "easy": "Ha! Over before I finished my snack!",
+    "down": "Wake up, wake up! Don't make me open your eyelids myself!",
+    "rest": "My feet hurt, my head hurts, everything hurts. Long rest?",
+    "explore1": "I wonder what's behind that door. There's always a door.",
+    "explore2": "If I had a lockpick for every locked chest... oh wait, I do!",
+    "levelup": "Quicker fingers! Ooh, this is exciting!",
+    "loot": "A secret compartment! I knew it, I just knew it!",
+    "town": "Millbrook! I've picked every lock here twice.",
+    "march": "The Dark Tower has a lot of locked doors. I can't wait.",
+    "boss": "So this is what was behind the last door!",
+    "win": "We won! Can we explore the treasure room now?"
+   }
+  },
+  "sable": {
+   "voice": "A low, dry, cool female voice, streetwise and wry, with a London accent, a fence who calmly appraises everything, unflappable.",
+   "lines": {
+    "start": "Mind the merchandise. I want what they're carrying.",
+    "danger": "Bad odds. I don't like bad odds.",
+    "hard": "That was a difficult battle. Somebody owes us for that.",
+    "easy": "Not even worth the price of the arrows.",
+    "down": "Stay with me. Dead partners don't split loot.",
+    "rest": "We're running on empty. Time we took a long rest.",
+    "explore1": "Everything has a price. Even this mud.",
+    "explore2": "That old ruin? Worth more than it looks. Trust me.",
+    "levelup": "Sharper eyes, sharper knives. Good for business.",
+    "loot": "Fine work. Worth a small fortune to the right buyer.",
+    "town": "Millbrook. I know a man here who doesn't ask questions.",
+    "march": "Whatever's in that tower, I'll know its price.",
+    "boss": "Your crown's worth a fortune. I'll be needing it.",
+    "win": "Realm's saved. And our cut? Very generous, I'd say."
+   }
+  },
+  "korra": {
+   "voice": "A husky, confident female voice, brash and showy, bold and theatrical, a thief who wants to be famous, with a grin in every word.",
+   "lines": {
+    "start": "Watch this! Somebody write this down!",
+    "danger": "Now this is how legends get made.",
+    "hard": "That was a difficult battle. Tell me someone saw that last move.",
+    "easy": "Too easy. Nobody will believe I needed help.",
+    "down": "Up! You can't die before you see me get famous!",
+    "rest": "Even legends need their sleep. Long rest, everyone.",
+    "explore1": "One day they'll put my face on wanted posters. Big ones.",
+    "explore2": "Do you think they'll name a heist after me?",
+    "levelup": "Better and better! My legend grows!",
+    "loot": "Now everyone will know I stole this!",
+    "town": "Millbrook! I wonder if they've heard of me yet.",
+    "march": "Robbing the Dark Tower? The heist of the century!",
+    "boss": "Stand still. I'm about to steal your whole kingdom.",
+    "win": "We did it! Korra Blackgum, savior of the realm!"
+   }
+  },
+  "nilsa": {
+   "voice": "A crisp, precise, no-nonsense female voice with a light Scottish accent, a dwarven trapsmith, professional and serious, clipped sentences.",
+   "lines": {
+    "start": "Formation! Mind your footing, there could be traps.",
+    "danger": "This is beyond my contract. We hold anyway.",
+    "hard": "That was a difficult battle. I'll be filing a full report.",
+    "easy": "Textbook. Exactly as planned.",
+    "down": "Man down! Keep pressure on the wound!",
+    "rest": "Gear's damaged, morale's low. We take a long rest.",
+    "explore1": "Third pressure plate this week. Somebody really doesn't like us.",
+    "explore2": "The guild expects results. So do I.",
+    "levelup": "Improved technique. The guild will be pleased.",
+    "loot": "Excellent workmanship. I'll note it in the inventory.",
+    "town": "Millbrook. Time to restock and check the gear.",
+    "march": "The Dark Tower. Every trap in there is mine to disarm.",
+    "boss": "Your defenses are impressive. They're also finished.",
+    "win": "Job complete. Best work of my career."
+   }
+  },
+  "ione": {
+   "voice": "A warm, gentle, kind female voice in her twenties, soft and calm, a temple healer who is soothing and caring, clear and sincere.",
+   "lines": {
+    "start": "Stay close to me! I'll keep you standing!",
+    "danger": "Gods protect us. Stay together, all of you.",
+    "hard": "That was a difficult battle. Let me see those wounds.",
+    "easy": "Thank the gods, no one was badly hurt.",
+    "down": "No! I won't let you go! Hold on!",
+    "rest": "Everyone's hurt. I think it's time we took a long rest.",
+    "explore1": "Every village we pass is another reason to keep going.",
+    "explore2": "Did everyone drink some water? Please drink some water.",
+    "levelup": "The light grows brighter in me.",
+    "loot": "A blessing! May it keep you safe.",
+    "town": "Millbrook. Let's see who needs healing.",
+    "march": "The Dark Tower. May the gods walk with us.",
+    "boss": "Your darkness ends here! Every life you took is remembered!",
+    "win": "We're alive. We're all alive. Thank the gods."
+   }
+  },
+  "durgan": {
+   "voice": "A big, jovial, booming baritone voice of an old dwarf priest with a Scottish accent, hearty and loud, always on the edge of singing or laughing.",
+   "lines": {
+    "start": "Ha ha! A hymn for battle, friends! Sing with me!",
+    "danger": "Now's the time for the loudest hymn I know!",
+    "hard": "That was a difficult battle! My voice is hoarse from all the singing!",
+    "easy": "Barely got through the first verse!",
+    "down": "Up you get! The hymn's not finished!",
+    "rest": "Even my lungs need a break. A long rest, I say!",
+    "explore1": "Did I ever sing you the Ballad of the Iron Psalm? All forty verses?",
+    "explore2": "Fine weather for a hymn! Every weather is fine for a hymn!",
+    "levelup": "Praise be! My voice grows mightier!",
+    "loot": "A gift from above! Or from a dead goblin. Same thing!",
+    "town": "Millbrook! A choir, a cask, and a warm hearth!",
+    "march": "To the Dark Tower! I've saved my best hymn for this!",
+    "boss": "Hear my hymn, villain! It's the last thing you'll hear!",
+    "win": "Victory! Now that deserves a hymn! All together now!"
+   }
+  },
+  "wren": {
+   "voice": "An older woman's voice, grandmotherly and sweet but shrewd, a halfling priestess with a homely country accent, gently scheming, warm and chuckling.",
+   "lines": {
+    "start": "Oh dear, oh dear. Mind you don't damage anything valuable.",
+    "danger": "My, my. Surviving this will need a very generous donation.",
+    "hard": "That was a difficult battle. Healing isn't free, you know, dearies.",
+    "easy": "There we are. Now, does anyone have spare coin for the temple?",
+    "down": "Up you get, dear! You haven't paid your tithe yet!",
+    "rest": "My old bones are aching. Time for a long rest, dearies.",
+    "explore1": "Such a lovely walk. I do hope we pass a rich merchant.",
+    "explore2": "The temple roof needs mending, you know. Very expensive.",
+    "levelup": "The gods smile on me! And on my collection plate.",
+    "loot": "Oh, how lovely! The temple will be so grateful.",
+    "town": "Millbrook! Time to pass the collection plate, dearies.",
+    "march": "The Dark Tower. I hear villains keep a great deal of gold.",
+    "boss": "You'll make a very generous donation, villain. Very generous.",
+    "win": "We did it, dearies! The temple thanks you. And so do I."
+   }
+  },
+  "aelith": {
+   "voice": "A radiant, clear, theatrical female voice, proud and grand, an elven sun priestess who speaks as if on a stage, bright and commanding.",
+   "lines": {
+    "start": "Behold! The sun's champion takes the field!",
+    "danger": "A worthy foe at last! The gods are watching!",
+    "hard": "That was a difficult battle. But did you see how I shone?",
+    "easy": "Hardly a fitting stage for my radiance.",
+    "down": "Rise! The sun does not let its champions fall!",
+    "rest": "Even the sun must set. We should take a long rest.",
+    "explore1": "The sunlight is perfect today. It suits me.",
+    "explore2": "When the gods write their histories, I'll be in chapter one.",
+    "levelup": "I shine brighter! The heavens take notice!",
+    "loot": "Ah, a relic worthy of my glory.",
+    "town": "Millbrook! I'm sure they'll want to see me.",
+    "march": "The Dark Tower. Darkness, meet the dawn.",
+    "boss": "Your shadows cannot stand against the sun!",
+    "win": "Dawn breaks over the realm, and I am its light!"
+   }
+  },
+  "ushka": {
+   "voice": "A low, calm, serene female voice, measured and quiet, a monk healer with quiet strength, gentle but firm, few words.",
+   "lines": {
+    "start": "Breathe. Focus. Strike.",
+    "danger": "Be calm. Fear only feeds the enemy.",
+    "hard": "That was a difficult battle. Sit. Let me tend to you.",
+    "easy": "Peace returns. That is enough.",
+    "down": "Hold still, friend. I am here.",
+    "rest": "Our bodies are spent. We should take a long rest.",
+    "explore1": "The road is long, but every step is a lesson.",
+    "explore2": "Listen. Even the wind is saying something.",
+    "levelup": "My spirit is steadier. My fists are heavier.",
+    "loot": "A useful thing. Let us use it wisely.",
+    "town": "Millbrook. There will be sick people here. Let us help them.",
+    "march": "The Dark Tower waits. We go in peace, and in strength.",
+    "boss": "I offer you mercy once. Only once.",
+    "win": "It is over. Now we heal the land."
+   }
+  },
+  "orrin": {
+   "voice": "An elderly male voice, scholarly and absent-minded, warm, slightly reedy and wandering, a distracted old wizard with an English accent, often trailing off.",
+   "lines": {
+    "start": "Oh! A fight! Er, yes, right. Fireball, was it?",
+    "danger": "Fascinating creature. Deadly, of course. But fascinating.",
+    "hard": "That was a difficult battle. Remind me to take notes later.",
+    "easy": "Hmm? Oh, it's over. I was reading.",
+    "down": "Oh dear, oh dear. Someone, ah, do the healing thing!",
+    "rest": "I believe it's time we took a long rest. I've lost my spectacles again.",
+    "explore1": "There's a footnote about this valley. Or was it the next valley?",
+    "explore2": "Did I mention the Dark Tower has a library? Footnote twelve.",
+    "levelup": "Ah! A new spell. Now, where did I write it down?",
+    "loot": "Extraordinary! I must study this at once.",
+    "town": "Millbrook! I believe I left a book at the inn. Some years ago.",
+    "march": "The Dark Tower at last. My footnote awaits!",
+    "boss": "Before we begin, could you clarify footnote twelve? No? Fireball, then.",
+    "win": "We won! And I finally finished my footnote."
+   }
+  },
+  "maelis": {
+   "voice": "A cool, elegant, aloof female voice, precise and articulate, an elven sorceress with a faintly dangerous calm and a refined accent, quietly intense.",
+   "lines": {
+    "start": "Let's see how they react to something forbidden.",
+    "danger": "Interesting. That shouldn't be possible.",
+    "hard": "That was a difficult battle. I'll need to revise my theories.",
+    "easy": "Hardly a worthwhile experiment.",
+    "down": "Don't die yet. I haven't finished observing you.",
+    "rest": "My mana is exhausted. A long rest is required.",
+    "explore1": "These ruins hum with old magic. Can you feel it?",
+    "explore2": "I only study it for academic reasons, of course.",
+    "levelup": "New knowledge. Forbidden, naturally.",
+    "loot": "Oh, this is very rare. And very, very dangerous. Perfect.",
+    "town": "Millbrook. Their library is pitiful.",
+    "march": "The tower's archives must be extraordinary. Let's go.",
+    "boss": "Your magic is crude. Allow me to demonstrate.",
+    "win": "Victory. And I've learned so much. Strictly for academic reasons."
+   }
+  },
+  "tobias": {
+   "voice": "An eager, fast-talking, chipper male voice, a halfling wizard who sounds like a market salesman, enthusiastic and persuasive, mid to high pitch.",
+   "lines": {
+    "start": "Fireballs! Get your fireballs! Free demonstration!",
+    "danger": "This might be the end of me. Spellbook copies, half price, everyone!",
+    "hard": "That was a difficult battle. Signed spellbook copies after the rest!",
+    "easy": "Easy! Want to learn that spell? Very reasonable rates.",
+    "down": "Don't die! Healing scrolls, discount for friends!",
+    "rest": "Time we took a long rest. I'll set up a little stall.",
+    "explore1": "Spellbook copies! Thirty gold! Twenty-five for the party!",
+    "explore2": "Have I told you about my scroll subscription service?",
+    "levelup": "A new spell! The second edition is going to sell so well.",
+    "loot": "Ooh, I know a collector who would pay a fortune for this.",
+    "town": "Millbrook! Prime customers!",
+    "march": "The Dark Tower. Imagine the souvenir market!",
+    "boss": "Before we fight, can I interest you in a spellbook?",
+    "win": "We saved the realm! Commemorative scrolls, available now!"
+   }
+  },
+  "esk": {
+   "voice": "A proud, gruff, pompous male dwarf voice, middle-aged, with a Scottish accent, boastful and loud, a runesmith who loves his own work.",
+   "lines": {
+    "start": "Watch the runes, friends! These ones are mine!",
+    "danger": "Big trouble. Good. Big trouble makes big legends.",
+    "hard": "That was a difficult battle. Write it down: the Grimmbrew Rune saved us.",
+    "easy": "Didn't even need my best rune.",
+    "down": "Get up! Nobody dies in front of the Grimmbrew Rune!",
+    "rest": "My hands are shaking. Time for a long rest and a strong ale.",
+    "explore1": "One day, every smith in the realm will carve the Grimmbrew Rune.",
+    "explore2": "Did you see my rune on that door? No? I'll carve another.",
+    "levelup": "A new rune! The Grimmbrew Rune, Mark Two!",
+    "loot": "Not bad. Could use a rune or two, though.",
+    "town": "Millbrook! Time to show the smith my latest rune.",
+    "march": "The Dark Tower. I'll carve my rune on its doors.",
+    "boss": "Feel the power of the Grimmbrew Rune!",
+    "win": "Victory! It will be known forever as the Grimmbrew Victory!"
+   }
+  },
+  "zarga": {
+   "voice": "A raspy, slow, mystical female voice, low and wry, a seer who reads the future in bones, ominous yet dryly humorous, deliberate pacing.",
+   "lines": {
+    "start": "The bones said this would happen.",
+    "danger": "The bones did not like this one. Not at all.",
+    "hard": "That was a difficult battle. The bones were right again.",
+    "easy": "The bones said we would win. They were bored too.",
+    "down": "Not yet. The bones say it's not your time.",
+    "rest": "The bones say rest. A long rest. Who am I to argue?",
+    "explore1": "Every bone tells a story. Most of them end badly.",
+    "explore2": "I cast the bones this morning. They wouldn't tell me the ending.",
+    "levelup": "The bones speak more clearly now.",
+    "loot": "Ah. The bones mentioned this.",
+    "town": "Millbrook. The bones say nothing happens here. I hope they're right.",
+    "march": "The Dark Tower. The bones say this is the end. Of what, they won't say.",
+    "boss": "I've seen how this ends, villain. Have you?",
+    "win": "So that's how it ends. I always wanted to know."
+   }
+  }
+ }
+}
