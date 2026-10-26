@@ -1727,7 +1727,8 @@
       add({ id: k, mode: done ? 'built' : 'plot', art: a.art, x, z, w });
     }
     add({ id: 'summon', mode: 'plot', art: null, x: DT_CIRCLE[0], z: DT_CIRCLE[1], w: G.researched(S, 'swift') ? 3.4 : 2.8, ring: '#b468ff' });
-    add({ id: 'treasury', mode: 'built', art: hasArt('t-treasury') ? 't-treasury' : 'dep-gold', x: DT_TREASURY[0], z: DT_TREASURY[1], w: 0.9 + Math.min(1.5, (S.res.gold || 0) / 100) });
+    { const own = hasArt('t-treasury'); const g = S.res.gold || 0;   // its own picture is a vault, already heaped with gold: it grows less
+      add({ id: 'treasury', mode: 'built', art: own ? 't-treasury' : 'dep-gold', x: DT_TREASURY[0], z: DT_TREASURY[1], w: own ? 1.3 + Math.min(0.5, g / 400) : 0.9 + Math.min(1.5, g / 100) }); }
     // a banner on the wall for every kind of monster you can raise
     const kinds = G.lairsFor(S).filter(k => G.lairKnown(S, k)); const n = kinds.length;
     // an avenue of banners up the road to the tower, one for every kind of monster you can raise

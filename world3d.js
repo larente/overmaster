@@ -341,7 +341,10 @@ const World3D = (() => {
     MAP.seed = S.seed; MAP.prot = undefined; MAP.vrot = null; MAP.objs = new Map(); MAP.nodes = new Map(); MAP.mins = new Map(); for (const L of MAP.labels.values()) L.el.remove(); MAP.labels = new Map();
     const Mp = G.mapOf(S); const MW = G.MW, MH = G.MH;
     const W = MW + 2 * EX, H = MH + 2 * EX;
-    const tclamp = (x, y) => Mp.T[clamp(y, 0, MH - 1) * MW + clamp(x, 0, MW - 1)];
+    // the map's outermost ring is a border of water and mountain tiles nobody can walk on. Drawn as tiles it made square
+    // pools and stripes at the edge of the world, so (0.24) that ring and everything beyond take the look of the land just
+    // inside, and heightFn's coast() cuts it off with a ragged shoreline into the sea
+    const tclamp = (x, y) => Mp.T[clamp(y, 1, MH - 2) * MW + clamp(x, 1, MW - 2)];
     const roadAt = (x, y) => x >= 0 && y >= 0 && x < MW && y < MH && Mp.road[y * MW + x] ? 1 : 0;
     const seed = S.seed % 100000;
     // base height per tile (with a little variety for mountains)
@@ -382,7 +385,17 @@ const World3D = (() => {
       const rw = sampleGrid(roadI, wx, wz);
       if (rw > 0.05) h -= Math.min(1, rw * 1.6) * 0.035;
       for (const s of sites) { const d = Math.hypot(wx - s.x, wz - s.z); if (d < s.r) { const k = 1 - smooth(clamp((d - s.r * 0.55) / (s.r * 0.45), 0, 1)); h = h + (s.h + 0.02 - h) * k; } }
-      return h;
+      return coast(wx, wz, h);
+    }
+    // beyond the edge (0.24): the land runs on a little way and ends in a ragged coast, bays and headlands, with the
+    // sea out to the dark (mountain ranges reach farther out). Before, the edge tiles just stretched out in stripes.
+    const SEA = TH.water - 0.3;
+    function coast(wx, wz, h) {
+      const o = Math.max(1 - wx, wx - (MW - 1), 1 - wz, wz - (MH - 1)); if (o <= 0) return h;   // how far past the walkable land
+      const n = fbm(wx * 0.23 + 3.3, wz * 0.23 - 8.1, seed + 41, 3);
+      const reach = 0.7 + n * 2.6 + sampleGrid(mountI, wx, wz) * 1.6;   // where the shore is, here
+      const k = smooth(clamp((o - reach) / 1.1 + 0.5, 0, 1));
+      return h + (SEA - h) * k;
     }
     // height grid
     const GW = W * RES + 1, GH = H * RES + 1;

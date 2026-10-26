@@ -22,7 +22,13 @@
   | Vampire Lord | Werewolves | Werewolf Lodge |
   | Death Knight | Black Riders | Black Stables |
 
-  Until their PixelLab art is made, they borrow another monster's or lair's picture, tinted. Make the art with `pixellab_gen.py colossus drake hellhound irongolem werewolf rider` and `pixellab_gen.py objects villain-lairs`.
+  Their pixel art is in: all six monsters, and the Bone Forge, Drake Eyrie, Brimstone Kennels and Werewolf Lodge. The Golem Foundry and Black Stables came out wrong (a lone anvil, and an empty pen), so they keep a tinted stand-in until they're redone (`pixellab_gen.py objects foundry stables --redo`). Anything without its own art borrows another monster's or lair's picture, tinted. The monsters have no portraits yet (`pixellab_gen.py portraits colossus drake hellhound irongolem werewolf rider`), so their round tokens are cut from their sprites.
+- **More art in:**
+  - the Dark Tower's works in the tower view: the Forbidden Library and its second wing, the Blood Fountain at three sizes, the Barracks, the Black Obelisk, the Ritual Altar, the Masons' Yard, the Storehouse and the Treasury;
+  - the redone Village Hall;
+  - Orrin's and Maelis's talking portraits.
+  - The redone Blacksmith III and Training Yard II came out small again, a brazier and a tiny figure, so they still use stand-ins.
+- **The edge of the world** is a coastline now. The map's outer ring of water and mountain tiles used to show as square pools and stripes. That ring and everything beyond now continue the land just inside, which ends in a ragged shore of bays and headlands, with the sea out to the dark.
 - **Respec.** Once a week, every point can be unlearned and spent again. Lairs already built keep working.
 - **Old saves** keep everything they had researched as talents, get their queued research refunded, and start with as many points as their heroes' level would have earned.
 - **The villain picker** shows each villain's own monster and talent path. The shop's unlock panel lists them too.
