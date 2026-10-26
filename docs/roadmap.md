@@ -5,6 +5,7 @@
 - Locked villains show a price on the villain picker, with an unlock panel and **Unlock to play** in place of Next. The title screen has a **Shop** with **Restore purchases**.
 - Buying as a guest asks the player to sign in first (Google first, email as a backup), then offers to carry on to Stripe's checkout. Coming back from Stripe lands on the same villain and unlocks it in a few seconds.
 - Unlocks live in Supabase (`entitlements`, readable only by their owner, writable only by the server). Two Edge Functions, `checkout` and `stripe-webhook`, set prices on the server, check Stripe's signature, and take unlocks back on a full refund. `node tools/test_store_functions.mjs` tests both.
+- **Redeem a code** in the account window, in the Shop, or from a link ending in `?redeem=CODE`, which survives signing in. Alex makes codes in the SQL Editor (`make_codes` for batches of random single-use codes, `make_code` for a shared code like BETA2026), with labels, use limits and expiry dates. Redeeming goes through one database function (`redeem_code`) that counts uses, gives each player one use, and makes a player wait after ten wrong codes in an hour. `node tools/test_codes_sql.mjs` tests it on a real Postgres.
 - The store is off until `config.js` says `store: true`. Until then, and in the Claude preview, every villain is unlocked. Setup is step 6 of `site/README.md`.
 
 ## Delivered in alpha 0.21.1

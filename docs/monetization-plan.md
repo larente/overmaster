@@ -44,7 +44,7 @@ Each signature is about one build of work, tested with the campaign simulator fo
   - `checkout`: the game calls it when a signed-in player clicks Unlock. It checks the product and the price on the server (the game never sends a price), works out the fair bundle price, and opens a Stripe Checkout page.
   - `stripe-webhook`: Stripe calls it when a payment succeeds. It checks Stripe's signature, then writes the unlocks. It removes them again if you refund the payment in Stripe.
 - **In the game:** a signed-in player's unlocks are read when they sign in and remembered in the browser, so they keep working offline. The store only switches on when `config.js` says `store: true` and accounts are set up. Until then, everything is unlocked.
-- **Gifts and promo codes:** you can unlock anything for anyone with one line of SQL in Supabase (for testers, streamers or support), and Stripe promotion codes work at checkout.
+- **Codes (built):** players redeem codes in their account window or from a link. You make them in Supabase: batches of single-use codes for giveaways, or one shared code for a beta group, with an optional label, use limit and expiry date. You can also unlock anything for one player with a line of SQL, and Stripe promotion codes give discounts at checkout.
 - **Steam, later:** Steam requires purchases in a Steam game to go through Steam, so on Steam the villains would be DLC. The game checks ownership the same way, with Steam as another source of unlocks.
 - **Cheating:** it's a browser game, so a determined player can unlock things on their own computer by editing the code. Cloud saves and the unlock list are safe on the server. That's normal for small web games and not worth fighting at this price.
 

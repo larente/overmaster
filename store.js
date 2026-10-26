@@ -135,6 +135,13 @@ const Store = (() => {
     const { data, error } = await sb.from('entitlements').select('sku');
     return error ? { error: friendly(error) } : { skus: (data || []).map(r => r.sku) };
   }
+  // a promo or beta code: the database checks it, counts the use and writes the unlocks
+  async function redeem(code) {
+    if (!sb || !user) return { error: 'Sign in to redeem a code.' };
+    const { data, error } = await sb.rpc('redeem_code', { p_code: String(code || '').slice(0, 60) });
+    if (error) return { error: /function .*redeem_code|could not find the function/i.test(error.message || '') ? 'Codes aren\'t set up on this site yet.' : friendly(error) };
+    return data && data.ok ? { ok: true, unlocked: data.unlocked || [], label: data.label || null } : { error: (data && data.error) || 'That code didn\'t work.' };
+  }
   async function invoke(name, body) {
     if (!sb) return { error: 'Accounts aren\'t set up on this site.' };
     try {
@@ -261,7 +268,7 @@ const Store = (() => {
   return {
     VERSION, SLOTS, slotLabel, isAuto, autoSlot, cloudReady: () => cloudReady && !!sb, google: CFG.googleSignIn ? google : null, feedbackEmail: CFG.feedbackEmail || '',
     init, user: () => user, onAuth: cb => authCbs.push(cb), recovering: () => recovery,
-    signUp, signIn, magicLink, forgot, setPassword, rename, signOut, entitlements, invoke,
+    signUp, signIn, magicLink, forgot, setPassword, rename, signOut, entitlements, invoke, redeem,
     list, save, load, remove, latest, autosave, flush, status: () => status,
     exportText, importText, download, feedback, reportError, settings, setSettings, meta
   };

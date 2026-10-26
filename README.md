@@ -34,4 +34,5 @@ Cloudflare builds from this repository with `bash build.sh`. As a Pages project,
 | `supabase/functions/` | The shop's server functions: `checkout` (opens Stripe) and `stripe-webhook` (unlocks after payment). Tested by `node tools/test_store_functions.mjs` |
 | `tools/` | Art and audio scripts (PixelLab, ElevenLabs). They read their keys from files outside the repository |
 | `docs/` | Roadmap, design notes, art guide and plans |
+| `tools/test_*.mjs` | Shop tests: `node tools/test_store_functions.mjs` (server functions) and `node tools/test_codes_sql.mjs` (codes, on Postgres in WebAssembly; needs `npm i @electric-sql/pglite`) |
 | `fuzz*.js`, `sim*.js` | Balance simulations and fuzz tests (`node fuzz10.js`) |

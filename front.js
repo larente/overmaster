@@ -291,7 +291,8 @@ const Front = (() => {
     if (Store.recovering()) mode = 'reset';
     if (u && mode !== 'reset') {
       const mine = Shop.paidVillains().filter(Shop.owns).map(k => Shop.CATALOG[k].name);
-      const unlocks = Shop.enabled() ? `<p class="hint">${mine.length ? `Unlocked: ${esc(mine.join(', '))}.` : 'No paid villains unlocked yet.'} <button type="button" class="lnk" data-fx="shop">Shop</button></p>` : '';
+      const unlocks = (Shop.enabled() ? `<p class="hint">${mine.length ? `Unlocked: ${esc(mine.join(', '))}.` : 'No paid villains unlocked yet.'} <button type="button" class="lnk" data-fx="shop">Shop</button></p>` : '')
+        + '<div class="coderow"><span>Have a code from a giveaway or the beta?</span><button type="button" class="btn sm" data-fx="redeem">Redeem a code</button></div>';
       UI.modal(`<h1 class="dtitle">Your account</h1><form class="form" id="acc-form" data-form="rename">
         <label class="fld" for="acc-name"><span>Name shown in the game</span><input id="acc-name" maxlength="40" value="${esc(u.name)}" autocomplete="nickname"></label>
         <p class="hint">Signed in as ${esc(u.email)}. Your saves${Shop.enabled() ? ' and unlocks' : ''} follow you to any device where you sign in.</p>${unlocks}
@@ -357,7 +358,7 @@ const Front = (() => {
       </div>
       ${u ? `<p class="hint">Signed in as ${esc(u.email)}. Prices in Canadian dollars; checkout is handled by Stripe.</p>` : '<p class="hint note">Sign in to buy. Your unlocks are kept with your account, so they follow you to any device.</p>'}
       <p class="msg" id="shop-msg" role="status"></p>
-      <div class="row end">${u ? '<button class="lnk" data-fx="restore">Restore purchases</button>' : '<button class="btn" data-fx="account">Sign in</button>'}<button class="btn" data-act="close">Close</button></div>`, null, 'wide');
+      <div class="row end"><button class="lnk" data-fx="redeem">Redeem a code</button>${u ? '<button class="lnk" data-fx="restore">Restore purchases</button>' : '<button class="btn" data-fx="account">Sign in</button>'}<button class="btn" data-act="close">Close</button></div>`, null, 'wide');
   }
   const shopOpen = () => !!document.querySelector('#modal .shoplist');
   function shopMsg(t, tone) { const el = $('shop-msg'); if (el) { el.textContent = t; el.className = 'msg ' + (tone || ''); } else if (t) toast(t, tone); }
@@ -398,6 +399,33 @@ const Front = (() => {
     rerenderFront();
     if (got) toast(`Unlocked: ${skuName(ret.sku)}. Thank you for supporting Overmaster!`, 'good', 8000);
     else toast('Your payment went through, but the unlock hasn\'t arrived yet. In a minute, open the Shop and press Restore purchases.', 'warn', 12000);
+  }
+
+  /* ================= codes ================= */
+  const listNames = a => a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1];
+  function showRedeem(prefill) {
+    if (!Store.cloudReady()) return;
+    if (!Store.user()) { ssx.set('om-code', prefill || ''); showAccount('signin', 'Sign in to redeem your code. Whatever it unlocks is kept with your account, on every device.'); return; }
+    UI.modal(`<h1 class="dtitle">Redeem a code</h1>
+      <p class="hint">Codes come from giveaways, beta invitations and the developer. Each one unlocks something for your account, on every device you sign in on.</p>
+      <form class="form" id="code-form" data-form="redeem"><label class="fld" for="code-in"><span>Code</span>
+        <input id="code-in" class="codein" maxlength="48" required autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="OVM-XXXX-XXXX" value="${esc(prefill || '')}"></label>
+        <p class="msg" id="code-msg" role="status"></p>
+        <div class="row end"><button type="button" class="btn" data-act="close">Close</button><button type="submit" class="btn big">Redeem</button></div></form>`);
+    const inp = $('code-in'); if (inp) { inp.focus(); inp.select(); }
+  }
+  async function submitRedeem(form) {
+    const inp = $('code-in'), btn = form.querySelector('[type="submit"]'), msg = $('code-msg');
+    const say = (t, tone) => { if (msg) { msg.textContent = t; msg.className = 'msg ' + (tone || ''); } };
+    if (!inp.value.trim()) { say('Type the code first.', 'warn'); return; }
+    busy(btn, true, 'Checking…'); say('');
+    const r = await Store.redeem(inp.value);
+    busy(btn, false);
+    if (r.error) { say(r.error, 'bad'); inp.focus(); return; }
+    await Shop.refresh();
+    const names = listNames(r.unlocked.map(k => skuName(k)));
+    say(`${r.label ? r.label + ': unlocked' : 'Unlocked'} ${names || 'it'}. Enjoy!`, 'good'); inp.value = '';
+    toast(`Unlocked ${names}.`, 'good', 6000);
   }
 
   /* ================= settings, rules, feedback ================= */
@@ -489,6 +517,7 @@ const Front = (() => {
       case 'copyfb': { const t = $('fb-copy'); const fall = () => { t.focus(); t.select(); toast('Selected. Press Ctrl+C or Cmd+C to copy.', 'sys'); }; try { navigator.clipboard.writeText(t.value).then(() => toast('Copied.', 'good'), fall); } catch (er) { fall(); } return; }
       case 'account': showAccount(); return;
       case 'shop': showShop(); return;
+      case 'redeem': showRedeem(''); return;
       case 'buy': buyFlow(d.sku, el); return;
       case 'notnow': Shop.clearPending(); UI.closeModal(); return;
       case 'restore': busy(el, true, 'Checking…'); Shop.refresh().then(r => { busy(el, false); if (shopOpen()) showShop(); shopMsg(r.error || 'Your unlocks are up to date.', r.error ? 'bad' : 'good'); }); return;
@@ -538,7 +567,7 @@ const Front = (() => {
   function onSubmit(e) {
     const f = e.target; if (!f.dataset || !f.dataset.form) return;
     e.preventDefault();
-    if (f.dataset.form === 'feedback') submitFeedback(f); else submitAccount(f);
+    if (f.dataset.form === 'feedback') submitFeedback(f); else if (f.dataset.form === 'redeem') submitRedeem(f); else submitAccount(f);
   }
   function showHowTo() {
     UI.modal(`<h1 class="dtitle">How to play</h1>
@@ -554,6 +583,14 @@ const Front = (() => {
       <p class="hint">You win when the heroes win. A fallen hero's player rolls up someone new at the same level. If all four fall at once, the campaign ends.</p>
       <div class="row end"><button class="btn big" data-act="close">Got it</button></div>`, null, 'wide');
   }
+  // a shared link like https://…/?redeem=OVM-7KQ2-XH9D: take the code out of the address bar
+  function takeCodeLink() {
+    let q; try { q = new URLSearchParams(location.search); } catch (e) { return null; }
+    if (!q.has('redeem')) return null;
+    const code = (q.get('redeem') || '').slice(0, 48); q.delete('redeem');
+    try { history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : '') + location.hash); } catch (e) { /* fine */ }
+    return code;
+  }
   async function start() {
     UI.boot();
     document.addEventListener('click', onClick);
@@ -565,17 +602,20 @@ const Front = (() => {
     Store.onAuth((u, ev) => {
       if (ev === 'PASSWORD_RECOVERY') { showAccount('reset'); return; }
       afterAuth(); if (ev === 'SIGNED_IN' && !UI.active()) toast(`Signed in as ${u ? u.name : 'you'}.`, 'good');
-      Shop.refresh().then(() => { if (u) offerPending(); });
+      Shop.refresh().then(() => { if (!u) return; const c = ssx.get('om-code'); if (c !== null) { ssx.set('om-code', null); showRedeem(c); } else offerPending(); });
     });
     Shop.onChange(rerenderFront);
     await Store.init().catch(() => null);
     const ret = Shop.takeReturn();
+    const link = takeCodeLink();
     Shop.refresh();
     const hot = window.claude && window.claude.hot && window.claude.hot.data;
     if (hot && hot.state && G.migrate(hot.state)) { $('front').hidden = true; UI.open(hot.state); }
-    else { showTitle(); if (!ret) showIntro(); }
+    else { showTitle(); if (!ret && link === null) showIntro(); }
     if (Store.recovering()) showAccount('reset');
-    if (ret) afterCheckout(ret); else if (Store.user()) offerPending();
+    else if (ret) afterCheckout(ret);
+    else if (link !== null && Store.cloudReady()) { ssx.set('om-code', null); showRedeem(link); }
+    else if (Store.user()) offerPending();
   }
   return { start, menu, showTitle, showLoad, showFeedback };
 })();

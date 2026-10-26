@@ -105,3 +105,150 @@ revoke all on public.sales from anon, authenticated;
 --   delete from public.entitlements where sku = 'villain-vampire'
 --     and user_id = (select id from auth.users where email = 'player@example.com');
 
+
+-- Codes (0.22): promotional unlocks and gifts for beta testers. Players redeem a code from their
+-- account window (or a link ending in ?redeem=CODE). Nobody can read the codes through the game:
+-- redeeming goes through redeem_code(), which checks and counts each use.
+-- Make codes in the SQL Editor with make_codes() or make_code(); see the examples at the end.
+create table if not exists public.codes (
+  code text primary key check (code ~ '^[A-Z0-9]{4,40}$'),   -- stored without dashes, upper case
+  grants text[] not null check (cardinality(grants) between 1 and 20),
+  max_uses integer check (max_uses is null or max_uses > 0),  -- null: no limit
+  uses integer not null default 0,
+  label text check (char_length(label) <= 120),               -- shown to the player, e.g. 'Beta tester thank-you'
+  expires_at timestamptz,
+  active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+create table if not exists public.redemptions (
+  code text not null references public.codes (code) on delete cascade,
+  user_id uuid not null references auth.users (id) on delete cascade,
+  redeemed_at timestamptz not null default now(),
+  primary key (code, user_id)
+);
+-- wrong guesses, so nobody can try codes by the thousand
+create table if not exists public.code_attempts (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references auth.users (id) on delete cascade,
+  code text,
+  ok boolean not null,
+  at timestamptz not null default now()
+);
+create index if not exists code_attempts_user on public.code_attempts (user_id, at desc);
+alter table public.codes enable row level security;
+alter table public.redemptions enable row level security;
+alter table public.code_attempts enable row level security;
+-- no policies on purpose: only the functions below and you (in the dashboard) can see these
+
+-- the unlocks that exist; add new ones here when the shop gets them (keep in step with shop.js)
+create or replace function public.known_skus() returns text[] language sql immutable as $$
+  select array['villain-demon', 'villain-archmage', 'villain-vampire', 'villain-deathknight', 'bundle-dark-court']
+$$;
+create or replace function public.sku_contents(p_sku text) returns text[] language sql immutable as $$
+  select case p_sku
+    when 'bundle-dark-court' then array['villain-demon', 'villain-archmage', 'villain-vampire', 'villain-deathknight']
+    else array[p_sku] end
+$$;
+
+-- players call this from the game
+create or replace function public.redeem_code(p_code text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  k text := upper(regexp_replace(coalesce(p_code, ''), '[^A-Za-z0-9]', '', 'g'));
+  c public.codes%rowtype;
+  fails integer;
+  want text[] := '{}';
+  g text;
+  added text[] := '{}';
+begin
+  if uid is null then return jsonb_build_object('ok', false, 'error', 'Sign in to redeem a code.'); end if;
+  select count(*) into fails from public.code_attempts where user_id = uid and not ok and at > now() - interval '1 hour';
+  if fails >= 10 then return jsonb_build_object('ok', false, 'error', 'Too many codes that didn''t work. Try again in an hour.'); end if;
+  if length(k) < 4 then return jsonb_build_object('ok', false, 'error', 'Type the whole code.'); end if;
+  select * into c from public.codes where code = k for update;
+  if not found or not c.active then
+    insert into public.code_attempts (user_id, code, ok) values (uid, left(k, 40), false);
+    return jsonb_build_object('ok', false, 'error', 'That code doesn''t exist. Check it and try again.');
+  end if;
+  if c.expires_at is not null and c.expires_at < now() then return jsonb_build_object('ok', false, 'error', 'That code has expired.'); end if;
+  if exists (select 1 from public.redemptions r where r.code = k and r.user_id = uid) then return jsonb_build_object('ok', false, 'error', 'You''ve already redeemed this code.'); end if;
+  if c.max_uses is not null and c.uses >= c.max_uses then return jsonb_build_object('ok', false, 'error', 'That code has been used up.'); end if;
+  -- what it unlocks, with bundles opened up, minus what they already own
+  foreach g in array c.grants loop want := want || public.sku_contents(g); end loop;
+  select coalesce(array_agg(distinct w), '{}') into want from unnest(want) w
+   where not exists (select 1 from public.entitlements e where e.user_id = uid and (e.sku = w or w = any (public.sku_contents(e.sku))));
+  if cardinality(want) = 0 then return jsonb_build_object('ok', false, 'error', 'You already own everything this code unlocks, so it''s still unused. Pass it on to a friend.'); end if;
+  insert into public.redemptions (code, user_id) values (k, uid);
+  update public.codes set uses = uses + 1 where code = k;
+  foreach g in array want loop
+    insert into public.entitlements (user_id, sku, source, ref) values (uid, g, 'promo', 'code:' || k) on conflict (user_id, sku) do nothing;
+    if found then added := added || g; end if;
+  end loop;
+  insert into public.code_attempts (user_id, code, ok) values (uid, k, true);
+  return jsonb_build_object('ok', true, 'unlocked', to_jsonb(added), 'label', c.label);
+end $$;
+revoke all on function public.redeem_code(text) from public, anon;
+grant execute on function public.redeem_code(text) to authenticated;
+
+-- you call these in the SQL Editor to make codes
+-- many random codes like OVM-7KQ2-XH9D, each good for p_uses redemptions (one per player)
+create or replace function public.make_codes(p_grants text[], p_count integer default 1, p_uses integer default 1,
+                                             p_label text default null, p_expires timestamptz default null, p_prefix text default 'OVM')
+returns setof text language plpgsql security definer set search_path = public as $$
+declare
+  alphabet constant text := '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';   -- no 0/O or 1/I to mix up
+  pre text := upper(regexp_replace(coalesce(p_prefix, ''), '[^A-Za-z0-9]', '', 'g'));
+  bad text;
+  i integer; j integer; b bytea; raw text;
+begin
+  select g into bad from unnest(p_grants) g where g <> all (public.known_skus()) limit 1;
+  if bad is not null then raise exception 'Unknown unlock "%". Known: %', bad, array_to_string(public.known_skus(), ', '); end if;
+  if p_count not between 1 and 1000 then raise exception 'Make between 1 and 1000 codes at a time.'; end if;
+  if length(pre) > 8 then raise exception 'Keep the prefix to 8 letters or fewer.'; end if;
+  for i in 1 .. p_count loop
+    loop
+      b := decode(replace(gen_random_uuid()::text, '-', ''), 'hex');
+      raw := '';
+      foreach j in array array[0, 1, 2, 3, 4, 5, 10, 11] loop   -- bytes with no fixed UUID bits
+        raw := raw || substr(alphabet, (get_byte(b, j) % 32) + 1, 1);
+      end loop;
+      exit when not exists (select 1 from public.codes x where x.code = pre || raw);
+    end loop;
+    insert into public.codes (code, grants, max_uses, label, expires_at) values (pre || raw, p_grants, p_uses, p_label, p_expires);
+    return next (case when pre = '' then '' else pre || '-' end) || substr(raw, 1, 4) || '-' || substr(raw, 5, 4);
+  end loop;
+end $$;
+-- one code you choose, like BETA2026, often shared with a group (p_uses null: no limit)
+create or replace function public.make_code(p_code text, p_grants text[], p_uses integer default null,
+                                            p_label text default null, p_expires timestamptz default null)
+returns text language plpgsql security definer set search_path = public as $$
+declare
+  k text := upper(regexp_replace(coalesce(p_code, ''), '[^A-Za-z0-9]', '', 'g'));
+  bad text;
+begin
+  select g into bad from unnest(p_grants) g where g <> all (public.known_skus()) limit 1;
+  if bad is not null then raise exception 'Unknown unlock "%". Known: %', bad, array_to_string(public.known_skus(), ', '); end if;
+  if length(k) < 6 then raise exception 'Make the code at least 6 letters or digits, so nobody guesses it.'; end if;
+  insert into public.codes (code, grants, max_uses, label, expires_at) values (k, p_grants, p_uses, p_label, p_expires);
+  return k;
+end $$;
+revoke all on function public.make_codes(text[], integer, integer, text, timestamptz, text) from public, anon, authenticated;
+revoke all on function public.make_code(text, text[], integer, text, timestamptz) from public, anon, authenticated;
+
+-- every code and how it's been used, newest first
+create or replace view public.code_report with (security_invoker = true) as
+  select c.code, c.label, c.grants, c.uses, c.max_uses, c.expires_at, c.active, c.created_at,
+         (select string_agg(u.email, ', ' order by r.redeemed_at) from public.redemptions r join auth.users u on u.id = r.user_id where r.code = c.code) as redeemed_by
+  from public.codes c order by c.created_at desc;
+revoke all on public.code_report from anon, authenticated;
+
+-- Examples (run in the SQL Editor):
+--   20 single-use codes for the Vampire Lord:
+--     select * from make_codes(array['villain-vampire'], 20);
+--   50 codes for all four villains, labelled, expiring at New Year:
+--     select * from make_codes(array['bundle-dark-court'], 50, 1, 'Beta tester thank-you', '2027-01-01');
+--   one shared code for a group of up to 100 players:
+--     select make_code('BETA2026', array['bundle-dark-court'], 100, 'Overmaster beta');
+--   see them:     select * from code_report;
+--   switch one off: update codes set active = false where code = 'BETA2026';

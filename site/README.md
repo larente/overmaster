@@ -128,14 +128,32 @@ The shop sells the four paid villains ($2.99 CAD each, or $7.99 for all four). T
 2. Repeat B to D in live mode: a live secret key (`sk_live_…`), and a live webhook with its own signing secret. Replace both secrets in Supabase.
 3. Taxes are yours to handle, since you're the seller. To have Stripe Tax calculate and add sales tax at checkout, turn on Stripe Tax in Stripe, then add the secret `STRIPE_TAX` with the value `on`. Talk to an accountant about GST/HST, BC PST, and VAT on sales abroad.
 
-**Giving unlocks away.** For a tester, a streamer or a support case, run this in the SQL Editor with their email:
+**Codes for giveaways and beta testers.** Players redeem codes in their account window (**Redeem a code**), from the Shop, or by opening a link like `https://your-game-address/?redeem=OVM-7KQ2-XH9D`. If they aren't signed in yet, the link asks them to sign in first and keeps the code. Codes only need Supabase (step 1 and part A above), not Stripe. Make them in the SQL Editor:
+
+```sql
+-- 20 single-use codes for the Vampire Lord (one player each)
+select * from make_codes(array['villain-vampire'], 20);
+
+-- 50 codes for all four villains, with a label the player sees, expiring at New Year
+select * from make_codes(array['bundle-dark-court'], 50, 1, 'Beta tester thank-you', '2027-01-01');
+
+-- one code you choose, shared by up to 100 players
+select make_code('BETA2026', array['bundle-dark-court'], 100, 'Overmaster beta');
+```
+
+- `make_codes` gives codes like `OVM-7KQ2-XH9D`. They're random enough that nobody can guess one, and a player who types ten wrong codes in an hour has to wait.
+- Each player can redeem a code once. A player who already owns everything a code unlocks is told so, and the code isn't used up.
+- `select * from code_report;` lists every code, how often it's been used, and by whom. To switch a code off: `update codes set active = false where code = 'BETA2026';` (codes are stored without dashes).
+- The unlocks a code can give are `villain-demon`, `villain-archmage`, `villain-vampire`, `villain-deathknight` and `bundle-dark-court` (all four). New packs get added to `known_skus()` in `schema.sql` when they're made.
+
+To unlock something for one player directly, without a code:
 
 ```sql
 insert into public.entitlements (user_id, sku, source)
 select id, 'villain-vampire', 'gift' from auth.users where email = 'player@example.com';
 ```
 
-Use `bundle-dark-court` to give all four. Stripe **promotion codes** also work on the checkout page. Create them in Stripe under **Product catalog → Coupons**.
+Stripe **promotion codes** (discounts at checkout) also work. Create them in Stripe under **Product catalog → Coupons**.
 
 **If something goes wrong.** In Supabase, **Edge Functions → (function) → Logs** shows each call. In Stripe, open the webhook's **Event deliveries** to see whether Stripe reached it and what came back. A `400 Bad signature` means `STRIPE_WEBHOOK_SECRET` doesn't match the endpoint's secret: test mode and live mode have different secrets.
 

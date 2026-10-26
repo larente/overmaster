@@ -261,3 +261,7 @@ ul.pw { display: grid; gap: 6px; }
   .sitem > .btn, .sitem > .owned { grid-column: 1 / -1; justify-self: stretch; }
 }
 @media (max-width: 480px) { .lockchip { top: 54px; left: 40px; padding: 2px 6px; font-size: 11px; } }
+.coderow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; margin: 4px 0 10px; padding: 10px 12px; border: 1px dashed #5a4626; border-radius: 3px; color: var(--muted); font-size: 14px; }
+.codein { font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace; font-size: 18px; letter-spacing: .12em; text-transform: uppercase; }
+.codein::placeholder { letter-spacing: .12em; opacity: .45; }
+
