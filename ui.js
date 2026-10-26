@@ -26,7 +26,8 @@
 
   /* ============ helpers ============ */
   const sfx = (k, o) => { if (window.SND) SND.play(k, o); };
-  const img = (key, cls, alt) => `<img class="${cls || ''}" src="${A.URI[key]}" alt="${esc(alt || '')}" draggable="false">`;
+  // data-icon lets a picture swap to its pixel art the moment that art arrives
+  const img = (key, cls, alt) => `<img class="${cls || ''}" src="${A.URI[key]}" data-icon="${key}" alt="${esc(alt || '')}" draggable="false">`;
   // the villain and heroes are chosen per campaign
   const VN = () => G.vName(S), VF = () => G.vFull(S), VP = () => G.vP(S), VT = () => G.vType(S);
   const vIcon = () => 'unit-' + VT().icon;
@@ -2595,6 +2596,11 @@
     oc.drawImage(cv, Math.round(hx - side / 2), y0 - Math.round(side * 0.08), side, side, 0, 0, side, side);
     return out;
   }
+  // art for one key has arrived: remember it and update every picture already on screen that shows its stand-in
+  function setIcon(key, cv) {
+    A.IMG[key] = cv; A.URI[key] = cv.toDataURL('image/png'); ART.keys[key] = true;
+    for (const im of document.querySelectorAll(`img[data-icon="${key}"]`)) im.src = A.URI[key];
+  }
   function loadArt() {
     if (ART.asked) return; ART.asked = true;
     let base = 'art/';
@@ -2604,15 +2610,15 @@
       if (!man || !man.art) return;
       const jobs = [];
       for (const [key, e] of Object.entries(man.art)) {
-        if (e.portrait) jobs.push(loadImg(base + e.portrait).then(im => { const t = tokenFrom(im, e.pixel); A.IMG[key] = t; A.URI[key] = t.toDataURL('image/png'); ART.keys[key] = true; }).catch(err => { if (err instanceof Error) console.error('art', key, err); /* a missing file just keeps the stand-in */ }));
-        if (e.icon && e.icon !== e.sprite) jobs.push(loadImg(base + e.icon).then(im => { const t = iconFrom(im); if (t) { A.IMG[key] = t; A.URI[key] = t.toDataURL('image/png'); ART.keys[key] = true; } }).catch(err => { if (err instanceof Error) console.error('art', key, err); }));
+        if (e.portrait) jobs.push(loadImg(base + e.portrait).then(im => { const t = tokenFrom(im, e.pixel); setIcon(key, t); }).catch(err => { if (err instanceof Error) console.error('art', key, err); /* a missing file just keeps the stand-in */ }));
+        if (e.icon && e.icon !== e.sprite) jobs.push(loadImg(base + e.icon).then(im => { const t = iconFrom(im); if (t) { setIcon(key, t); } }).catch(err => { if (err instanceof Error) console.error('art', key, err); }));
         if (e.sprite) jobs.push(loadImg(base + e.sprite).then(im => {
           if (W3) W3.setArt(key, im, { dirs: e.dirs || 0, pixel: !!e.pixel });
           ART.size[key] = [im.naturalWidth || im.width, im.naturalHeight || im.height];
           // map buildings and objects: the same picture is their icon
-          if (e.icon === e.sprite) { const t = iconFrom(im); if (t) { A.IMG[key] = t; A.URI[key] = t.toDataURL('image/png'); ART.keys[key] = true; } }
+          if (e.icon === e.sprite) { const t = iconFrom(im); if (t) { setIcon(key, t); } }
           // directional pixel art with no portrait: the token is the head and shoulders of the front-facing frame
-          if (!e.portrait && e.dirs > 1) { const hc = headCrop(im, e.dirs); if (hc) { const t = tokenFrom(hc, e.pixel); A.IMG[key] = t; A.URI[key] = t.toDataURL('image/png'); ART.keys[key] = true; } }
+          if (!e.portrait && e.dirs > 1) { const hc = headCrop(im, e.dirs); if (hc) { const t = tokenFrom(hc, e.pixel); setIcon(key, t); } }
         }).catch(err => { if (err instanceof Error) console.error('art', key, err); /* a missing file just keeps the stand-in */ }));
       }
       return Promise.all(jobs).then(() => {

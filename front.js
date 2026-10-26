@@ -14,7 +14,8 @@ const Front = (() => {
     while (box.children.length > 3) box.removeChild(box.firstChild);
     setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 400); }, 3600);
   }
-  const portraitOf = h => { const k = 'unit-hero-' + (h.rid || h.id); return A.URI[k] || A.portrait(h); };
+  const heroKey = h => 'unit-hero-' + (h.rid || h.id);
+  const portraitOf = h => A.URI[heroKey(h)] || A.portrait(h);
   const ago = t => {
     if (!t) return '';
     const s = Math.round((Date.now() - t) / 1000);
@@ -128,14 +129,14 @@ const Front = (() => {
   function villainHtml() {
     const V = F.villain; const T = G.BOSS_TYPES[V.type];
     const cards = G.BOSS_ORDER.map(k => { const t = G.BOSS_TYPES[k]; return `<button class="vcard${k === V.type ? ' on' : ''}" data-fx="vtype" data-k="${k}" aria-pressed="${k === V.type}">
-        <img src="${A.URI[vIcon(k)]}" alt="" draggable="false"><span class="vtxt"><b>${esc(t.label)}</b><span>${esc(t.blurb)}</span><i>${t.powers.map(p => esc(G.BOSS_POWERS[p].name)).join(' · ')}</i></span></button>`; }).join('');
+        <img src="${A.URI[vIcon(k)]}" data-icon="${vIcon(k)}" alt="" draggable="false"><span class="vtxt"><b>${esc(t.label)}</b><span>${esc(t.blurb)}</span><i>${t.powers.map(p => esc(G.BOSS_POWERS[p].name)).join(' · ')}</i></span></button>`; }).join('');
     const pr = Object.keys(G.PRON).map(k => `<button class="pill${V.pron === k ? ' on' : ''}" data-fx="vpron" data-k="${k}" aria-pressed="${V.pron === k}">${G.PRON[k].label}</button>`).join('');
     const full = V.title ? `${V.name || T.names[0]}, ${V.title}` : (V.name || T.names[0]);
     return `<div class="stitle"><h2>Who is your Big Bad?</h2><p>Every villain waits on the throne of the Dark Tower at level 20. Each kind fights differently, so the heroes will need different things from you to get ready.</p></div>
       <div class="vgrid">
         <div class="vcards" role="group" aria-label="Kind of villain">${cards}</div>
         <aside class="vform">
-          <img class="vbig" src="${A.URI[vIcon(V.type)]}" alt="">
+          <img class="vbig" src="${A.URI[vIcon(V.type)]}" data-icon="${vIcon(V.type)}" alt="">
           <p class="vfull" id="v-full">${esc(full)}</p>
           <p class="vkind">A level 20 ${esc(T.label.toLowerCase())}</p>
           <label class="fld" for="v-name"><span>Name</span><span class="inrow"><input id="v-name" maxlength="28" autocomplete="off" value="${esc(V.name)}"><button class="btn sm" data-fx="vroll" title="Pick a random name and title">Roll</button></span></label>
@@ -151,7 +152,7 @@ const Front = (() => {
   function partyHtml() {
     const ids = F.party;
     const slots = [0, 1, 2, 3].map(i => { const r = G.ROSTER_BY[ids[i]]; return r
-      ? `<button class="pslot" data-fx="pick" data-id="${r.id}" title="Remove ${esc(r.name)}"><img src="${portraitOf(r)}" alt=""><span><b>${esc(r.name)}</b><small>${esc(G.RACES[r.race].label)} ${esc(G.CLASSES[r.cls].label.toLowerCase())}</small></span><i aria-hidden="true">×</i></button>`
+      ? `<button class="pslot" data-fx="pick" data-id="${r.id}" title="Remove ${esc(r.name)}"><img src="${portraitOf(r)}" data-icon="${heroKey(r)}" alt=""><span><b>${esc(r.name)}</b><small>${esc(G.RACES[r.race].label)} ${esc(G.CLASSES[r.cls].label.toLowerCase())}</small></span><i aria-hidden="true">×</i></button>`
       : `<div class="pslot empty"><span class="ring" aria-hidden="true"></span><span><b>Seat ${i + 1}</b><small>Pick a hero below</small></span></div>`; }).join('');
     const notes = G.partyNotes(ids).map(n => `<li class="${n.tone}">${esc(n.text)}</li>`).join('');
     const filters = [['all', 'All twenty']].concat(G.CLASS_ORDER.map(c => [c, G.CLASSES[c].label + 's'])).map(([k, n]) => `<button class="pill${F.filter === k ? ' on' : ''}" data-fx="filter" data-k="${k}" aria-pressed="${F.filter === k}">${n}</button>`).join('');
@@ -159,7 +160,7 @@ const Front = (() => {
     const cards = G.ROSTER.filter(r => F.filter === 'all' || r.cls === F.filter).map(r => {
       const n = ids.indexOf(r.id); const on = n >= 0; const D = G.DRIVES[r.drive];
       return `<button class="hcard${on ? ' on' : ''}" data-fx="pick" data-id="${r.id}" aria-pressed="${on}"${!on && ids.length >= 4 ? ' data-full="1"' : ''}>
-        <img src="${portraitOf(r)}" alt="" draggable="false">
+        <img src="${portraitOf(r)}" data-icon="${heroKey(r)}" alt="" draggable="false">
         <span class="htxt"><b>${esc(r.name)}</b><span class="rc">${esc(G.RACES[r.race].label)} ${esc(G.CLASSES[r.cls].label.toLowerCase())}</span><span class="drv d-${r.drive}">${esc(D.label)}: ${esc(D.want)}</span><span class="bio">${esc(r.bio)}</span></span>
         ${on ? `<span class="seat" aria-label="Seat ${n + 1}">${n + 1}</span>` : ''}</button>`;
     }).join('');
@@ -193,10 +194,10 @@ const Front = (() => {
   /* ================= saves ================= */
   function saveRow(it, opts) {
     const m = it.meta || {}; const heroes = m.heroes || [];
-    const ps = heroes.map(h => `<img src="${portraitOf(h)}" alt="">`).join('');
+    const ps = heroes.map(h => `<img src="${portraitOf(h)}" data-icon="${heroKey(h)}" alt="">`).join('');
     const done = m.result ? `<span class="tagx ${m.result === 'victory' ? 'good' : 'bad'}">${m.result === 'victory' ? 'Won' : 'Party fell'}</span>` : '';
     return `<div class="srow" data-slot="${esc(it.slot)}" data-where="${it.where}">
-      <div class="sparty"><img class="sv" src="${A.URI[vIcon(m.vtype)]}" alt="">${ps}</div>
+      <div class="sparty"><img class="sv" src="${A.URI[vIcon(m.vtype)]}" data-icon="${vIcon(m.vtype)}" alt="">${ps}</div>
       <div class="sinfo"><b>${esc(it.name)}</b> ${done}<span>${esc(m.villain || '')}</span><small>${esc(it.label)} · ${esc(where(it))}${it.updated ? ' · ' + esc(ago(it.updated)) : ''}</small></div>
       <div class="sact">${opts.save ? `<button class="btn sm" data-fx="saveto" data-slot="${esc(it.slot)}" data-where="${it.where}">Save here</button>` : `<button class="btn sm" data-fx="loadit" data-slot="${esc(it.slot)}" data-where="${it.where}">Load</button><button class="btn sm" data-fx="exportit" data-slot="${esc(it.slot)}" data-where="${it.where}" title="Download this save as a file">Export</button><button class="btn sm danger" data-fx="delask" data-slot="${esc(it.slot)}" data-where="${it.where}">Delete</button>`}</div></div>`;
   }

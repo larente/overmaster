@@ -1,5 +1,8 @@
 # Overmaster — roadmap
 
+## Delivered in alpha 0.21.1
+- **Pixel portraits on a first visit.** On a fresh visit to the website, the villain and hero pictures on the setup screens showed their old cartoon stand-ins and kept them, because those screens were drawn before the pixel art had downloaded. Every picture now swaps to its pixel art the moment that art arrives, on every screen.
+
 ## Delivered in alpha 0.21
 - **The game is called Overmaster** ("Heroes need villains. You're both."). It replaces Behind the Screen, which was already the name of a game on Steam, and it stays clear of Wizards of the Coast's "Dungeon Master" trademark. Saves, settings and save files from earlier builds still load.
 - **An opening.** The first time the game loads in a visit: "Alex Larente presents", then the emblem and the OVERMASTER wordmark rise letter by letter through drifting embers, then the tagline and "Press any key" (or "Tap to begin" on phones). Any key, click or tap skips it, unlocks sound and plays a low sting. It's skipped when the player has asked for reduced motion and when a game is restored after a reload.
