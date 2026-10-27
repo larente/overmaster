@@ -527,3 +527,23 @@ ul.dpw li.off { opacity: .5; }
 .tnode.lair.avail .tnt small { color: #b8f0a0; }
 @media (max-width: 1240px) { .ttrees { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 620px) { .ttrees { grid-template-columns: minmax(0, 1fr); } .thead { grid-template-columns: minmax(0, 1fr); } .tinf { grid-template-columns: auto minmax(60px, 1fr); } .tinf small { grid-column: 1 / -1; } }
+
+/* 0.30, the villain edition: Infamy, Millbrook's walls and hall, waves */
+.bar .vgauge .k { color: #d8b8ff; font-size: 12px; letter-spacing: .06em; }
+.bar .vgauge .track i, .gauge.vgauge .track i { background: linear-gradient(180deg, #e8d0ff 0%, #a868f0 45%, #5a2aa0 100%); }
+.bar .vgauge b { font-size: 14px; color: #e2ccff; }
+.hpline { display: block; height: 7px; margin: 3px 0 7px; background: #000; border: 1px solid #4a3a24; border-radius: 4px; overflow: hidden; }
+.hpline i { display: block; height: 100%; transition: width .4s; background: linear-gradient(180deg, #ffe39a 0%, #d9a33a 45%, #7a5410 100%); }
+.hpline.hall i { background: linear-gradient(180deg, #ffc0a8 0%, #d8583a 45%, #7a1e10 100%); }
+.hpline.wall i { background: linear-gradient(180deg, #e8eef4 0%, #a0aab6 45%, #4e5662 100%); }
+.hpline.inf i { background: linear-gradient(180deg, #e8d0ff 0%, #a868f0 45%, #5a2aa0 100%); }
+.townbtn .hpline { margin: 4px 0 0; height: 4px; max-width: 180px; }
+.vxp { display: grid; grid-template-columns: auto minmax(60px, 1fr); gap: 2px 8px; align-items: center; margin: 4px 0 6px; }
+.vxp .hpline { margin: 0; }
+.vxp small { grid-column: 1 / -1; color: #b8a0d8; font-size: 11.5px; }
+.pw li.off { opacity: .55; }
+.pw li.off i { color: #a890c8; }
+.cap.sm { font-size: 12px; margin: 10px 0 4px; }
+ul.log li { font-size: 12.5px; margin: 3px 0; color: #d8ccb0; }
+ul.log small { color: #8a7a60; margin-right: 4px; }
+.qrow .est { margin-left: auto; white-space: nowrap; }

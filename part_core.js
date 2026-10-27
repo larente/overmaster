@@ -129,18 +129,18 @@
     if (mode === 'balanced') return CLASS_ORDER.map(c => shuffle(ROSTER.filter(r => r.cls === c))[0].id);
     return shuffle(ROSTER).slice(0, 4).map(r => r.id);
   }
-  // what the players should know about a party before they commit to it
+  // what you should know about the party you're picking to face (0.30: from the villain's side)
   function partyNotes(ids) {
     const rs = ids.map(id => ROSTER_BY[id]).filter(Boolean); const cls = c => rs.filter(r => r.cls === c).length; const out = [];
     if (rs.length < 4) return out;
-    if (!cls('cleric')) out.push({ tone: 'warn', text: 'No cleric: the heroes carry healing potions instead, but the final showdown is a lot harder without a healer.' });
-    if (!cls('wizard')) out.push({ tone: 'warn', text: 'No wizard: no area spells to thin out big crowds.' });
-    if (!cls('barbarian') && cls('rogue') + cls('wizard') >= 3) out.push({ tone: 'warn', text: 'Fragile: few heroes can stand in the front line.' });
-    if (cls('cleric') >= 2) out.push({ tone: 'good', text: 'Two healers: hard to wear down.' });
-    if (cls('barbarian') >= 2) out.push({ tone: 'good', text: 'A heavy front line.' });
-    if (rs.some(r => r.race === 'elf')) out.push({ tone: 'good', text: 'An elf in the party: they see one tile farther on the map.' });
+    if (!cls('cleric')) out.push({ tone: 'good', text: 'No cleric: they carry healing potions instead, and wear down much faster.' });
+    if (!cls('wizard')) out.push({ tone: 'good', text: 'No wizard: nothing to burn down your swarms in one blast.' });
+    if (!cls('barbarian') && cls('rogue') + cls('wizard') >= 3) out.push({ tone: 'good', text: 'Fragile: few of them can hold a front line.' });
+    if (cls('cleric') >= 2) out.push({ tone: 'warn', text: 'Two healers: hard to wear down.' });
+    if (cls('barbarian') >= 2) out.push({ tone: 'warn', text: 'A heavy front line: hard to break.' });
+    if (rs.some(r => r.race === 'elf')) out.push({ tone: 'warn', text: 'An elf: they see one tile farther, so your lairs are harder to hide.' });
     const drives = new Set(rs.map(r => r.drive));
-    if (drives.size <= 2) out.push({ tone: 'warn', text: 'The players all want the same few things. Spotlights will be harder to spread around.' });
+    if (drives.size <= 2) out.push({ tone: 'good', text: 'They all want the same few things, so they\'re easier to predict.' });
     return out;
   }
 
@@ -610,6 +610,7 @@
       quests: [], townEvent: null,
       villain: { type: vil.type, name: vil.name, title: vil.title, pron: vil.pron, state: 'lair', x: tower.x, y: tower.y, mp: VILLAIN_MP, banish: 0, army: [], up: { vigor: 0, dread: 0, raise: 0, traps: 0, ritual: 0 }, known: false, glimpsed: 0, movedDay: 0, level: 1, xp: 0 }
     };
+    s.town.hall = hallMax(s);
     s.nodes = genNodes(s);
     for (let i = 0; i < STARTING_MINIONS; i++) spawnMinion(s);
     startingLair(s);
@@ -1471,7 +1472,7 @@
     const P = townCost(s, k); for (const r of Object.keys(P)) s.town.res[r] -= P[r];
     const l = townLv(s, k); const d = TOWN_B[k].days[l];
     s.town.build = { k, days: d, total: d, cost: P };
-    say(s, k === 'walls' ? `Millbrook starts building ${TOWN_B.walls.names[l].toLowerCase()}. Ready in ${d} days.` : `Millbrook starts ${l ? 'enlarging its' : 'building a'} ${TOWN_B[k].name}. Ready in ${d} days.`, 'note');
+    say(s, k === 'walls' ? `Millbrook starts work on ${TOWN_B.walls.names[l].toLowerCase()}. Ready in ${d} days.` : `Millbrook starts work on the ${TOWN_B[k].name}${l ? ' ' + roman(l + 1) : ''}. Ready in ${d} days.`, 'note');
     return null;
   }
   function townCancel(s) {
@@ -1542,8 +1543,8 @@
     while (V.level < BOSS_LEVEL && V.xp >= VXP[V.level + 1]) V.level++;
     if (V.level > L0) {
       s.odds = null;
-      const fresh = powersAt(s, V.level).filter(k => powersAt(s, L0).indexOf(k) < 0).map(k => BOSS_POWERS[k].name);
-      say(s, `${vName(s)} grows stronger: level ${V.level}.${fresh.length ? ` ${capFirst(vP(s).he)} learns ${fresh.join(' and ')}.` : ''}`, 'boss');
+      const fresh = powersAt(s, V.level).filter(k => powersAt(s, L0).indexOf(k) < 0);
+      say(s, `${vName(s)} grows stronger: level ${V.level}.${fresh.length ? ` ${capFirst(vP(s).he)} learns ${fresh.map(k => BOSS_POWERS[k].name).join(' and ')}.` : ''}`, 'boss');
       s.vUps = (s.vUps || []).concat([{ from: L0, to: V.level, powers: fresh }]);
       talentTick(s);
     }
@@ -2940,7 +2941,7 @@
         }
         if (D === 'kill') {
           if (T === 'liar') { ambush(); return { text: 'His hidden friends see him fall and charge out for revenge!', th: [debate, ['The captive\'s friends wanted revenge', 3, g]] }; }
-          return { text: T === 'secrets' ? 'It\'s quick. Whatever he knew dies with him.' : 'It\'s quick. The cleric\'s player goes quiet.', th: [debate, ['Finished the captive', 1 + db(s, g, 1), g]] };
+          return { text: T === 'secrets' ? 'It\'s quick. Whatever he knew dies with him.' : 'It\'s quick. The cleric looks away.', th: [debate, ['Finished the captive', 1 + db(s, g, 1), g]] };
         }
         if (ok) {
           if (T === 'liar') { const xp = lvXp(s, 0.22); giveXp(s, xp); return { text: `They see through the act, sneak up on his hidden friends, and send them running. (+${xp} XP)`, th: [debate, ['Saw through an ambush', 3 + db(s, w, 2), w]] }; }
@@ -3052,6 +3053,7 @@
     for (const [label, v, h] of out.th) { thrill(s, label, v, h && h.id); lines.push({ label, v }); }
     s.todayActive = true;
     e.outcome = { text: out.text, lines, ok };
+    if (!ok) e.outcome.infamy = addInfamy(s, 2, `The heroes stumbled at the ${e.name}`);   // 0.30: their failures are your fame
     e.stage = 'done';
     say(s, `${e.name}: ${out.text}`, ok ? 'good' : 'note');
     return e.outcome;

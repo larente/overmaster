@@ -658,6 +658,8 @@
   const selBand = () => { if (!ui.sel || ui.sel.type !== 'obj' || !S) return null; const o = S.objects.find(z => z.id === ui.sel.id); return o && o.kind === 'stack' ? o : null; };
   // where a band walks next: toward the end of its patrol leg
   function bandRoute(o) {
+    // 0.30: a wave's road to Millbrook's gates
+    if (o.wave) { const key = ['w', o.id, o.x, o.y, S.party.x, S.party.y, S.objects.length].join(':'); if (ui.broute && ui.broute.key === key) return ui.broute.r; const p = G.wavePath(S, o); const r = p && p.length ? [[o.x, o.y]].concat(p) : []; ui.broute = { key, r }; return r; }
     if (!o.patrol) return [];
     const tgt = o.patrol.to ? o.patrol.b : o.patrol.a; const key = [o.id, o.x, o.y, tgt.join(), S.party.x, S.party.y, S.objects.length].join(':');
     if (ui.broute && ui.broute.key === key) return ui.broute.r;
@@ -681,7 +683,7 @@
     }
     return null;
   }
-  const THREAT_TXT = { Trivial: 'Trivial: they would scatter or die without a scratch on anyone. No experience in that.', Easy: 'Easy: a few bruises.', Tense: 'Tense: the sweet spot. A real fight they should win.', Harrowing: 'Harrowing: it could go either way.', Deadly: 'Deadly: this could wipe the party.' };
+  const THREAT_TXT = { Trivial: 'Trivial: the heroes would hardly notice them. No Infamy, and no experience for the heroes either.', Easy: 'Easy: a few bruises, a little Infamy.', Tense: 'Tense: real blood spilled, and real experience for the heroes if they win.', Harrowing: 'Harrowing: it could go either way.', Deadly: 'Deadly: this could wipe out the party.' };
 
   /* ============ minions: select, then right-click to give orders ============ */
   const selMinions = () => ui.sel && ui.sel.type === 'minion' && S ? (ui.sel.ids || [ui.sel.id]).map(id => (S.minions || []).find(m => m.id === id)).filter(Boolean) : [];
@@ -956,7 +958,7 @@
     if (!S || !ui.active) return;
     const b = S.phase === 'battle' && S.battle;
     const over = S.phase === 'over';
-    SND.music(over ? (S.result === 'victory' ? 'music-victory' : 'music-defeat') : b ? (b.finale || b.boss ? 'music-finale' : 'music-battle') : ui.screen === 'tower' ? 'music-tower' : ui.screen === 'town' && SND.has('music-town') ? 'music-town' : 'music-map');
+    SND.music(over ? (S.result === 'razed' || S.result === 'wiped' ? 'music-victory' : 'music-defeat') : b ? (b.finale || b.boss ? 'music-finale' : 'music-battle') : ui.screen === 'tower' ? 'music-tower' : ui.screen === 'town' && SND.has('music-town') ? 'music-town' : 'music-map');
     SND.amb(over || b ? null : ui.screen === 'tower' ? 'amb-tower' : ui.screen === 'town' && SND.has('amb-town') ? 'amb-town' : ui.night ? 'amb-night' : 'amb-day');
   }
   /* ============ the heroes talk: a portrait pops up and says a line, voiced and lip-synced when it's been recorded ============ */
@@ -1122,7 +1124,7 @@
       const got = G.RES_KEYS.filter(k => n.res[k]).map(k => `+${n.res[k]} ${k}`).join(', ');
       if (got || n.raised.length) toast(`Overnight: ${got || 'no resources'}${n.raised.length ? '. Your lairs raised ' + n.raised.map(([t, c]) => `${c} ${c > 1 ? G.CREATURES[t].name.toLowerCase() : G.CREATURES[t].one.toLowerCase()}`).join(', ') : ''}.`, 'sys');
       for (const id of n.opened || []) { const nd = S.nodes.find(z => z.id === id); if (nd) toast(`Your ${MT().one.toLowerCase()} opened a ${G.NODE_KINDS[nd.kind].name} near ${G.regionName(S, nd.x, nd.y)}.`, 'good'); }
-      for (const id of n.released || []) { const b = S.objects.find(z => z.id === id); if (b) toast(`${G.bandName(b)} march out of your ${G.DUNGEONS[(S.objects.find(z => z.id === b.lair) || { dtype: 'warren' }).dtype].name}. Click them to give orders.`, 'good'); }
+      for (const id of n.released || []) { const b = S.objects.find(z => z.id === id); if (b) toast(`${G.bandName(b)} march ${b.wave ? 'on Millbrook from' : 'out of'} your ${G.DUNGEONS[(S.objects.find(z => z.id === b.lair) || { dtype: 'warren' }).dtype].name}.`, 'good'); }
       sfx('dawn', { vol: 0.6 });
       let at = 0.9; const later = k => { sfx(k, { delay: at }); at += 0.8; };
       if (n.built.length || n.library || (n.town && n.town.built)) later('built');
@@ -1131,9 +1133,15 @@
       if (n.town && n.town.built) { const B = G.TOWN_B[n.town.built]; const l = G.townLv(S, n.town.built); toast(`Millbrook's ${B.name}${l > 1 ? ' ' + G.roman(l) : ''} is ${l > 1 ? 'enlarged' : 'finished'}: ${B.levels ? B.levels[l - 1] : '+' + G.priceText(B.income[l - 1]) + ' a day'}.`, 'good'); }
       if ((n.summoned || []).length) toast(`A new ${MT().one.toLowerCase()} crawls out of the Dark Tower, ready to work.`, 'good');
       if (n.library) toast(G.libraryLevel(S) > 1 ? "The Forbidden Library's new wing is finished: one more talent point." : 'The Forbidden Library is finished: a talent point to spend.', 'good');
+      // 0.30: the night's sieges, and what Millbrook is up to
+      for (const r of n.sieges || []) { toast(r.text, r.breached ? 'good' : 'sys'); if (r.breached) later('coins'); }
+      for (const o of S.objects.filter(z => z.wave && z.atGates)) toast(`${G.bandName(o)} wait at Millbrook's gates. The heroes will man the walls.`, 'warn');
+      if (n.town && n.town.started) { const k = n.town.started; toast(`Millbrook starts work on ${k === 'walls' ? G.TOWN_B.walls.names[G.townLv(S, 'walls')].toLowerCase() : 'the ' + G.TOWN_B[k].name + (G.townLv(S, k) ? ' ' + G.roman(G.townLv(S, k) + 1) : '')}.`, 'sys'); }
     }
-    if (S.phase === 'week') { commit(); showWeek(); return; }
-    commit(); morning();
+    if (S.phase === 'over') { commit(); showOver(); return; }
+    const go = () => { if (S.phase === 'week') { commit(); showWeek(); return; } commit(); morning(); };
+    if (S.vUps && S.vUps.length) { commit(); showVillainUps(go); return; }
+    go();
   }
   function playMapRolls(rolls, done) {
     const tray = $('maptray'); let i = 0;
@@ -1158,12 +1166,12 @@
   const perNight = (n, C) => n >= 1.25 ? `${Math.round(n * 10) / 10} ${C.name.toLowerCase()} a night` : n >= 0.75 ? `about 1 ${C.one.toLowerCase()} a night` : `1 ${C.one.toLowerCase()} every ${Math.max(2, Math.round(1 / n))} nights`;
   function readinessHtml(full) {
     const r = G.readiness(S); const pct = r.win === null ? Math.min(30, r.ratio / r.need * 30) : Math.max(4, r.win * 100); const mark = r.need <= 1 ? r.need * 100 : 55;
-    const cls = r.ready ? 'good' : r.label === 'Almost ready' ? 'warn' : 'bad';
-    return `<div class="readybox"><p><b class="${cls}">${esc(r.label)}</b> · party level ${G.avgLevel(S)} against a level ${G.BOSS_LEVEL} ${esc(VT().label.toLowerCase())}${S.march ? ` · <b class="warn">${S.march === 'bored' ? 'marching out of boredom!' : 'marching on the tower'}</b>` : ''}</p>
-      <div class="readymeter" title="${r.win === null ? 'Below level 10 the party won\'t even think about the tower.' : `They think they\'d win about ${Math.round(r.win * 100)}% of the time. The white line is where they feel ready to march.`}"><i style="width:${pct.toFixed(0)}%"></i><em style="left:${mark.toFixed(0)}%"></em></div>
-      ${full ? `<p class="hint">From level 10 the party sizes up the showdown every time they grow stronger. They march when they think they'd win more often than not, when their mood hits zero, or when they can't level any more. Healers and magic items count for a lot.${r.win !== null ? ` Right now they'd win about ${Math.round(r.win * 100)}% of the time.` : ''}</p>` : ''}</div>`;
+    const cls = r.ready ? 'bad' : r.label === 'Almost ready' ? 'warn' : 'good';
+    const lab = S.march ? 'Marching on you' : r.win === null ? 'No threat yet' : r.ready ? 'Ready to march' : r.label === 'Almost ready' ? 'Almost ready' : 'Not ready';
+    return `<div class="readybox"><p><b class="${cls}">${esc(lab)}</b> · heroes level ${G.avgLevel(S)} against ${esc(VN())} at level ${G.villainLevel(S)}${S.march ? ` · <b class="warn">they're on their way to the Dark Tower</b>` : ''}</p>
+      <div class="readymeter" title="${r.win === null ? `Below level ${Math.max(G.MARCH_LV, G.villainLevel(S) - 6)} the heroes don't even think about the tower.` : `They think they'd beat you about ${Math.round(r.win * 100)}% of the time. The white line is where they march.`}"><i style="width:${pct.toFixed(0)}%"></i><em style="left:${mark.toFixed(0)}%"></em></div>
+      ${full ? `<p class="hint">From level ${G.MARCH_LV} the heroes size up the showdown at your throne every time something changes: their levels and items, your level and powers. When they think they'd win more often than not, they march on the Dark Tower. Keep levelling up to stay ahead of them.${r.win !== null ? ` Right now they'd win about ${Math.round(r.win * 100)}% of the time.` : ''}</p>` : ''}</div>`;
   }
-
   /* --- the war party you are putting together, and how the fight would go --- */
   const compList = () => G.CREATURE_ORDER.filter(t => (ui.comp[t] || 0) > 0).map(t => [t, ui.comp[t]]);
   const compKey = () => compList().map(x => x.join(':')).join(',') + '|' + S.heroes.map(h => h.id + h.level + ':' + h.hp + ':' + h.mana + ':' + h.items.length).join(',') + '|' + today();
@@ -1300,10 +1308,10 @@
       if (o.building) body = `<div class="prow">${pbar(1 - o.building / tot, 'build')}<small>${tot - o.building} of ${tot} day${tot > 1 ? 's' : ''}</small></div><p>Going up: ${o.building} day${o.building > 1 ? 's' : ''} of work left${builders.length ? `, ${builders.length} ${builders.length > 1 ? MT().name.toLowerCase() : MT().one.toLowerCase()} assigned${builders.some(m => m.path.length) ? ' (on the way)' : ''}` : '. Nobody is working on it.'}.</p><div class="row">${!builders.length ? `<button class="btn sm" data-act="buildhelp" data-id="${o.id}"${!G.idleMinions(S).length ? ' disabled' : ''}>Send a ${esc(MT().one.toLowerCase())}</button>` : ''}<button class="btn sm" data-act="cancelbuild" data-id="${o.id}">Cancel · half back</button></div>`;
       else if (wrecked) body = `<p class="warn">The heroes wrecked it. It raises nothing for ${o.wrecked - G.dayIndex(S)} more day${o.wrecked - G.dayIndex(S) > 1 ? 's' : ''}.</p>`;
       else {
-        const P = G.upPrice(o.dtype); const err = G.expandCheck(S, o.id); const out = G.bandsOf(S, o); const at = G.bandAt(S, o);
+        const P = G.upPrice(o.dtype); const err = G.expandCheck(S, o.id); const out = G.wavesOf(S, o); const max = G.wavesPerLair(S); const at = Math.min(Math.floor(G.lairCap(S, o)), G.waveAt(S, o) + Math.max(1, Math.round(G.lairRate(S, o))));
         body = `<p>Raises ${esc(perNight(G.lairRate(S, o), C))}${D.home.indexOf(G.terrainAt(S, o.x, o.y)) >= 0 ? ' (home ground: +25%)' : ''}. <b>${G.lairCount(o)}</b> here.</p>
-          <div class="prow">${pbar(Math.min(1, G.lairCount(o) / at), 'build')}<small>${out >= G.BANDS_PER_LAIR ? 'bands are out' : `next band at ${at}`}</small></div>
-          <p class="hint">When ${at} have gathered they march out as a band and wait nearby, ${out} of ${G.BANDS_PER_LAIR} out now. Click a band to give it orders.</p>
+          <div class="prow">${pbar(Math.min(1, G.lairCount(o) / at), 'build')}<small>${out >= max ? 'a wave is on the road' : `next wave at ${at}`}</small></div>
+          <p class="hint">When it's full (${at}), ${G.waveAt(S, o)} of them march down the road to Millbrook as a wave, on their own. The rest stay to guard the lair. ${out} of ${max} on the road now.${o.harm ? ' <b class="warn">Millbrook knows where its waves come from.</b>' : ''}</p>
           ${(o.level || 1) < 2 ? `<div class="row"><button class="btn sm" data-act="expand" data-id="${o.id}"${err ? ' disabled' : ''}>Expand</button>${priceChips(P)}</div><p class="hint">Expanding raises 75% more and reaches 2 tiles farther.</p>` : '<p class="hint">Fully expanded.</p>'}`;
       }
       return `<section class="panel sel">${img(o.building ? 'obj-building' : wrecked ? 'obj-wrecked' : 'obj-' + o.dtype, 'selimg')}<div>${close}<h2 class="cap">${esc(D.name)}${(o.level || 1) > 1 ? ' II' : ''}</h2>${body}<p class="hint">${o.known ? 'The heroes know it is here.' : 'The heroes don\'t know it is here.'}</p>${o.building ? '' : bountyRow({ kind: 'obj', id: o.id })}</div></section>`;
@@ -1343,13 +1351,16 @@
         if (!canSeeObj(o)) { ui.sel = null; ui.mode = null; return ''; }
         const C = G.CREATURES[o.type]; const L = o.lvl || 1; const lair = o.lair && S.objects.find(z => z.id === o.lair);
         const from = lair ? `Bred in your ${esc(G.DUNGEONS[lair.dtype].name)}.` : o.lair ? 'Their lair is gone.' : 'Wanderers from the wilds.';
-        const doing = o.patrol ? `Patrolling between ${esc(G.regionName(S, o.patrol.a[0], o.patrol.a[1]))} and ${esc(G.regionName(S, o.patrol.b[0], o.patrol.b[1]))}.` : o.home ? 'Prowling near their lair.' : 'Standing their ground.';
+        const eta = o.wave ? G.waveEta(S, o) : null;
+        const doing = o.wave ? (o.atGates ? '<b class="warn">At Millbrook\'s gates.</b>' : `Marching on Millbrook${eta !== null ? `: ${eta} night${eta > 1 ? 's' : ''} to the gates` : ', but the way is blocked'}.`) : o.patrol ? `Patrolling between ${esc(G.regionName(S, o.patrol.a[0], o.patrol.a[1]))} and ${esc(G.regionName(S, o.patrol.b[0], o.patrol.b[1]))}.` : o.home ? 'Prowling near their lair.' : 'Standing their ground.';
+        const out = o.wave ? G.siegeOutlook(S, o) : null;
+        const siege = out ? `<p class="threat t-${esc(String(OUTLOOK_CLS[out.label]).toLowerCase())}"><b>Against Millbrook now: ${esc(out.label)}.</b> ${out.hallDmg ? `About ${out.hallDmg} damage to the hall, if nothing stops them.` : out.wallDmg ? `They'd hack ${out.wallDmg} off the walls.` : 'The towers would cut them down.'}</p>` : '';
         const th = bandThreat(o); const lc = L < 3 ? G.bandLevelCost(o) : null; const lerr = G.bandLevelCheck(S, o);
-        const thr = th ? `<p class="threat t-${esc(String(th.label).toLowerCase())}"><b>Against the heroes now: ${esc(th.label)}.</b> ${th.avg !== undefined ? `They'd lose about ${Math.round(th.avg * 100)}% of their health.` : ''}</p><p class="hint">${esc(THREAT_TXT[th.label] || '')}</p>` : '<p class="hint">Sizing them up against the heroes…</p>';
+        const thr = th ? `<p class="threat t-${esc(String(th.label).toLowerCase())}"><b>Against the heroes now: ${esc(th.label)}.</b> ${th.avg !== undefined ? `They'd lose about ${Math.round(Math.min(1, th.avg) * 100)}% of their health.` : ''}</p><p class="hint">${esc(THREAT_TXT[th.label] || '')}</p>` : '<p class="hint">Sizing them up against the heroes…</p>';
         return `<section class="panel sel bpanel${ui.mode === 'patrol' ? ' placing' : ''}">${img('unit-' + o.type, 'selimg')}<div>${close}<h2 class="cap">${esc(G.bandName(o))}${L > 1 ? ` <span class="lv">Lv ${L}</span>` : ''}</h2>
-          <p>${from} ${doing}${o.known ? ' The heroes know they\'re here.' : ''}</p>${thr}
-          <div class="mmenu three"><button class="mbtn${ui.mode === 'patrol' ? ' on' : ''}" data-act="bpatrol" title="Click a spot: they walk back and forth between here and there">${MICON.patrol}<span>Patrol</span></button><button class="mbtn" data-act="blevel"${lerr ? ` disabled title="${esc(lerr)}"` : ` title="+2 to hit, +1 AC, +30% hit points, +1 damage, and a fifth more of them"`}>${MICON.level}<span>Level up${lc ? ` · ${lc.gold} gold` : ''}</span></button><button class="mbtn" data-act="baway" title="They leave the map for good">${MICON.away}<span>Go away</span></button></div>
-          ${ui.mode === 'patrol' ? `<p class="hint placehint"><b>Click where they should patrol to</b> (explored ground within ${G.PATROL_RANGE} tiles). Right-click or Esc to cancel.</p>` : o.patrol ? '<div class="row"><button class="btn sm" data-act="bhold">Stop patrolling</button></div>' : '<p class="hint">Right-click the map to set a patrol.</p>'}${bountyRow({ kind: 'obj', id: o.id })}</div></section>`;
+          <p>${from} ${doing}${o.known ? ' The heroes know they\'re here.' : ''}</p>${siege}${thr}
+          <div class="mmenu three"><button class="mbtn${ui.mode === 'patrol' ? ' on' : ''}" data-act="bpatrol" title="${o.wave ? 'Stop the march on Millbrook. Click a spot: they patrol between here and there instead' : 'Click a spot: they walk back and forth between here and there'}">${MICON.patrol}<span>Patrol</span></button><button class="mbtn" data-act="blevel"${lerr ? ` disabled title="${esc(lerr)}"` : ` title="+2 to hit, +1 AC, +30% hit points, +1 damage, and a fifth more of them"`}>${MICON.level}<span>Level up${lc ? ` · ${lc.gold} gold` : ''}</span></button><button class="mbtn" data-act="baway" title="They leave the map for good">${MICON.away}<span>Go away</span></button></div>
+          ${ui.mode === 'patrol' ? `<p class="hint placehint"><b>Click where they should patrol to</b> (explored ground within ${G.PATROL_RANGE} tiles).${o.wave ? ' They stop marching on Millbrook.' : ''} Right-click or Esc to cancel.</p>` : o.patrol ? '<div class="row"><button class="btn sm" data-act="bhold">Stop patrolling</button></div>' : o.wave ? '<p class="hint">Level them up to hit harder, or right-click the map to make them patrol instead.</p>' : '<p class="hint">Right-click the map to set a patrol.</p>'}${bountyRow({ kind: 'obj', id: o.id })}</div></section>`;
       }
       const name = o.kind === 'dungeon' ? G.DUNGEONS[o.dtype].name : (G.ITEMS[o.kind] || { name: 'Something' }).name;
       return `<section class="panel sel">${img(o.kind === 'dungeon' ? 'obj-' + o.dtype : 'obj-' + o.kind, 'selimg')}<div>${close}<h2 class="cap">${esc(name)}</h2><p class="hint">${o.wild ? 'The world put this here, not you. ' : ''}${o.known ? 'The heroes know it is here.' : 'The heroes haven\'t found it yet.'}</p>${isTrapKind(o.kind) ? '' : bountyRow({ kind: 'obj', id: o.id })}</div></section>`;
@@ -1357,7 +1368,7 @@
     if (sel.type === 'site') {
       const site = G.siteOf(S, sel.id);
       const qable = (site.kind === 'landmark' && !S.visited[site.id]) || site.kind === 'tower';
-      return `<section class="panel sel">${img(siteIcon(site), 'selimg')}<div>${close}<h2 class="cap">${esc(site.name)}</h2><p class="hint">${esc(site.text)}</p>${site.kind === 'town' ? '<div class="row"><button class="btn sm" data-act="town">Run Millbrook</button></div>' : site.kind === 'tower' ? '<div class="row"><button class="btn sm" data-act="tower">Open the tower</button></div>' : ''}${qable ? bountyRow({ kind: 'site', id: site.id }) : ''}</div></section>`;
+      return `<section class="panel sel">${img(siteIcon(site), 'selimg')}<div>${close}<h2 class="cap">${esc(site.name)}</h2><p class="hint">${esc(site.text)}</p>${site.kind === 'town' ? '<div class="row"><button class="btn sm" data-act="town">Spy on Millbrook</button></div>' : site.kind === 'tower' ? '<div class="row"><button class="btn sm" data-act="tower">Open the tower</button></div>' : ''}${qable ? bountyRow({ kind: 'site', id: site.id }) : ''}</div></section>`;
     }
     return '';
   }
@@ -1385,24 +1396,35 @@
     if (ui.screen) renderScreen();
     renderBar();
   }
+  // the sidebar's Millbrook card: its walls and hall, what it's building, and any bounty on your lairs
   function townBtn() {
-    const T = S.town; const nb = G.TOWN_ORDER.filter(k => G.townLv(S, k)).length; const nq = S.quests.filter(q => q.status === 'open').length; const idle = townIdle();
-    const doing = T.build ? `${G.TOWN_B[T.build.k].name} going up` : idle ? 'builders idle' : `${Math.floor(T.res.gold)} gold`;
-    return `<button class="towerbtn townbtn" data-act="town">${img('obj-town', 'cicon')}<span><b>Millbrook</b><small>${nb} building${nb === 1 ? '' : 's'} · ${esc(doing)}${nq ? ` · ${nq} bount${nq > 1 ? 'ies' : 'y'}` : ''}</small></span>${idle ? '<i class="badge">!</i>' : ''}</button>`;
+    const T = S.town; const wm = G.WALL_HP[G.townLv(S, 'walls')] || 0; const hm = G.hallMax(S); const nq = S.quests.filter(q => q.status === 'open').length;
+    const gates = S.objects.filter(o => o.wave && o.atGates).length;
+    const doing = T.build ? `building ${T.build.k === 'walls' ? G.TOWN_B.walls.names[G.townLv(S, 'walls')].toLowerCase() : G.TOWN_B[T.build.k].name.toLowerCase()}` : 'saving up';
+    return `<button class="towerbtn townbtn" data-act="town" title="Spy on Millbrook: its defences, its buildings and the bounties on your lairs">${img('obj-town', 'cicon')}<span><b>Millbrook</b><small>${esc(G.wallName(S))} ${Math.round(T.wallHp)}/${wm} · hall ${Math.round(T.hall)}/${hm} · ${esc(doing)}${nq ? ` · ${nq} bount${nq > 1 ? 'ies' : 'y'} on you` : ''}</small>${hpBar(T.hall, hm, 'hall')}</span>${gates ? `<i class="badge" title="${gates} wave${gates > 1 ? 's' : ''} at the gates">${gates}</i>` : ''}</button>`;
+  }
+  // the villain's level and the Infamy to the next one
+  function villainXpHtml() {
+    const L = G.villainLevel(S); const lo = G.VXP[L] || 0, hi = G.villainNext(S); const xp = S.villain.xp || 0;
+    return `<div class="vxp"><span class="k">Infamy</span>${hpBar(hi ? xp - lo : 1, hi ? hi - lo : 1, 'inf')}<small>${hi ? `${Math.floor(xp)} / ${hi} to level ${L + 1}` : `${Math.floor(xp)}, the highest level there is`}</small></div>`;
   }
   function renderBar() {
     if (!S) return;
     for (const k of G.RES_KEYS) { const e = $('b-' + k); if (e) e.textContent = Math.floor(S.res[k] || 0); const t = $('b-m' + k); if (t) t.textContent = Math.floor((S.town && S.town.res[k]) || 0); }
     { const tp = $('b-tpic'); const key = siteIcon({ id: 'tower' }); if (tp && A.URI[key] && tp.dataset.k !== key) { tp.src = A.URI[key]; tp.dataset.k = key; } }
     { const tb = $('b-townbusy'); if (tb) { const B = S.town && S.town.build; tb.hidden = !B; if (B) tb.title = `Building: ${G.TOWN_B[B.k].name}, ${B.days} day${B.days > 1 ? 's' : ''} left`; } }
-    $('b-eng').textContent = S.engagement; $('b-engbar').style.width = S.engagement + '%'; $('g-eng').classList.toggle('low', S.engagement < 30);
+    { const L = G.villainLevel(S); const lo = G.VXP[L] || 0, hi = G.villainNext(S); const xp = S.villain.xp || 0;
+      $('b-vlv').textContent = 'Lv ' + L; $('b-inf').textContent = hi ? `${Math.floor(xp)}/${hi}` : Math.floor(xp);
+      $('b-infbar').style.width = (hi ? Math.max(0, Math.min(1, (xp - lo) / (hi - lo))) * 100 : 100).toFixed(0) + '%';
+      $('g-inf').title = `${VN()} is level ${L}. ${hi ? `${Math.ceil(hi - xp)} more Infamy to level ${L + 1}.` : 'The highest level there is.'} Hurting and killing heroes, breaking into Millbrook, plunder and every lair you keep standing earn Infamy. Each level makes your villain stronger on the throne and gives a talent point.`; }
     $('b-date').textContent = `Week ${S.week} · Day ${S.day}`;
     const fx = G.WEEKS_FX[S.weekFx]; $('b-week').textContent = fx.name; $('b-week').title = fx.text;
     $('b-lvl').textContent = 'Lv ' + G.avgLevel(S);
     const r = G.readiness(S); const rd = $('b-ready');
-    rd.textContent = S.march ? 'Marching on the tower' : r.win === null ? 'Not ready yet' : r.label;
-    rd.className = 'ready ' + (S.march ? 'march' : r.ready ? 'r-ok' : r.label === 'Almost ready' ? 'r-near' : r.win === null ? 'r-far' : 'r-bad');
-    rd.title = r.win === null ? 'From level 10 the heroes start sizing up the final showdown.' : `They think they'd win the showdown about ${Math.round(r.win * 100)}% of the time.`;
+    // 0.30: from your side, the heroes being ready is the danger
+    rd.textContent = S.march ? 'Marching on you!' : r.win === null ? 'No threat yet' : r.ready ? 'Ready to march' : r.label === 'Almost ready' ? 'Almost ready' : `${Math.round(r.win * 100)}% odds`;
+    rd.className = 'ready ' + (S.march ? 'march' : r.ready ? 'r-bad' : r.label === 'Almost ready' ? 'r-near' : 'r-ok');
+    rd.title = r.win === null ? `Until they reach level ${Math.max(G.MARCH_LV, G.villainLevel(S) - 6)} the heroes don't even think about the Dark Tower.` : `They think they'd beat ${VN()} on the throne about ${Math.round(r.win * 100)}% of the time. They march at ${Math.round(r.need * 100)}%.`;
   }
   // a new day: offer a fair fight right away, so the usual move is one click
   function morning() {
@@ -1472,7 +1494,7 @@
     const mt = MT(); const d = S.lastDay; const tf = G.talentFree(S);
     return `<div class="tgrid">
       <section class="tcard"><h2 class="cap">${esc(mt.name)}</h2>${summonCard()}</section>
-      <section class="tcard"><h2 class="cap">Talents</h2><p class="hint">${tf ? `<b class="gold">${tf} talent point${tf > 1 ? 's' : ''}</b> to spend.` : 'No points to spend right now.'} ${G.talentSpent(S)} spent so far. Every level the heroes gain gives you another, and close fights earn Infamy toward more.</p>
+      <section class="tcard"><h2 class="cap">Talents</h2><p class="hint">${tf ? `<b class="gold">${tf} talent point${tf > 1 ? 's' : ''}</b> to spend.` : 'No points to spend right now.'} ${G.talentSpent(S)} spent so far. Every level ${esc(VN())} gains gives you another.</p>
         <div class="row"><button class="btn sm${tf ? ' big' : ''}" data-act="ttab" data-k="talents">Open the talents</button></div></section>
       <section class="tcard"><h2 class="cap">The Forbidden Library</h2>${libraryCard()}</section>
       ${d ? `<section class="tcard"><h2 class="cap">Last night</h2><p class="hint">${G.RES_KEYS.map(k => `+${d.res[k]} ${k}`).join(', ')}${d.raised && d.raised.length ? '. Your lairs raised ' + d.raised.map(([t, n]) => `${n} ${G.CREATURES[t].name.toLowerCase()}`).join(', ') : ''}.</p></section>` : ''}
@@ -1511,18 +1533,18 @@
   }
   function towerTalents() {
     const tf = G.talentFree(S), earned = G.talentEarned(S), spent = G.talentSpent(S); const T = S.talents || {};
-    const inf = Math.floor(T.inf || 0); const lv = Math.max(0, (T.lv || 1) - 1); const lib = G.libraryLevel(S);
-    const rerr = G.resetCheck(S);
+    const lv = Math.max(0, G.villainLevel(S) - 1); const lib = G.libraryLevel(S);
+    const rerr = G.resetCheck(S); const L = G.villainLevel(S), lo = G.VXP[L] || 0, hi = G.villainNext(S), xp = S.villain.xp || 0;
     const head = `<section class="tcard thead"><div class="tpts${tf ? ' has' : ''}"><b>${tf}</b><span>talent point${tf === 1 ? '' : 's'}<br>to spend</span></div>
-      <div class="tsrc"><p class="hint">${earned} earned: 1 to start, ${lv} from the heroes' levels${lib ? `, ${lib} from the Library` : ''}${G.talentFx(S).points ? `, ${G.talentFx(S).points} from your own talents` : ''}, and the rest from Infamy. A row opens once enough points are spent in its tree.</p>
-        <div class="tinf" title="Close fights and heroes knocked down earn Infamy. Every ${G.INFAMY_STEP} Infamy is another talent point."><span>Infamy</span>${pbar(inf / G.INFAMY_STEP, 'summon')}<small>${inf} / ${G.INFAMY_STEP} to the next point</small></div></div>
+      <div class="tsrc"><p class="hint">${earned} earned: 1 to start, ${lv} from ${esc(VN())}'s levels${lib ? `, ${lib} from the Library` : ''}${G.talentFx(S).points ? `, ${G.talentFx(S).points} from your own talents` : ''}. A row opens once enough points are spent in its tree.</p>
+        <div class="tinf" title="Hurting and killing heroes, breaking into Millbrook, plunder and every lair you keep standing earn Infamy. Every level is another talent point."><span>Infamy</span>${pbar(hi ? (xp - lo) / (hi - lo) : 1, 'summon')}<small>${hi ? `${Math.floor(xp)} / ${hi} to level ${L + 1}` : `level ${L}, the highest`}</small></div></div>
       <div class="treset"><button class="btn sm" data-act="treset"${rerr ? ' disabled' : ''} title="${esc(rerr || 'Get every point back to spend again. Lairs already built keep working.')}">Unlearn all</button><small>free once a week</small></div></section>`;
     return head + `<div class="ttrees">${G.talentTrees(S).map(tTree).join('')}</div>`;
   }
   function towerLairs() {
     const rows = G.myLairs(S).map(o => {
       const D = G.DUNGEONS[o.dtype]; const wr = G.lairWrecked(S, o); const bands = G.bandsOf(S, o); const tot = o.buildTotal || G.buildDays(o.dtype);
-      const st = o.building ? `<div class="prow">${pbar(1 - o.building / tot, 'build')}<small>going up, ${o.building} of ${tot} days left</small></div>` : wr ? `<p class="hint warn">Wrecked by the heroes: rebuilt in ${o.wrecked - G.dayIndex(S)} days.</p>` : `<p class="hint">${G.lairCount(o)} ${esc(G.CREATURES[D.unit].name.toLowerCase())} at home${bands ? `, ${bands} band${bands > 1 ? 's' : ''} out` : ''}.</p>`;
+      const st = o.building ? `<div class="prow">${pbar(1 - o.building / tot, 'build')}<small>going up, ${o.building} of ${tot} days left</small></div>` : wr ? `<p class="hint warn">Wrecked by the heroes: rebuilt in ${o.wrecked - G.dayIndex(S)} days.</p>` : `<p class="hint">${G.lairCount(o)} ${esc(G.CREATURES[D.unit].name.toLowerCase())} at home${G.wavesOf(S, o) ? ', a wave on the road' : ''}${bands - G.wavesOf(S, o) > 0 ? `, ${bands - G.wavesOf(S, o)} band${bands - G.wavesOf(S, o) > 1 ? 's' : ''} out` : ''}.${G.questOn(S, { kind: 'obj', id: o.id }) ? ' <b class="warn">Millbrook has a bounty on it.</b>' : ''}</p>`;
       return `<div class="lcard">${img(o.building ? 'obj-building' : wr ? 'obj-wrecked' : 'obj-' + o.dtype, 'licon')}<div><b>${esc(D.name)}${(o.level || 1) > 1 ? ' II' : ''}</b><small>${esc(G.regionName(S, o.x, o.y))}</small>${st}</div><button class="btn sm" data-act="sellair" data-id="${o.id}">Show</button></div>`;
     }).join('');
     return `<section class="tcard"><h2 class="cap">Your lairs</h2><p class="hint">To build one, select a minion on the map and pick Build. New kinds of lair come from talents: The Brood, and your villain's own path.</p>${rows ? `<div class="lcards">${rows}</div>` : '<p class="hint">No lairs yet.</p>'}</section>`;
@@ -1530,96 +1552,93 @@
   function towerVillain() {
     const T = VT(); const est = ui.finaleEst; const V = S.villain;
     const gate = G.gateGuards(S).map(([t, n]) => `${n} ${G.CREATURES[t].name}`).join(', ');
-    const pw = T.powers.map(k => `<li><b>${esc(G.BOSS_POWERS[k].name)}.</b> ${esc(G.BOSS_POWERS[k].text)}</li>`).join('');
+    const pw = T.powers.map((k, i) => { const at = G.POWER_LV[i] || 1; const on = G.villainLevel(S) >= at; return `<li class="${on ? 'on' : 'off'}"><b>${esc(G.BOSS_POWERS[k].name)}.</b> ${on ? esc(G.BOSS_POWERS[k].text) : `<i>Learned at level ${at}.</i>`}</li>`; }).join('');
     const dark = ['vigor', 'raise', 'dread', 'ritual'].map(k => { const U = G.LAIR[k]; const n = V.up[k] || 0; return `<li class="${n ? 'on' : 'off'}">${img(vIcon(), 'ticon')}<span><b>${esc(U.name)}${U.max > 1 ? ` · ${n} of ${U.max}` : n ? '' : ''}</b><small>${n ? esc(U.text) : 'Not learned yet.'}</small></span></li>`; }).join('');
     return `<div class="tgrid two">
-      <section class="tcard"><h2 class="cap">${esc(VF())}</h2><div class="vmini">${img(vIcon(), 'vportrait')}<div><p class="fxname">${esc(T.label)}</p><p class="hint">Waits on the throne at level ${G.BOSS_LEVEL}. The heroes must win that fight to save the realm.</p><ul class="plain pw">${pw}</ul></div></div>
+      <section class="tcard"><h2 class="cap">${esc(VF())}</h2><div class="vmini">${img(vIcon(), 'vportrait')}<div><p class="fxname">${esc(T.label)} · level ${G.villainLevel(S)}</p>${villainXpHtml()}<p class="hint">On the throne ${esc(VP().he)} fights at the level ${esc(VP().he)} has reached. If the heroes win that fight, your reign is over.</p><ul class="plain pw">${pw}</ul></div></div>
         ${readinessHtml(true)}<p class="hint">At the gates today: ${esc(gate)}. Then the throne room.</p>
         <div class="row"><button class="btn sm" data-act="scoutfinale">Scout the showdown</button>${est ? `<span class="est ${est.win >= 0.6 ? 'Tense' : est.win >= 0.3 ? 'Harrowing' : 'Deadly'}">They win ${Math.round(est.win * 100)}%${est.gateLoss >= 0.1 ? ` · ${Math.round(est.gateLoss * 100)}% fall at the gates` : ''}</span>` : ''}</div></section>
       <section class="tcard"><h2 class="cap">Dark powers</h2><p class="hint">Talents in the Dread tree. They make the final fight harder, and more memorable.</p><ul class="plain dpw">${dark}</ul>
         <div class="row"><button class="btn sm" data-act="ttab" data-k="talents">Talents</button></div></section>
     </div>`;
   }
-  /* ============ Millbrook (0.19): the heroes' town, which you run too ============ */
-  const TOWN_TABS = [['view', 'View'], ['build', 'Buildings'], ['quests', 'Quest board']];
-  const TOWN_ICON = { market: 'obj-tourney', sawmill: 'obj-node-lumber', ironworks: 'obj-mine', smith: 'obj-wrecked', temple: 'obj-shrine', guild: 'obj-tower-archmage', yard: 'obj-den', tavern: 'obj-woods' };
+  /* ============ Millbrook: the heroes' town. The game runs it now (0.30); you can only spy on it ============ */
+  const TOWN_TABS = [['view', 'View'], ['defence', 'Defences'], ['build', 'Buildings'], ['quests', 'Bounties']];
+  const TOWN_ICON = { market: 'obj-tourney', sawmill: 'obj-node-lumber', ironworks: 'obj-mine', smith: 'obj-wrecked', temple: 'obj-shrine', guild: 'obj-tower-archmage', yard: 'obj-den', tavern: 'obj-woods', walls: 'obj-camp', watch: 'obj-peaks', ballista: 'obj-wrecked', arcane: 'obj-t-guild', bell: 'obj-shrine' };
   // a building's own picture once art/objects has one (obj-t-market...), the nearest stand-in until then
-  const townIcon = k => { const l = Math.max(1, S ? G.townLv(S, k) : 1); for (let i = l; i >= 2; i--) if (ART.keys['obj-t-' + k + '-' + i]) return 'obj-t-' + k + '-' + i; return ART.keys['obj-t-' + k] ? 'obj-t-' + k : TOWN_ICON[k]; };
+  const townIcon = k => { const l = Math.max(1, S ? G.townLv(S, k) : 1); for (let i = l; i >= 2; i--) if (ART.keys['obj-t-' + k + '-' + i]) return 'obj-t-' + k + '-' + i; return ART.keys['obj-t-' + k] ? 'obj-t-' + k : k === 'walls' && l >= 2 ? 'obj-hold' : TOWN_ICON[k]; };
   // levels that add up (the smith's +1 hit stays when the armour comes), and levels that replace the one before
   const TOWN_STACKS = { smith: 1, temple: 1, guild: 1 };
-  const QUEST_TIERS = [[2, 'Small'], [5, 'Good'], [9, 'Rich']];
-  const townIdle = () => !!S.town && !S.town.build && G.TOWN_ORDER.some(k => !G.townCheck(S, k));
+  const townBName = k => k === 'walls' ? G.TOWN_B.walls.names[Math.max(0, G.townLv(S, 'walls') - 1)] : G.TOWN_B[k].name;
+  const OUTLOOK_CLS = { Crushed: 'Trivial', Repelled: 'Easy', 'Breaks in': 'Tense', 'Sacks the town': 'Deadly' };
   function scrTown() {
-    const tab = ui.townTab || 'view'; const nq = S.quests.filter(q => q.status === 'open').length;
-    const badge = { build: S.town.build ? '<i class="tb busy" title="Building">1</i>' : townIdle() ? '<i class="tb idle" title="The builders are idle">!</i>' : '', quests: nq ? `<i class="tb">${nq}</i>` : '', view: '' };
+    const tab = ui.townTab === 'build' || ui.townTab === 'quests' || ui.townTab === 'defence' ? ui.townTab : ui.townTab === 'view' ? 'view' : 'view';
+    const nq = S.quests.filter(q => q.status === 'open').length; const gates = S.objects.filter(o => o.wave && o.atGates).length;
+    const badge = { build: S.town.build ? '<i class="tb busy" title="Building">1</i>' : '', defence: gates ? `<i class="tb idle" title="At the gates">${gates}</i>` : '', quests: nq ? `<i class="tb">${nq}</i>` : '', view: '' };
     const tabs = `<nav class="ttabs" role="tablist">${TOWN_TABS.map(([k, n]) => `<button class="ttab${k === tab ? ' on' : ''}" role="tab" aria-selected="${k === tab}" data-act="ztab" data-k="${k}">${n}${badge[k]}</button>`).join('')}</nav>`;
     if (tab === 'view') return `${tabs}<div class="tvslot"></div>`;
-    return `${tabs}<div class="tpanel z-${tab}">${tab === 'quests' ? townQuests() : townBuildings()}</div>`;
+    return `${tabs}<div class="tpanel z-${tab}">${tab === 'quests' ? townQuests() : tab === 'defence' ? townDefences() : townBuildings()}</div>`;
+  }
+  const hpBar = (v, max, cls) => `<span class="hpline ${cls || ''}"><i style="width:${(max ? Math.max(0, Math.min(1, v / max)) * 100 : 0).toFixed(0)}%"></i></span>`;
+  // the waves on the map you can see, soonest at the gates first
+  function wavesInSight() {
+    return S.objects.filter(o => o.kind === 'stack' && o.wave && canSeeObj(o)).map(o => ({ o, eta: G.waveEta(S, o), out: G.siegeOutlook(S, o) })).sort((a, b) => (a.eta === null ? 99 : a.eta) - (b.eta === null ? 99 : b.eta));
+  }
+  function townDefences() {
+    const T = S.town; const wl = G.townLv(S, 'walls'); const wm = G.WALL_HP[wl] || 0; const hm = G.hallMax(S);
+    const W = wavesInSight();
+    const wrow = ({ o, eta, out }) => `<div class="qrow">${img('unit-' + o.type, 'ticon')}<span><b>${esc(G.bandName(o))}${(o.lvl || 1) > 1 ? ` · Lv ${o.lvl}` : ''}</b><small>${o.atGates ? '<b class="warn">At the gates</b>' : eta === null ? 'No way through' : `${eta} night${eta > 1 ? 's' : ''} to the gates`}${o.atGates && G.partyHome(S) ? ' · the heroes will man the walls' : ''}</small></span><span class="est ${OUTLOOK_CLS[out.label]}" title="${esc(`If it reached the gates now: it would kill ${out.killed} of them${out.wallDmg ? `, hack ${out.wallDmg} off the walls` : ''}${out.hallDmg ? `, and do ${out.hallDmg} damage to the hall` : ''}.`)}">${esc(out.label)}</span><button class="lnk" data-act="qshow" data-rk="obj" data-rid="${esc(o.id)}">show</button></div>`;
+    const last = (S.log || []).filter(l => /attack Millbrook|batter Millbrook|sack Millbrook/.test(l.t)).slice(-4).reverse();
+    const cards = G.DEF_ORDER.map(townCard).join('');
+    return `<div class="tgrid two">
+      <section class="tcard"><h2 class="cap">The walls and the hall</h2>
+        <p><b>${esc(G.wallName(S))}</b> ${Math.round(T.wallHp)} / ${wm}</p>${hpBar(T.wallHp, wm, 'wall')}
+        <p><b>The hall</b> ${Math.round(T.hall)} / ${hm}</p>${hpBar(T.hall, hm, 'hall')}
+        <p class="hint">Your waves have to break the walls before they can sack the town (flyers go straight over). Sacking damages the hall, plunders the purse and burns buildings down a level. <b>If the hall falls, Millbrook is razed and you win.</b> The town patches its walls a fifth of the way and its hall a little every day.</p></section>
+      <section class="tcard"><h2 class="cap">Waves on the road</h2>${W.map(wrow).join('') || '<p class="hint">None of your waves are in sight. When a lair is full, it sends one down the road to Millbrook.</p>'}
+        <p class="hint">How each would do against the town as it stands: Crushed, Repelled, Breaks in, or Sacks the town.</p>
+        ${last.length ? `<h3 class="cap sm">Lately</h3><ul class="plain log">${last.map(l => `<li><small>W${l.w} D${l.d}</small> ${esc(l.t)}</li>`).join('')}</ul>` : ''}</section>
+    </div>
+    <section class="rsec"><h3>Defences</h3><p class="hint">Millbrook builds these against whatever has been hurting it: ballistas against brutes, the arcane tower against swarms, the bell against the undead.</p><div class="towncards">${cards}</div></section>`;
   }
   function townBuildings() {
     const T = S.town; const inc = G.townIncome(S); const B0 = T.build; const d = S.lastDay && S.lastDay.town;
-    const now = B0 ? `<div class="prow rnow">${img(townIcon(B0.k), 'ticon')}<b>${esc(G.TOWN_B[B0.k].name)}${G.townLv(S, B0.k) ? ' ' + G.roman(G.townLv(S, B0.k) + 1) : ''}</b>${pbar(1 - B0.days / B0.total, 'build')}<small>${B0.days} day${B0.days > 1 ? 's' : ''} left</small><button class="lnk" data-act="towncancel" title="Stop and get ${esc(G.priceText(B0.cost))} back">cancel</button></div>`
-      : `<p class="hint">${townIdle() ? '<b class="gold">The builders are idle.</b> Pick something below.' : 'The builders are idle, and Millbrook can\'t afford anything yet.'} One building at a time, paid from the town's purse.</p>`;
+    const now = B0 ? `<div class="prow rnow">${img(townIcon(B0.k), 'ticon')}<b>${esc(B0.k === 'walls' ? G.TOWN_B.walls.names[G.townLv(S, 'walls')] : G.TOWN_B[B0.k].name + (G.townLv(S, B0.k) ? ' ' + G.roman(G.townLv(S, B0.k) + 1) : ''))}</b>${pbar(1 - B0.days / B0.total, 'build')}<small>${B0.days} day${B0.days > 1 ? 's' : ''} left</small></div>`
+      : '<p class="hint">The builders are idle: Millbrook is saving up for its next building.</p>';
     const cards = G.TOWN_ORDER.map(townCard).join('');
     return `<div class="tgrid two">
-      <section class="tcard"><h2 class="cap">The town's purse</h2><p>Every day: <b>${esc(G.priceText(inc))}</b>.</p><p class="hint">Taxes bring ${esc(G.priceText(G.TOWN_TAX))} a day; the market, sawmill and ironworks add more. The heroes also bring home a share of the loot from every fight they win: the closer the fight, the bigger the share${d && d.built ? `. Finished last night: the ${esc(G.TOWN_B[d.built].name)}` : ''}.</p></section>
-      <section class="tcard"><h2 class="cap">Builders</h2>${now}</section>
+      <section class="tcard"><h2 class="cap">The town's purse</h2>${purseHtml('town')}<p>Every day: <b>${esc(G.priceText(inc))}</b>.</p><p class="hint">Taxes bring ${esc(G.priceText(G.TOWN_TAX))} a day; the market, sawmill and ironworks add more. The heroes bring home a share of the loot from every fight they win. Your waves plunder it when they break in${d && d.built ? `. Finished last night: the ${esc(townBName(d.built))}` : ''}.</p></section>
+      <section class="tcard"><h2 class="cap">Builders</h2>${now}<p class="hint">Millbrook decides for itself: trade first, then the heroes' buildings, and walls and towers whenever your waves have been getting through.</p></section>
     </div>
-    <section class="rsec"><h3>Buildings</h3><p class="hint">What makes money, and what makes the heroes stronger. Their effects show on the heroes' sheets.</p><div class="towncards">${cards}</div></section>`;
+    <section class="rsec"><h3>Buildings</h3><p class="hint">What makes the town money, and what makes its heroes stronger. Their effects show on the heroes' sheets.</p><div class="towncards">${cards}</div></section>`;
   }
   function townCard(k) {
     const B = G.TOWN_B[k]; const l = G.townLv(S, k); const T = S.town; const busy = T.build && T.build.k === k;
     const eff = i => B.levels ? B.levels[i] : `+${G.priceText(B.income[i])} a day`;
     const pips = Array.from({ length: B.max }, (_, i) => `<i class="${i < l ? 'on' : busy && i === l ? 'up' : ''}"></i>`).join('');
     const have = l ? `<p class="have"><span class="k">Now</span> ${esc(cap1(TOWN_STACKS[k] ? B.levels.slice(0, l).join('; ') : eff(l - 1)))}</p>` : '';
-    const next = l < B.max ? `<p class="next"><span class="k">${l ? 'Next' : 'Builds'}</span> ${esc(cap1(eff(l)))}</p>` : '';
-    const err = G.townCheck(S, k); const P = G.townCost(S, k);
-    const ctrl = busy ? `<div class="prow">${pbar(1 - T.build.days / T.build.total, 'build')}<small>${T.build.days} day${T.build.days > 1 ? 's' : ''} left</small></div>`
-      : l >= B.max ? '<p class="hint">Fully built.</p>'
-      : `<div class="row"><button class="btn sm" data-act="townbuild" data-k="${k}"${err ? ` disabled title="${esc(err)}"` : ''}>${l ? 'Enlarge' : 'Build'} · ${B.days[l]} days</button><span class="prices">${priceChips(P, 'town')}</span></div>`;
-    return `<div class="tbcard${l ? ' built' : ''}${busy ? ' busy' : ''}">${img(townIcon(k), 'licon')}<div><h4>${esc(B.name)}${l ? ' ' + G.roman(l) : ''}<span class="pips" title="Level ${l} of ${B.max}">${pips}</span></h4><p class="hint">${esc(B.text)}</p>${have}${next}${ctrl}</div></div>`;
+    const next = l < B.max ? `<p class="next"><span class="k">${l ? 'Next' : 'Could build'}</span> ${esc(cap1(eff(l)))} <span class="prices">${priceChips(G.townCost(S, k), 'town')}</span></p>` : '';
+    const need = Object.keys(B.needs || {}).find(n => G.townLv(S, n) < B.needs[n]);
+    const ctrl = busy ? `<div class="prow">${pbar(1 - T.build.days / T.build.total, 'build')}<small>going up: ${T.build.days} day${T.build.days > 1 ? 's' : ''} left</small></div>`
+      : l >= B.max ? '<p class="hint">Fully built.</p>' : need ? `<p class="hint">Needs the ${esc(G.TOWN_B[need].name)} first.</p>` : '';
+    const nm = k === 'walls' ? (l ? B.names[l - 1] : 'No walls') : B.name + (l ? ' ' + G.roman(l) : '');
+    return `<div class="tbcard${l ? ' built' : ''}${busy ? ' busy' : ''}">${img(townIcon(k), 'licon')}<div><h4>${esc(nm)}<span class="pips" title="Level ${l} of ${B.max}">${pips}</span></h4><p class="hint">${esc(B.text)}</p>${have}${next}${ctrl}</div></div>`;
   }
   const cap1 = t => t ? t[0].toUpperCase() + t.slice(1) : t;
-  // everything a bounty could be posted on that you can see: bands in sight, places you've explored, the tower once they're strong enough
-  function questTargets() {
-    const out = [];
-    for (const o of S.objects) {
-      if (o.kind === 'stack') { if (!canSeeObj(o)) continue; }
-      else if (o.kind === 'dungeon') { if (o.building || !hasSeen(o.x, o.y)) continue; }
-      else if (!G.ITEMS[o.kind] || isTrapKind(o.kind) || !hasSeen(o.x, o.y)) continue;
-      const t = o.kind === 'stack' ? (bandTile(o.id) || o) : o;
-      out.push({ ref: { kind: 'obj', id: o.id }, x: Math.round(t.x), y: Math.round(t.y), o });
-    }
-    for (const z of G.sitesOf(S)) if ((z.kind === 'landmark' && !S.visited[z.id] && hasSeen(z.x, z.y)) || (z.kind === 'tower' && G.avgLevel(S) >= 10)) out.push({ ref: { kind: 'site', id: z.id }, x: z.x, y: z.y, site: z });
-    if (G.villainOnMap(S) && canSee(S.villain.x, S.villain.y)) out.push({ ref: { kind: 'villain', id: 'villain' }, x: S.villain.x, y: S.villain.y });
-    return out.filter(t => !G.questOn(S, t.ref)).map(t => Object.assign(t, { d: Math.hypot(t.x - S.party.x, t.y - S.party.y) })).sort((a, b) => a.d - b.d);
-  }
-  const targetIcon = t => t.ref.kind === 'villain' ? vIcon() : t.site ? siteIcon(t.site) : t.o.kind === 'stack' ? 'unit-' + t.o.type : t.o.kind === 'dungeon' ? 'obj-' + t.o.dtype : 'obj-' + t.o.kind;
-  function bountyBtns(ref) {
-    const full = S.quests.filter(z => z.status === 'open').length >= G.MAX_QUESTS;
-    return QUEST_TIERS.map(([r, n]) => { const g = r * G.QUEST_GOLD; const short = (S.town.res.gold || 0) < g;
-      return `<button class="btn sm qb" data-act="quest" data-rk="${ref.kind}" data-rid="${esc(String(ref.id))}" data-r="${r}"${full || short || S.march ? ' disabled' : ''} title="${esc(`${n} reward: ${G.rewardText(S, r)}. ${g} gold, paid now from Millbrook's purse.${short ? ' Millbrook can\'t afford it.' : ''}${full ? ' The board is full: three at a time.' : ''}`)}">${n}<span class="pc gold${short ? ' short' : ''}">${img('obj-res-gold', 'ric')}${g}</span></button>`; }).join('');
-  }
-  // the bounty line on a map card: post one, or see the one that's up
+  // the bounty line on a map card: Millbrook has put a price on it
   function bountyRow(ref) {
     if (!S.town || S.phase !== 'map') return '';
     const q = G.questOn(S, ref);
-    if (q) return `<p class="bounty on">${img('obj-quest', 'ric')}<span>Bounty in Millbrook: <b>${esc(G.rewardText(S, q.reward))}</b>.</span></p>`;
-    if (S.march || (ref.kind === 'site' && ref.id === 'tower' && G.avgLevel(S) < 10)) return '';
-    return `<div class="bounty"><span class="k" title="Post it on the Millbrook quest board, paid from the town's purse. The bigger the reward, the more the heroes want it. It lapses at the end of the week.">${img('obj-quest', 'ric')}Bounty</span>${bountyBtns(ref)}</div>`;
+    return q ? `<p class="bounty on">${img('obj-quest', 'ric')}<span>Millbrook has put a bounty on it: <b>${esc(G.rewardText(S, q.reward))}</b> for the heroes.</span></p>` : '';
   }
   function townQuests() {
     const open = S.quests.filter(q => q.status === 'open');
     const rows = open.map(q => { const t = G.refTarget(S, q.ref);
       return `<div class="qrow">${img('obj-quest', 'ticon')}<span><b>${esc(q.name)}</b><small>${esc(G.rewardText(S, q.reward))} · lapses at the end of the week</small></span>${t && t.x !== undefined ? `<button class="btn sm" data-act="qshow" data-rk="${q.ref.kind}" data-rid="${esc(String(q.ref.id))}">Show</button>` : ''}</div>`; }).join('');
-    const T = questTargets().slice(0, 12);
-    const trow = t => { const th = t.o && t.o.kind === 'stack' ? `, ${t.o.count} of them` : '';
-      return `<div class="qrow">${img(targetIcon(t), 'ticon')}<span><b>${esc(G.questName(S, t.ref))}</b><small>${esc(G.regionName(S, t.x, t.y))}${th} · ${Math.round(t.d)} tiles from the party</small></span><span class="qbs">${bountyBtns(t.ref)}</span><button class="lnk" data-act="qshow" data-rk="${t.ref.kind}" data-rid="${esc(String(t.ref.id))}">show</button></div>`; };
     return `<div class="tgrid two">
-      <section class="tcard"><h2 class="cap">On the board · ${open.length} of ${G.MAX_QUESTS}</h2>${rows || '<p class="hint">No bounties posted.</p>'}</section>
-      <section class="tcard"><h2 class="cap">Why post one</h2><p class="hint">The heroes go where they like, but a bounty pulls them: a monster band, a lair, a landmark they haven't explored, even the Dark Tower once they reach level 10. The reward is paid now from Millbrook's gold, and the heroes get it as experience when they finish the job. A rich reward will tempt them a long way, and past danger they'd otherwise avoid.</p></section>
-    </div>
-    <section class="rsec"><h3>Post a bounty</h3><p class="hint">Things you can see right now, nearest to the party first.${S.march ? ' <b class="warn">Not while the party marches on the Dark Tower.</b>' : ''}</p><div class="qlist">${T.map(trow).join('') || '<p class="hint">Nothing in sight. Your minions are your eyes: send them out.</p>'}</div></section>`;
+      <section class="tcard"><h2 class="cap">On the board · ${open.length}</h2>${rows || '<p class="hint">No bounties posted.</p>'}</section>
+      <section class="tcard"><h2 class="cap">What it means</h2><p class="hint">When your waves hurt Millbrook, the survivors' tracks lead back to their lair, and the town puts a price on it. A bounty pulls the heroes toward that lair, and pays them in experience when they wreck it. Guard it, or let them come.</p></section>
+    </div>`;
   }
   // a quest's target, as data-rk/data-rid name it
   function refFrom(d) {
@@ -1651,6 +1670,9 @@
   // Millbrook: [x, z, width] on its 18 x 11 ground, the hall in the middle of the valley, the square in front of it
   const MB_AT = { temple: [2.5, 2.8, 2.6], ironworks: [5.7, 1.6, 2.4], guild: [13.4, 2.0, 1.9], sawmill: [16.0, 4.9, 2.6], smith: [4.6, 5.6, 2.6], market: [6.4, 8.9, 3.1], tavern: [12.7, 7.9, 3.1], yard: [1.9, 8.7, 3.0] };
   const MB_HALL = [9.3, 3.3], HALL_W = [3.2, 3.7, 4.2, 4.7, 5.2], MB_BOARD = [11.0, 5.2];
+  // 0.30: Millbrook's defences. The gate stands on the road at the front of the valley, the towers beside it
+  const MB_DEF = { walls: [9.0, 10.5, 2.4], watch: [11.5, 10.3, 1.25], ballista: [6.6, 10.5, 1.3], arcane: [16.6, 2.3, 1.5], bell: [4.6, 3.9, 0.9] };
+  const DEF_STAND = { walls: 'camp', watch: 'peaks', ballista: 'wrecked', arcane: 't-guild', bell: 'shrine' };
   // PixelLab's buildings all share one pixel size, so a bigger level is a bigger picture: world units per pixel
   const TOWN_UPP = 0.026;
   const artW = k => (ART.size['obj-' + k] || [0])[0];
@@ -1671,7 +1693,7 @@
     if (kind === 'town') return { kind, seed: S.seed + 11, road: [[9, 18], [9, 12], [9, 7.6]], plaza: { x: 9, z: 6.3, r: 2.1 },
       paths: [[[7.2, 6.3], [5.2, 6.1], [2.7, 3.4]], [[10.7, 6.9], [12.4, 8.1]], [[7.6, 7.3], [6.5, 8.8], [2.4, 9.0]], [[10.6, 5.7], [13.2, 2.6]], [[10.9, 6.3], [15.6, 5.2]]],
       pond: { x: 15.6, z: 9.5, rx: 2.0, rz: 1.2 }, mounds: [{ x: 2.5, z: 2.5, r: 2.7, h: 0.6 }],
-      keepOut: plotsOut(MB_AT).concat([[MB_HALL[0], MB_HALL[1], 2.6], [MB_BOARD[0], MB_BOARD[1], 0.6]]) };
+      keepOut: plotsOut(MB_AT).concat(plotsOut(MB_DEF), [[MB_HALL[0], MB_HALL[1], 2.6], [MB_BOARD[0], MB_BOARD[1], 0.6]]) };
     const P = vpal();
     return { kind, seed: S.seed + 23, road: [[9, 18], [9, 12], [9, 6.8]], plaza: { x: 9, z: 5.9, r: 2.0 }, paths: [[[7.3, 5.6], [4.6, 4.2]], [[10.6, 5.6], [14.4, 4.2]], [[10.6, 6.6], [13.0, 7.3]], [[9.6, 9.3], [11.6, 9.7]]],
       pond: { x: 5.2, z: 9.9, rx: 1.7, rz: 1.0, color: P.pool, glow: P.glow }, fog: P.fog, sun: P.sun, glow: P.glow, glowAt: [9, 4.6],
@@ -1707,6 +1729,13 @@
         if (going) add({ id: k, mode: 'site', art: a.art, x, z, w, p: 1 - B.days / B.total });
         else if (l) add({ id: k, mode: 'built', art: a.art, x, z, w, smoke: k === 'smith' || k === 'ironworks' || k === 'tavern', smokeAt: k === 'tavern' ? [0.25, 0.92] : [-0.15, 0.8] });
         else add({ id: k, mode: 'plot', art: a.art, x, z, w });
+      }
+      // 0.30: the walls and towers Millbrook has raised against you (no empty plots: you can't build them)
+      for (const k of G.DEF_ORDER) {
+        const [x, z, w0] = MB_DEF[k]; const l = G.townLv(S, k); const going = B && B.k === k; if (!l && !going) continue;
+        const lv = going ? l + 1 : l; const stand = k === 'walls' && lv >= 2 ? 'hold' : DEF_STAND[k]; const a = levelArt('t-' + k, lv, stand);
+        const real = a.art.indexOf('t-') === 0 && artW(a.art) && a.art !== 't-guild'; const w = real ? artW(a.art) * TOWN_UPP * (a.own ? 1 : 1 + 0.1 * (lv - 1)) : w0 * (1 + 0.1 * (lv - 1));
+        if (going) add({ id: k, mode: 'site', art: a.art, x, z, w, p: 1 - B.days / B.total }); else add({ id: k, mode: 'built', art: a.art, x, z, w });
       }
       // the heroes stand in the square while they're in town; new recruits wait outside the tavern
       const tw = G.siteOf(S, 'town'); const home = S.party.x === tw.x && S.party.y === tw.y;
@@ -1744,7 +1773,7 @@
   }
   /* --- what a hover tip and a click card say --- */
   function viewName(id) {
-    if (ui.viewKind === 'town') { if (id === 'hall') return G.hallStage(S).name; if (id === 'board') return 'Quest board'; const B = G.TOWN_B[id]; return B ? B.name + (G.townLv(S, id) > 1 ? ' ' + G.roman(G.townLv(S, id)) : '') : id; }
+    if (ui.viewKind === 'town') { if (id === 'hall') return G.hallStage(S).name; if (id === 'board') return 'Quest board'; if (id === 'walls') return G.wallName(S); const B = G.TOWN_B[id]; return B ? B.name + (G.townLv(S, id) > 1 ? ' ' + G.roman(G.townLv(S, id)) : '') : id; }
     if (id === 'main') return G.towerStage(S).name; if (id === 'summon') return 'Summoning circle'; if (id === 'treasury') return 'Treasury';
     if (id.indexOf('ban-') === 0) { const D = G.DUNGEONS[id.slice(4)]; return D ? G.CREATURES[D.unit].name + ' banner' : id; }
     return DT_NAME[id] || id;
@@ -1752,11 +1781,12 @@
   function viewTip(id) {
     const T = S.town;
     if (ui.viewKind === 'town') {
-      if (id === 'hall') { const st = G.hallStage(S); return `${st.name} · stage ${st.stage} of ${st.of}`; }
-      if (id === 'board') { const n = S.quests.filter(q => q.status === 'open').length; return `Quest board · ${n} of ${G.MAX_QUESTS} bounties`; }
+      if (id === 'hall') { const st = G.hallStage(S); return `${st.name} · ${Math.round(T.hall)} of ${G.hallMax(S)}: if it falls, Millbrook is razed`; }
+      if (id === 'board') { const n = S.quests.filter(q => q.status === 'open').length; return `Quest board · ${n} bount${n === 1 ? 'y' : 'ies'} on your lairs`; }
+      if (id === 'walls') return `${G.wallName(S)} · ${Math.round(T.wallHp)} of ${G.WALL_HP[G.townLv(S, 'walls')]}`;
       const B = G.TOWN_B[id]; const l = G.townLv(S, id);
       if (T.build && T.build.k === id) return `${B.name} · going up, ${T.build.days} day${T.build.days > 1 ? 's' : ''} left`;
-      if (!l) return `Empty plot · build the ${B.name}`;
+      if (!l) return `Empty plot · no ${B.name} yet`;
       return `${viewName(id)} · ${B.levels ? B.levels[l - 1] : '+' + G.priceText(B.income[l - 1]) + ' a day'}`;
     }
     if (id === 'main') { const st = G.towerStage(S); return `${st.name} · stage ${st.stage} of ${st.of}`; }
@@ -1772,9 +1802,9 @@
     const stageTxt = (st, what) => `<p>${st.next !== null ? `Grows into the <b>${esc(st.nextName)}</b> at ${st.next} ${what} (now ${st.n}).` : `Fully grown (${st.n} ${what}).`}</p>`;
     if (ui.viewKind === 'town') {
       if (id === 'hall') { const st = G.hallStage(S); const inc = G.townIncome(S);
-        return head('obj-' + levelArt('t-hall', st.stage, 'town').art, st.name, `Stage ${st.stage} of ${st.of}`) + stageTxt(st, 'building levels') + `<p class="hint">Millbrook makes ${esc(G.priceText(inc))} a day, and the heroes bring loot home after every fight they win.</p><div class="row"><button class="btn sm" data-act="ztab" data-k="build">All buildings</button></div>`; }
+        return head('obj-' + levelArt('t-hall', st.stage, 'town').art, st.name, `Stage ${st.stage} of ${st.of}`) + `<p><b>${Math.round(S.town.hall)}</b> of ${G.hallMax(S)}</p>${hpBar(S.town.hall, G.hallMax(S), 'hall')}<p class="hint">Your waves damage it when they sack the town. <b>If it falls, Millbrook is razed and you win.</b> Millbrook makes ${esc(G.priceText(inc))} a day.</p><div class="row"><button class="btn sm" data-act="ztab" data-k="defence">Defences</button><button class="btn sm" data-act="ztab" data-k="build">All buildings</button></div>`; }
       if (id === 'board') { const open = S.quests.filter(q => q.status === 'open');
-        return head('obj-quest', 'Quest board', `${open.length} of ${G.MAX_QUESTS} bounties posted`) + (open.length ? `<ul class="plain">${open.map(q => `<li><b>${esc(q.name)}</b> <span class="hint">${esc(G.rewardText(S, q.reward))}</span></li>`).join('')}</ul>` : '<p class="hint">No bounties posted. A bounty pulls the heroes toward a band, a lair or a landmark.</p>') + '<div class="row"><button class="btn sm" data-act="ztab" data-k="quests">Post a bounty</button></div>'; }
+        return head('obj-quest', 'Quest board', `${open.length} bount${open.length === 1 ? 'y' : 'ies'} on your lairs`) + (open.length ? `<ul class="plain">${open.map(q => `<li><b>${esc(q.name)}</b> <span class="hint">${esc(G.rewardText(S, q.reward))}</span></li>`).join('')}</ul>` : '<p class="hint">Nothing posted. When your waves hurt the town, it puts a price on the lair they came from.</p>') + '<div class="row"><button class="btn sm" data-act="ztab" data-k="quests">Bounties</button></div>'; }
       if (G.TOWN_B[id]) return townCard(id);
       return '';
     }
@@ -1817,7 +1847,7 @@
     const el = ui.tview; if (!el) return;
     const card = el.querySelector('.tvcard'); const html = ui.tvSel ? viewCard(ui.tvSel) : '';
     card.hidden = !html; card.innerHTML = html ? `<button class="xbtn" data-act="tvclose" title="Close">×</button>${html}` : '';
-    el.querySelector('.tvhint').textContent = ui.tvSel ? '' : ui.viewKind === 'town' ? 'Click a building to run it. An empty plot shows what you can still build there.' : 'Click a building to run it. Your talents raise new ones around the tower.';
+    el.querySelector('.tvhint').textContent = ui.tvSel ? '' : ui.viewKind === 'town' ? 'Click a building to see what it does. Empty plots are what Millbrook hasn\'t built yet.' : 'Click a building to run it. Your talents raise new ones around the tower.';
     if (!ui.r3d) kickView();
   }
   // which thing the pointer is over
@@ -1906,7 +1936,7 @@
     const sb = $('scbody'); const keep = fresh || !sb ? 0 : sb.scrollTop;
     const body = ui.screen === 'chronicle' ? scrChronicle() : ui.screen === 'town' ? scrTown() : scrTower();
     const vkind = ui.screen === 'town' && (ui.townTab || 'view') === 'view' ? 'town' : ui.screen === 'tower' && (ui.towerTab || 'view') === 'view' ? 'tower' : null;
-    const head = ui.screen === 'chronicle' ? ['Chronicle', 'Everything that has happened in this campaign, newest first.'] : ui.screen === 'town' ? ['Millbrook', 'The heroes\' home town. You run it too: raise buildings that make the party stronger, and post bounties that send them where you want.'] : ['The Dark Tower', `Your seat of power: summon ${MT().name.toLowerCase()}, study dark secrets and watch over your lairs.`];
+    const head = ui.screen === 'chronicle' ? ['Chronicle', 'Everything that has happened in this campaign, newest first.'] : ui.screen === 'town' ? ['Millbrook', 'The heroes\' home town, and your target. It runs itself: it builds walls and towers against your waves, makes its heroes stronger, and puts bounties on your lairs.'] : ['The Dark Tower', `Your seat of power: summon ${MT().name.toLowerCase()}, study dark secrets and watch over your lairs.`];
     el.hidden = false;
     if (vkind) { const st = vkind === 'town' ? G.hallStage(S) : G.towerStage(S); head[1] = `${st.name}, stage ${st.stage} of ${st.of}. ${st.next !== null ? `Grows into the ${st.nextName} at ${st.next} ${vkind === 'town' ? 'building levels' : 'talent points'} (now ${st.n}).` : 'Fully grown.'}`; }
     el.innerHTML = `<div class="scr solo"><div class="scbody${vkind ? ' vmode' : ''}" id="scbody"><header class="schd"><div class="schd-t"><h1 class="dtitle">${esc(head[0])}</h1><p>${esc(head[1])}</p></div>${ui.screen === 'chronicle' ? '' : purseHtml(ui.screen === 'town' ? 'town' : 'tower')}<button class="btn" data-act="closescreen" title="Back to the map (Esc)">Back to the map</button></header>${body}</div></div>`;
@@ -1938,22 +1968,39 @@
   function showWeek() {
     save(true);
     const r = S.recap; const fx = G.WEEKS_FX[r.nextFx];
-    const end = false;
+    const L = r.vlevel; const lo = G.VXP[L] || 0, hi = r.next;
+    const siege = r.sieges ? `<p>${r.sieges} siege${r.sieges > 1 ? 's' : ''} of Millbrook, ${r.breaches ? `<b class="good">${r.breaches} broke in</b>` : 'none got in'}${r.plunder ? `, ${r.plunder} gold plundered` : ''}${r.burned ? `, ${r.burned} building level${r.burned > 1 ? 's' : ''} burned` : ''}.</p>` : '<p class="hint">None of your waves reached Millbrook this week.</p>';
     modal(`<h1 class="dtitle">End of week ${r.week}</h1>
-      <div class="cols"><div><h2 class="cap">Thrill</h2>${ledger(r.lines.length ? r.lines : [{ label: 'Nothing memorable happened', v: 0 }], r.thrill, 'Total thrill')}</div>
-      <div><h2 class="cap">Mood</h2>${ledger(r.eng, r.delta, 'Change')}<p class="big">${r.before} → <b class="${r.after < 30 ? 'neg' : 'pos'}">${r.after}</b></p>
-      ${r.grew ? `<p class="hint">Wild monster bands out on the map grew this week (${r.grew}).</p>` : ''}${r.recruits.map(t => `<p class="hint">${esc(t)}</p>`).join('')}
-      <p class="hint">Party level ${r.level}. Against ${esc(VN())}: <b>${esc(r.ready.win === null ? 'not ready yet' : r.ready.label)}</b>. Close fights lift the mood; stomps and quiet days sink it. It counts toward your final score.</p></div></div>
-      ${r.march ? `<div class="astro bad"><h2 class="cap">The players are fed up</h2><p>The table's mood hit zero. "Enough side quests. Let's just go fight the boss." Next week the party marches on the Dark Tower, ready or not. A level ${r.level} party against a level ${G.BOSS_LEVEL} ${esc(VT().label.toLowerCase())}...</p></div>` : ''}
+      <div class="cols"><div><h2 class="cap">Infamy</h2>${ledger(r.lines.length ? r.lines : [{ label: 'Nothing to boast about', v: 0 }], r.infamy, 'This week')}
+        <p class="big">${esc(VN())} · <b>level ${L}</b></p>${hpBar(hi ? r.xp - lo : 1, hi ? hi - lo : 1, 'inf')}<p class="hint">${hi ? `${Math.floor(r.xp)} / ${hi} Infamy to level ${L + 1}.` : 'The highest level there is.'}</p></div>
+      <div><h2 class="cap">Millbrook</h2>${siege}
+        <p><b>${esc(G.wallName(S))}</b> ${Math.round(r.wall)} / ${r.wallMax}</p>${hpBar(r.wall, r.wallMax, 'wall')}<p><b>The hall</b> ${Math.round(r.hall)} / ${r.hallMax}</p>${hpBar(r.hall, r.hallMax, 'hall')}
+        ${r.grew ? `<p class="hint">Wild monster bands out on the map grew this week (${r.grew}).</p>` : ''}
+        <p class="hint">The heroes are level ${r.heroLevel}. Against you on the throne: <b>${esc(r.ready.win === null ? 'no threat yet' : r.ready.ready ? 'ready to march' : r.ready.label === 'Almost ready' ? 'almost ready' : Math.round(r.ready.win * 100) + '% odds')}</b>.</p></div></div>
       <div class="astro"><h2 class="cap">Astrologers proclaim</h2><p class="fxname">${esc(fx.name)}</p><p>${esc(fx.text)}</p></div>
-      <div class="row end"><button class="btn big" data-act="close">${end ? 'See how it ended' : 'Begin week ' + (r.week + 1)}</button></div>`,
-    () => { const was = S.march; G.startNextWeek(S); if (S.phase === 'over') { commit(); showOver(); return; } ui.est = null; ui.finaleEst = null; commit(); toast(`Week ${S.week}: ${G.WEEKS_FX[S.weekFx].name}.`, 'sys'); if (S.march && !was) toast('The party marches on the Dark Tower. Give them a finale to remember!', 'warn'); morning(); }, 'wide');
+      <div class="row end"><button class="btn big" data-act="close">Begin week ${r.week + 1}</button></div>`,
+    () => { const was = S.march; G.startNextWeek(S); if (S.phase === 'over') { commit(); showOver(); return; } ui.est = null; ui.finaleEst = null; commit(); toast(`Week ${S.week}: ${G.WEEKS_FX[S.weekFx].name}.`, 'sys'); if (S.march && !was) toast('The heroes march on the Dark Tower! Stop them on the road, or meet them at the throne.', 'warn'); morning(); }, 'wide');
   }
+  // the heroes levelling up is news from the enemy camp now (0.30): a line, not a dialog
   function showLevelUps(then) {
-    const L = S.pendingLevelUps.splice(0); sfx('levelup');
-    { const who = L.length && S.heroes.find(x => x.id === L[Math.floor(Math.random() * L.length)].id); if (who) setTimeout(() => bark('levelup', who), 500); }
-    const rows = L.map(u => `<div class="lvrow">${heroImg(S.heroes.find(x => x.id === u.id) || { id: u.id, cls: u.cls }, 'port lg')}<div><b>${esc(u.name)}</b> reaches level ${u.level}.<br><span class="hint">+${u.gains.hp} HP${u.gains.hit ? ', +' + u.gains.hit + ' to hit' : ''}${u.gains.ac ? ', +' + u.gains.ac + ' AC' : ''}</span>${u.ability ? `<p><b class="gold">${esc(G.ABILITIES[u.ability].name)}.</b> ${esc(G.ABILITIES[u.ability].text)}</p>` : ''}</div></div>`).join('');
-    modal(`<h1 class="dtitle">Level up</h1><p class="hint">Your war parties will need to be bigger now. Fights that are too easy give no experience.</p>${rows}<div class="row end"><button class="btn big" data-act="close">Onward</button></div>`, () => { renderSide(); if (then) then(); });
+    const L = S.pendingLevelUps.splice(0);
+    if (L.length) {
+      const who = S.heroes.find(x => x.id === L[Math.floor(Math.random() * L.length)].id); if (who && Math.random() < 0.5) setTimeout(() => bark('levelup', who), 500);
+      const lv = Math.max.apply(null, L.map(u => u.level)); const ab = L.filter(u => u.ability).map(u => `${shortName(u.name)}: ${G.ABILITIES[u.ability].name}`);
+      toast(`The heroes grow stronger: level ${lv}.${ab.length ? ' ' + ab.slice(0, 4).join(', ') + '.' : ''}`, 'sys');
+    }
+    renderSide(); if (then) then();
+  }
+  // your villain levelling up: worth a dialog, with the powers it learns
+  function showVillainUps(then) {
+    const U = (S.vUps || []).splice(0); S.vUps = [];
+    if (!U.length || S.phase === 'over') { if (then) then(); return; }
+    const from = U[0].from, to = U[U.length - 1].to; const powers = [].concat.apply([], U.map(u => u.powers || []));
+    sfx('research'); renderBar();
+    const next = G.villainNext(S);
+    modal(`<h1 class="dtitle">${esc(VN())} grows stronger</h1><div class="lvrow">${img(vIcon(), 'port lg')}<div><b>Level ${to}</b>${to - from > 1 ? ` <span class="hint">(up from ${from})</span>` : ''}<br><span class="hint">Stronger on the throne: more hit points, harder blows, a surer aim. ${to - from > 1 ? `${to - from} talent points` : 'A talent point'} to spend at the Dark Tower.${next ? ` ${next - Math.floor(S.villain.xp || 0)} more Infamy to level ${to + 1}.` : ''}</span>
+      ${powers.map(k => `<p><b class="gold">${esc(G.BOSS_POWERS[k].name)}.</b> ${esc(G.BOSS_POWERS[k].text)}</p>`).join('')}</div></div>
+      <div class="row end"><button class="btn" data-act="vtalents">Spend the point${to - from > 1 ? 's' : ''}</button><button class="btn big" data-act="close">Onward</button></div>`, () => { renderSide(); if (then) then(); });
   }
   /* --- the party sheet: all four heroes side by side --- */
   const avgRoll = (n, sides) => n * (sides + 1) / 2;
@@ -2024,35 +2071,35 @@
   function showRules(first) {
     const mt = G.minionType(S);
     modal(`<h1 class="dtitle">Overmaster</h1>
-      <p>You are the dungeon master, and you run both sides. The Dark Tower is the villain's town: ${esc(VF())}, a level ${G.BOSS_LEVEL} ${esc(VT().label.toLowerCase())}, waits on its throne while your minions dig, build lairs and breed monsters. Millbrook is the heroes' town, and you run that too. Four players run the party itself, and you never control them. Your job: power the heroes up until they can destroy ${esc(VN())}, as fast as you can, and give the table a thrilling ride on the way.</p>
+      <p>You are ${esc(VF())}, a ${esc(VT().label.toLowerCase())} newly risen in the Dark Tower, and still weak: level 1. Your minions dig, build lairs and breed monsters, and your lairs send them down the roads to burn Millbrook, the heroes' town. The game runs Millbrook and its four heroes. They will grow stronger, and one day they will march on your tower.</p>
       <ol class="rules">
         <li><b>Your eyes are your minions.</b> You start with two ${esc(mt.name.toLowerCase())} at the tower. The map stays dark where none of them have been; you always see what your tower, your lairs and your minions see, and everything around the heroes.</li>
         <li><b>Gather.</b> Click a minion to select it (Shift-click for more, <b>I</b> for the next idle one) and pick <b>Move</b>, <b>Build</b> or <b>Dance</b>. Right-click a gold deposit, timber stand or ore deposit to put it to work: it spends a night opening a mine or camp, then digs <b class="gold">gold</b>, cuts <b>lumber</b> or hauls <b>ore</b> every night. One minion per site.</li>
-        <li><b>Build lairs.</b> Pick <b>Build</b>, choose a lair and click explored ground the heroes can't see. Each lair takes a few days of work and then breeds one kind of monster every night, from goblins up to pit demons; when enough have gathered they march out as a band.</li>
-        <li><b>Talents.</b> Your villain earns a talent point every time the heroes gain a level, and Infamy from close fights earns more. Spend them at the Dark Tower in four trees: The Brood (new lairs and fiercer monsters), Dominion (servants, mines and gold), Dread (your villain and the showdown), and your villain's own path, with a monster only ${esc(VN())} can raise. Five lairs are known from the start. Once a week you can unlearn everything and choose again.</li>
-        <li><b>Run Millbrook.</b> The heroes' town has its own purse: taxes, a market, and a share of the loot from every fight the heroes win. Spend it on a blacksmith, a temple, a mage guild and more to make the party stronger, and post bounties on the quest board to send them where you want.</li>
-        <li><b>Command the monsters.</b> Click any band you can see, yours or the wilds', and tell it to <b>Patrol</b> (walk back and forth to a spot you pick), <b>Level up</b> (stronger and more of them, for the tower's gold) or <b>Go away</b>. You never control the heroes: they hunt the bands they think they can beat, storm your lairs and raid your mines. The card tells you how a band would fare against them right now.</li>
-        <li><b>Close fights pay.</b> Tense and harrowing fights give the most experience, the most loot for Millbrook and the most mood. Stomps give nothing and bore the table.</li>
+        <li><b>Build lairs.</b> Pick <b>Build</b>, choose a lair and click explored ground the heroes can't see. Each lair breeds one kind of monster every night. <b>When it's full, a wave marches down the road to Millbrook on its own.</b> A lair near the town strikes often; one far away is harder for the heroes to find.</li>
+        <li><b>The siege.</b> A wave at the gates fights Millbrook's archers, ballista, arcane tower and temple bell, and batters its walls. Once it's through, or if it flies over, it sacks the town: it damages the hall, plunders gold and burns buildings. If the heroes are home, they man the walls and fight it themselves, with the towers firing. Millbrook builds its own defences against whatever keeps hurting it, so mix up what you send.</li>
+        <li><b>Infamy.</b> Hurting and killing heroes, breaking into Millbrook, plunder and every lair you keep standing earn Infamy. Infamy levels up your villain: stronger on the throne, a new power at levels 6, 11 and 16, and a talent point every level. Spend talents at the Dark Tower in four trees: The Brood (new lairs and fiercer monsters), Dominion (servants, mines and gold), Dread (your villain and the showdown), and ${esc(VN())}'s own path, with a monster only ${esc(VP().he)} can raise.</li>
+        <li><b>The heroes.</b> You never control them. They hunt the monsters they think they can beat, intercept your waves, storm your lairs and raid your mines. Millbrook puts bounties on the lairs that hurt it most. Click any band you can see to <b>Patrol</b>, <b>Level up</b> or send it <b>Away</b>; the card tells you how it would fare against the heroes, and a wave's card how it would fare against the town.</li>
         <li><b>Watch, or take command.</b> Battles play out on their own. Press <b>Take command</b> to play your monsters: every unit gets a <b>Move</b>, an <b>Attack</b> and a <b>Bonus</b> action each turn. <b>Skip</b> jumps to the end of a fight.</li>
-        <li><b>The finale.</b> When the heroes feel ready, or can't grow any stronger, they storm your tower. There's no clock, but the sooner they win, the higher your score; the table's mood and thrill add to it. Close fights often leave them magic items, and their growing fame brings heirlooms.</li>
+        <li><b>Winning and losing.</b> You win if Millbrook's hall falls, or if your monsters wipe out the whole party while the tavern lies in ashes (with a tavern, a new and greener party takes up the sword). You lose if the heroes beat you on your throne. They march when they think they'd win, so stay ahead of them. The sooner you win, the higher your score.</li>
       </ol>
       <p class="hint">The game autosaves; the Menu has saving, loading, settings and the chronicle. Drag the map to look around, scroll to zoom, click the minimap to jump, Esc to deselect. Keys: E end day · I next idle minion (Shift+I all of them) · with minions selected: M move, B build. In command: M move · F attack · B bonus · E end turn · W wait · D defend · A let the AI play this turn.</p>
-      <div class="row end"><button class="btn big" data-act="close">${first ? 'Take your seat' : 'Back to the table'}</button></div>`, null, 'wide');
+      <div class="row end"><button class="btn big" data-act="close">${first ? 'Begin your reign' : 'Back to the game'}</button></div>`, null, 'wide');
   }
   function showOver() {
-    save(true); syncAudio(); sfx(S.result === 'victory' ? 'win' : 'lose');
-    if (S.result === 'victory') setTimeout(() => bark('win', null, { force: true }), 1500);
-    const res = S.result;
-    const title = res === 'victory' ? `${esc(VN())} falls` : 'Total party kill';
-    const text = res === 'victory' ? `The heroes stormed your citadel at level ${G.avgLevel(S)} and cast down ${esc(VF())}. The realm is saved, and your players are already asking when the next campaign starts.`
-      : `The whole party fell${S.march ? ' at the Dark Tower' : ''}. The dice were honest, and the table is stunned.`;
+    const res = S.result; const won = res === 'razed' || res === 'wiped';
+    save(true); syncAudio(); sfx(won ? 'win' : 'lose');
+    if (!won && res === 'defeat') setTimeout(() => bark('win', null, { force: true }), 1500);
+    const title = res === 'razed' ? 'Millbrook burns' : res === 'wiped' ? 'The heroes are no more' : `${esc(VN())} falls`;
+    const text = res === 'razed' ? `Your monsters broke Millbrook's walls and burned its hall to the ground. With the heroes' town gone, the realm is yours. ${esc(VF())} reigns at level ${G.villainLevel(S)}.`
+      : res === 'wiped' ? `The last of Millbrook's heroes is dead, and with its tavern in ashes nobody is left to take up the sword. ${esc(VF())} reigns at level ${G.villainLevel(S)}.`
+      : `The heroes stormed your citadel at level ${G.avgLevel(S)} and cast down ${esc(VF())}, level ${G.villainLevel(S)}. The realm is saved. Your reign is over, for now.`;
     const sc = G.campaignScore(S);
-    const hist = S.history.slice(-16).map(h => `<div class="wk"><span>W${h.week}${h.level ? ' · L' + h.level : ''}</span><i style="height:${Math.max(4, Math.min(100, h.thrill))}%"></i><b>${h.thrill}</b></div>`).join('');
+    const hist = S.history.slice(-16).map(h => { const v = h.vlevel || 0, hl = h.level || 0; return `<div class="wk"><span>W${h.week}</span><i style="height:${Math.max(4, v * 3.6)}%" title="${esc(VN())} level ${v}"></i><b>${v}${hl ? ` · ${hl}` : ''}</b></div>`; }).join('');
     modal(`<h1 class="dtitle xl">${title}</h1><p>${text}</p>
-      <div class="stats"><div><span>Score</span><b>${sc.total}</b></div><div><span>Days</span><b>${sc.days}</b></div><div><span>Party level</span><b>${G.avgLevel(S)}</b></div><div><span>Heroes lost</span><b>${S.deaths}</b></div></div>
+      <div class="stats"><div><span>Score</span><b>${sc.total}</b></div><div><span>Days</span><b>${sc.days}</b></div><div><span>${esc(VN())}</span><b>Lv ${G.villainLevel(S)}</b></div><div><span>Heroes slain</span><b>${S.deaths}</b></div></div>
       ${sc.tier ? `<p class="fxname">${sc.tier}</p>` : ''}
-      <div class="cols"><div><h2 class="cap">Score</h2>${ledger(sc.rows, sc.total, 'Total')}<p class="hint">${res === 'victory' ? 'The sooner the heroes win, the higher the score.' : 'Speed only counts when the heroes win.'}</p></div>
-      <div><h2 class="cap">Thrill by week</h2><div class="hist">${hist}</div></div></div>
+      <div class="cols"><div><h2 class="cap">Score</h2>${ledger(sc.rows, sc.total, 'Total')}<p class="hint">${won ? 'The sooner you win, the higher the score.' : 'A reign that ends on the throne scores for how long it lasted.'}</p></div>
+      <div><h2 class="cap">Your level, and the heroes', by week</h2><div class="hist">${hist}</div></div></div>
       <div class="row end"><button class="btn big" data-act="newgame">Start a new campaign</button></div>`, null, 'wide');
   }
 
@@ -2063,7 +2110,7 @@
     const head = `<div class="enc-head">${img('obj-' + e.art, 'port xl')}<div><p class="eyebrow">An event</p><h1 class="dtitle">${esc(e.name)}</h1><p>${esc(e.intro)}</p></div></div>`;
     if (e.stage === 'setup') {
       const ch = e.choices.map(c => `<button class="choice" data-act="encchoose" data-k="${c.k}"><b>${esc(c.label)}</b><small>${esc(c.text)}</small></button>`).join('');
-      modal(`${head}<h2 class="cap">You decide</h2><div class="choices">${ch}</div><p class="hint">The players can't see this choice. The dice decide the rest.</p>`, null, 'wide enc');
+      modal(`${head}<h2 class="cap">Your scheme</h2><div class="choices">${ch}</div><p class="hint">The heroes can't see this choice. You set the scene; the dice decide the rest.</p>`, null, 'wide enc');
       return;
     }
     modal(`${head}<div class="enc-narr" id="enc-narr"></div><div class="enc-rolls" id="enc-rolls"></div><div class="tray inline" id="enc-tray" hidden></div><div class="enc-narr" id="enc-out"></div><div class="row end" id="enc-ctrl"></div>`, null, 'wide enc');
@@ -2088,9 +2135,8 @@
     if (e.stage === 'done') {
       const o = e.outcome;
       for (const r of e.extraRolls) addRollChip(r);
-      const box = $('enc-out'); const p = document.createElement('p'); p.className = 'outcome ' + (o.ok ? 'pos' : 'neg'); p.textContent = o.text; box.appendChild(p);
-      const sum = o.lines.reduce((t, l) => t + l.v, 0);
-      const l = document.createElement('div'); l.innerHTML = ledger(o.lines, sum, 'Thrill'); box.appendChild(l.firstElementChild);
+      const box = $('enc-out'); const p = document.createElement('p'); p.className = 'outcome ' + (o.ok ? 'neg' : 'pos'); p.textContent = o.text; box.appendChild(p);
+      if (o.infamy) { const l = document.createElement('div'); l.innerHTML = ledger([{ label: 'The heroes stumbled', v: o.infamy }], o.infamy, 'Infamy'); box.appendChild(l.firstElementChild); }
       ctrl.innerHTML = `<button class="btn big" data-act="encclose">${e.ambush ? 'To battle!' : 'Continue'}</button>`;
       ctrl.querySelector('button').focus({ preventScroll: true });
       renderBar();
@@ -2460,21 +2506,23 @@
     renderBar(); save(true); $('btray').hidden = true;
     if (res.result === 'win' && !(res.finale && res.stage !== 1)) { const hard = res.label === 'Tense' || res.label === 'Harrowing'; if (Math.random() < (hard ? 0.85 : 0.35)) setTimeout(() => bark(hard ? 'hard' : 'easy'), 700); }
     const killed = Object.keys(res.killed).map(k => `<li>${res.killed[k]} ${esc(res.killed[k] > 1 ? res.plural[k] || k : k)}</li>`).join('') || '<li class="hint">Nothing.</li>';
-    const title = res.result === 'win' ? (res.finale && res.stage === 1 ? 'The citadel gates are broken' : res.finale ? `${esc(VN())} is destroyed` : res.boss ? `${esc(VN())} is driven off` : res.dungeon ? 'The lair falls' : res.attack ? 'The heroes beat your war party' : 'The heroes are victorious') : res.result === 'tpk' ? 'Total party kill' : res.finale ? 'The assault on the Dark Tower fails' : res.result === 'retreat' ? 'The heroes retreat' : 'Your monsters flee';
-    const xpLine = res.xp ? `<p class="hint">Each hero gains ${res.xp} XP${res.xpMult > 1 ? ' (a harrowing fight is worth extra)' : res.xpMult < 1 ? ' (an easy fight is worth less)' : ''}.</p>` : res.noXp ? '<p class="warn">No experience: the fight was too easy for heroes of their level.</p>' : '';
-    const thrillSum = res.lines.reduce((t, l) => t + l.v, 0);
-    modal(`<h1 class="dtitle">${title}</h1><p>${res.label === 'Easy' ? 'An' : 'A'} <b class="est ${res.label}">${res.label}</b> fight: the party lost ${Math.round(Math.min(1, res.frac) * 100)}% of its health over ${res.rounds} round${res.rounds > 1 ? 's' : ''}.${res.escaped ? ` ${esc(VN())} escaped to the Dark Tower to recover.` : ''}</p>
+    const title = res.result === 'win' ? (res.finale && res.stage === 1 ? 'The heroes break through your gates' : res.finale ? `${esc(VN())} falls` : res.boss ? `${esc(VN())} is driven off` : res.dungeon ? 'The heroes wreck your lair' : res.siege ? 'Millbrook holds' : res.attack ? 'The heroes beat your war party' : 'The heroes win')
+      : res.result === 'tpk' ? 'Total party kill' : res.finale ? 'The assault on the Dark Tower fails' : res.result === 'retreat' ? 'The heroes retreat' : 'Your monsters flee';
+    const xpLine = res.xp ? `<p class="hint">Each hero gains ${res.xp} XP${res.xpMult > 1 ? ' (a harrowing fight is worth extra)' : res.xpMult < 1 ? ' (an easy fight is worth less)' : ''}.</p>` : res.noXp ? '<p class="good">No experience for them: the fight was too easy for heroes of their level.</p>' : '';
+    const infSum = Math.round(res.lines.reduce((t, l) => t + l.v, 0) * 10) / 10;
+    const wipe = res.wiped ? (res.newParty ? `<p class="fxname">The whole party is dead. In Millbrook's tavern a new, greener party takes up the sword: ${res.newParty.map(esc).join(', ')}.</p>` : '<p class="fxname">The whole party is dead, and with the tavern in ashes there is nobody left to take their place.</p>') : '';
+    modal(`<h1 class="dtitle">${title}</h1><p>${res.label === 'Easy' ? 'An' : 'A'} <b class="est ${res.label}">${res.label}</b> fight for the heroes: they lost ${Math.round(Math.min(1, res.frac) * 100)}% of their health over ${res.rounds} round${res.rounds > 1 ? 's' : ''}.${res.escaped ? ` ${esc(VN())} escaped to the Dark Tower to recover.` : ''}</p>
       ${res.townGold ? `<div class="payoff"><span>${img('obj-town', 'ticon')}<b class="gold">+${res.townGold} gold for Millbrook</b> The heroes carry their share of the loot home.</span></div>` : ''}
-      ${res.attack ? `<div class="payoff"><span>${img('obj-res-gold', 'ticon')}<b class="gold">+${Math.max(0, res.towerGold)} gold for your tower</b> ${res.bounty >= 3 ? 'A close fight fills your coffers.' : res.label === 'Trivial' ? 'A stomp pays nothing.' : ''}</span>${res.home.length ? `<span class="hint">Back to their lairs: ${res.home.map(([t, n]) => `${n} ${esc(n > 1 ? G.CREATURES[t].name : G.CREATURES[t].one)}`).join(', ')}.</span>` : ''}</div>` : ''}
-      <div class="cols"><div><h2 class="cap">Slain</h2><ul class="plain">${killed}</ul>${xpLine}${res.died.length ? `<p class="neg">Fallen: ${res.died.map(esc).join(', ')}. ${res.result !== 'tpk' ? 'Their players roll up new characters at the same level, waiting in Millbrook without magic items.' : ''}</p>` : ''}${res.next === 'throne' ? `<p class="fxname">The throne room awaits. The heroes catch their breath, then climb to face ${esc(VN())}.</p>` : ''}${res.finale && res.result !== 'win' && res.result !== 'tpk' ? '<p class="hint">The heroes fall back to regroup. They\'ll be back when they feel ready.</p>' : ''}</div>
-      <div><h2 class="cap">The table's thrill</h2>${ledger(res.lines, thrillSum, 'From this battle')}</div></div>
+      <div class="cols"><div><h2 class="cap">Your dead</h2><ul class="plain">${killed}</ul>${xpLine}${res.died.length && !res.wiped ? `<p class="good">Slain: ${res.died.map(esc).join(', ')}. ${G.townLv(S, 'tavern') ? 'Someone new will come to Millbrook\'s tavern to take their place.' : 'With the tavern burned, nobody comes to take their place.'}</p>` : ''}${wipe}${res.next === 'throne' ? `<p class="fxname">The throne room is next. The heroes catch their breath, then climb to face ${esc(VN())}.</p>` : ''}${res.finale && res.result !== 'win' && res.result !== 'tpk' ? '<p class="hint">The heroes fall back to regroup. They\'ll be back when they feel ready.</p>' : ''}</div>
+      <div><h2 class="cap">Infamy</h2>${res.lines.length ? ledger(res.lines, infSum, 'From this battle') : '<p class="hint">Nothing to boast about: the heroes barely got a scratch.</p>'}</div></div>
       <div class="row end"><button class="btn big" data-act="close">${res.next === 'throne' ? 'To the throne room' : 'Continue'}</button></div>`,
     () => {
       if (S.phase === 'battle' && S.battle) { if (S.pendingLevelUps.length) showLevelUps(() => enterBattle()); else enterBattle(); return; }
       exitBattle();
       if (S.phase === 'over') { showOver(); return; }
       const goOn = () => { if (ui.moving) stepLoop(); else commit(); };
-      if (S.pendingLevelUps.length) showLevelUps(goOn); else goOn();
+      const after = () => showVillainUps(goOn);
+      if (S.pendingLevelUps.length) showLevelUps(after); else after();
     }, 'wide');
   }
   function renderBattleUI(light) {
@@ -2484,7 +2532,7 @@
     $('bparty').innerHTML = party.map(x => { const v = ui.view[x.id] || x; const f = Math.max(0, v.hp / x.maxHp) * 100; return `<div class="bh${!v.alive ? ' dead' : v.down ? ' down' : ''}${b.cur === x.id ? ' cur' : ''}">${img('unit-' + x.icon, 'port sm')}<span><b>${esc(shortName(x.name))}</b><i class="hpb"><i style="width:${f.toFixed(0)}%"></i></i><small>${v.alive ? (v.down ? 'Down' : Math.max(0, v.hp) + '/' + x.maxHp) : 'Dead'} · AC ${x.ac}${x.maxMana ? ' · ' + x.mana + ' mana' : ''}</small></span></div>`; }).join('');
     $('bround').textContent = b.phase === 'deploy' ? 'Deployment' : `Round ${b.round}`;
     $('bterrain').textContent = G.TERRAIN[b.terrain] ? G.TERRAIN[b.terrain].name : '';
-    $('bdm').innerHTML = `<span title="The tower's gold: pays for extra traps and reinforcements">Tower <b>${Math.floor(S.res.gold)}</b></span><span title="Millbrook's gold: pays for the spells that help the heroes">Millbrook <b>${Math.floor(S.town ? S.town.res.gold : 0)}</b></span><span>Mood <b>${S.engagement}</b></span>${b.attack ? '<span>Your war party</span>' : b.finale ? '<span>The final showdown</span>' : ''}`;
+    $('bdm').innerHTML = `<span title="The tower's gold: pays for extra traps and reinforcements">Tower <b>${Math.floor(S.res.gold)}</b></span><span title="${esc(VN())}'s level">${esc(VN())} <b>Lv ${G.villainLevel(S)}</b></span>${b.siege ? '<span>The siege of Millbrook</span>' : b.attack ? '<span>Your war party</span>' : b.finale ? '<span>The final showdown</span>' : ''}`;
     if (light) return;
     const dep = $('bdeploy');
     if (b.phase === 'deploy') {
@@ -2532,18 +2580,11 @@
     $('bauto').textContent = ui.autoBattle ? 'Take command' : 'Let them fight';
     $('bauto').title = ui.autoBattle ? 'Play your monsters yourself, and use the spellbook' : 'Go back to watching: the monsters fight on their own';
     $('battle').classList.toggle('command', !ui.autoBattle);
-    const tpk = $('btpk');
-    if (b.pendingTPK) {
-      const err = G.canDmSpell(S, 'deus');
-      tpk.hidden = false;
-      tpk.innerHTML = `<h2 class="dtitle">The party has fallen</h2><p>Every hero is down and your monsters are closing in. Save them from behind the screen, or let the dice stand.</p>
-        <div class="row"><button class="btn big" data-act="deus"${err ? ' disabled' : ''}>Deus ex Machina · ${G.DM_SPELLS.deus.cost} Millbrook gold</button><button class="btn big danger" data-act="tpk">Let them fall</button></div>
-        <p class="hint">${err ? esc(err) + ' ' : ''}A rescue costs 10 mood: the players notice${b.finale ? ', and the fight goes on' : ', and it ends the fight'}.</p>`;
-    } else tpk.hidden = true;
+    const tpk = $('btpk'); if (tpk) tpk.hidden = true;   // 0.30: no rescue from behind the screen
   }
   function spellbook() {
-    const rows = Object.keys(G.DM_SPELLS).map(k => { const sp = G.DM_SPELLS[k]; const err = G.canDmSpell(S, k); return `<button class="spell" data-act="cast" data-k="${k}"${err ? ' disabled' : ''}><b>${esc(sp.name)}</b><span class="tcost">${sp.cost ? `${sp.cost} ${sp.purse === 'town' ? 'Millbrook' : 'tower'} gold` : 'Free'}</span><small>${esc(sp.text)}${sp.mood ? ` <em>−${sp.mood} mood</em>` : ''}${err ? `<br><i>${esc(err)}</i>` : ''}</small></button>`; }).join('');
-    modal(`<h1 class="dtitle">The DM's spellbook</h1><p class="hint">One spell per round, on one of your monsters' turns. Spells that help the heroes are paid from Millbrook's purse; reinforcements from your tower's. The players notice fudging.</p><div class="spells">${rows}</div><div class="row end"><button class="btn" data-act="close">Close</button></div>`);
+    const rows = Object.keys(G.DM_SPELLS).map(k => { const sp = G.DM_SPELLS[k]; const err = G.canDmSpell(S, k); return `<button class="spell" data-act="cast" data-k="${k}"${err ? ' disabled' : ''}><b>${esc(sp.name)}</b><span class="tcost">${sp.cost ? `${sp.cost} tower gold` : 'Free'}</span><small>${esc(sp.text)}${err ? `<br><i>${esc(err)}</i>` : ''}</small></button>`; }).join('');
+    modal(`<h1 class="dtitle">${esc(VN())}'s spellbook</h1><p class="hint">One spell per round, on one of your monsters' turns, paid from the tower's purse.</p><div class="spells">${rows}</div><div class="row end"><button class="btn" data-act="close">Close</button></div>`);
   }
   function bindBattle() {
     const cv = bcv();
@@ -2602,7 +2643,7 @@
         } else el.textContent = `${who.name} is out of reach this turn${u.ranged && u.shots > 0 && !G.los(b, u.pos, who.pos) ? '. No line of sight.' : '.'}`;
         return;
       }
-      if (o.reach.has(k) && k !== u.pos) { el.textContent = (o.targets.length ? 'Move here without attacking. The players may wonder why you held back.' : 'Move here.') + (tileTxt ? ' ' + tileTxt : ''); return; }
+      if (o.reach.has(k) && k !== u.pos) { el.textContent = (o.targets.length ? 'Move here without attacking.' : 'Move here.') + (tileTxt ? ' ' + tileTxt : ''); return; }
     }
     if (who) { el.textContent = who.side === 'dm' ? `${who.boss ? '' : who.count + ' '}${who.name}: ${G.totalHp(who)} HP, AC ${who.ac}, +${who.hit} to hit, ${who.dice[0]}d${who.dice[1]}+${who.dice[2]}${who.boss ? ' ×2' : ' each'}, speed ${who.spd}${who.ranged ? ', shooter' : ''}${who.flyer ? ', flies' : ''}.` : `${who.name}: ${who.hp}/${who.maxHp} HP, AC ${who.ac}, +${who.hit} to hit, speed ${who.spd}.`; return; }
     if (tileTxt || trap) { el.textContent = trap ? 'Your hidden spike trap.' : tileTxt; return; }
@@ -2767,6 +2808,7 @@
         case 'hero': showHero(d.id); return;
         case 'party': showParty(); return;
         case 'tower': ui.towerTab = d.k || 'view'; openScreen('tower'); return;
+        case 'vtalents': closeModal(); ui.towerTab = 'talents'; openScreen('tower'); return;
         case 'ttab': sfx('tab'); ui.towerTab = d.k; renderScreen(true); return;
         case 'town': if (!S.town) return; ui.townTab = d.k || 'view'; openScreen('town'); return;
         case 'tvclose': ui.tvSel = null; updateViewCard(); return;
@@ -2924,7 +2966,8 @@
       ui.chatter = st.chatter !== false; ui.items = null; ui.autoSkip = !!st.skipfights;
       if (!ui.tried3d) { ui.tried3d = true; init3d(); }
       else if (ui.r3d) { W3.exitBattle(); W3.attach($('mapwrap'), $('map')); W3.buildMap(S); W3.centerOn(S.party.x, S.party.y, true); W3.setMode('map'); }
-      sizeMap(); centerOn(S.party.x, S.party.y, true); commit(); drawMap();
+      // 0.30: a new reign opens on your own tower
+      { const c = opts.fresh ? G.siteOf(S, 'tower') : S.party; sizeMap(); centerOn(c.x, c.y, true); } commit(); drawMap();
       if (S.phase === 'battle' && S.battle) enterBattle();
       else if (S.phase === 'encounter' && S.enc) showEncounter();
       else if (S.phase === 'week') showWeek();
@@ -2992,5 +3035,5 @@
     if (ui.r3d) { const M = W3._map(); const T3 = M.camera.position.constructor; const v = new T3(x + 0.5, M.hAt(x + 0.5, y + 0.5), y + 0.5); v.project(M.camera); const r = W3.canvas.getBoundingClientRect(); return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height }; }
     const r = mapCv().getBoundingClientRect(); return { x: r.left + (x + 0.5) * TILE - Math.round(ui.cam.x), y: r.top + (y + 0.5) * TILE - Math.round(ui.cam.y) };
   }
-  window.__bts = { state: () => S, ui, vo: () => VO, bark: (c, w, o) => bark(c, w, o), TILE, minionScreen, tileScreen, centerOn: (x, y) => { centerOn(x, y, true); drawMap(); }, enterBattle: () => enterBattle(), commit: () => commit(), openScreen: k => openScreen(k), renderSide: () => renderSide(), findFair: () => findFair(), showOver: () => showOver(), spellbook: () => spellbook() };
+  window.__bts = { state: () => S, ui, vo: () => VO, bark: (c, w, o) => bark(c, w, o), TILE, minionScreen, tileScreen, centerOn: (x, y) => { centerOn(x, y, true); drawMap(); }, enterBattle: () => enterBattle(), commit: () => commit(), openScreen: k => openScreen(k), renderSide: () => renderSide(), findFair: () => findFair(), showOver: () => showOver(), spellbook: () => spellbook(), select: sel => { ui.sel = sel; renderSide(); drawMap(); }, showWeek: () => showWeek(), showVillainUps: () => showVillainUps(), dawn: () => dawn() };
 })();

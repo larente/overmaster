@@ -12,6 +12,7 @@ Run it in Terminal:
     python3 ~/Documents/bts-art/pixellab_gen.py objects library tower-lich   # just these
     python3 ~/Documents/bts-art/pixellab_gen.py colossus drake hellhound irongolem werewolf rider   # each villain's own monster
     python3 ~/Documents/bts-art/pixellab_gen.py objects villain-lairs   # and their lairs
+    python3 ~/Documents/bts-art/pixellab_gen.py objects defences   # Millbrook's walls and towers (0.30)
     python3 ~/Documents/bts-art/pixellab_gen.py talk            # talking portraits: mouth shapes for every hero, lip-sync for their lines
     python3 ~/Documents/bts-art/pixellab_gen.py talk ione pip   # just these heroes
 
@@ -644,6 +645,18 @@ OBJECTS = {
     't-hall-3': ('town hall: a stone town hall with red and blue roofs, a clock tower, banners and a little walled courtyard', 192),
     't-hall-4': ('city hall: a grand stone city hall with several wings, blue slate roofs, a tall clock tower and banners on the walls', 208),
     't-hall-5': ('capitol: a white stone castle palace with blue roofs and golden spires, high walls, flags flying from every tower', 224),
+    # Millbrook's defences (0.30): the town builds them against your waves
+    't-walls': ('a village palisade gate: a wooden gatehouse of sharpened logs with a short walkway on top, a stretch of log palisade on each side, a red banner over the gate', 176),
+    't-walls-2': ('stone town walls: a sturdy grey stone gatehouse with an arched wooden gate and battlements, a stretch of stone wall on each side, blue banners', 176),
+    't-walls-3': ('great town walls: a tall grey stone gatehouse with two round towers, a portcullis, battlements and flags, thick walls on each side', 192),
+    't-watch': ('an archer tower: a small square wooden watchtower on stilts with a ladder, a roofed platform on top with a bow and a quiver of arrows', 128),
+    't-watch-2': ('archer towers: a sturdy stone watchtower with a wooden roofed top, arrow slits, a red pennant and a rack of bows at its foot', 144),
+    't-watch-3': ('a ring of archer towers: two tall stone watchtowers joined by a wooden walkway, arrow slits, banners and bundles of arrows', 160),
+    't-ballista': ('a ballista: a huge wooden crossbow on a timber platform, aimed up, with a stack of giant iron-tipped bolts beside it', 128),
+    't-ballista-2': ('a ballista tower: a squat stone tower with a huge wooden crossbow mounted on top and a pile of giant bolts', 144),
+    't-arcane': ('an arcane defence tower: a slim blue stone tower with a glowing crystal on top crackling with blue fire, runes on its walls', 144),
+    't-arcane-2': ('a great arcane tower: a tall blue stone tower with three floating crystals around its peak, blue fire and runes glowing', 160),
+    't-bell': ('a temple bell: a big bronze bell hanging in a white stone arch with a little tiled roof, holy symbols carved on the stone, soft golden glow', 112),
     # the Dark Tower's works, raised by research
     't-library-2': ('the Forbidden Library with a new wing: a dark stone library with a domed roof and a second taller wing, purple stained-glass windows glowing, books piled at the door', 176),
     't-vigor': ('a small blood fountain: a black stone basin with dark red liquid bubbling, carved skulls around the rim', 112),
@@ -877,6 +890,7 @@ def main():
                   'darktower': [k for k in OBJECTS if k.startswith(TOWER_WORKS)] + (['library'] if 'library' in OBJECTS else []),
                   'stages': [k for k in OBJECTS if re.match(r'tower-[a-z]+-\d$', k)]}
         groups['villain-lairs'] = ['boneforge', 'eyrie', 'brimstone', 'foundry', 'lodge', 'stables']
+        groups['defences'] = [k for k in OBJECTS if k.startswith(('t-walls', 't-watch', 't-ballista', 't-arcane', 't-bell'))]
         for v in ('lich', 'dragon', 'demon', 'archmage', 'vampire', 'deathknight'):
             groups['stages-' + v] = [k for k in OBJECTS if re.match(r'tower-%s-\d$' % v, k)]
         args = [k for a in args for k in groups.get(a, [a])]

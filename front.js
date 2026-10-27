@@ -140,18 +140,18 @@ const Front = (() => {
         ${lk ? `<span class="lockchip" title="Unlock for ${esc(Shop.label(Shop.villainSku(k)))}">${LOCK}${esc(Shop.money(Shop.price(Shop.villainSku(k))))}</span>` : ''}<img src="${A.URI[vIcon(k)]}" data-icon="${vIcon(k)}" alt="" draggable="false"><span class="vtxt"><b>${esc(t.label)}</b><span>${esc(t.blurb)}</span><i>${t.powers.map(p => esc(G.BOSS_POWERS[p].name)).join(' · ')}</i></span></button>`; }).join('');
     const pr = Object.keys(G.PRON).map(k => `<button class="pill${V.pron === k ? ' on' : ''}" data-fx="vpron" data-k="${k}" aria-pressed="${V.pron === k}">${G.PRON[k].label}</button>`).join('');
     const full = V.title ? `${V.name || T.names[0]}, ${V.title}` : (V.name || T.names[0]);
-    return `<div class="stitle"><h2>Who is your Big Bad?</h2><p>Every villain waits on the throne of the Dark Tower at level 20. Each kind fights differently, so the heroes will need different things from you to get ready.</p></div>
+    return `<div class="stitle"><h2>Who will you be?</h2><p>Every villain rises in the Dark Tower at level 1 and grows on Infamy, learning its powers as it levels up. Each kind fights differently, and each has its own minions, its own monster and its own talents.</p></div>
       <div class="vgrid">
         <div class="vcards" role="group" aria-label="Kind of villain">${cards}</div>
         <aside class="vform">
           <img class="vbig" src="${A.URI[vIcon(V.type)]}" data-icon="${vIcon(V.type)}" alt="">
           <p class="vfull" id="v-full">${esc(full)}</p>
-          <p class="vkind">A level 20 ${esc(T.label.toLowerCase())}</p>
+          <p class="vkind">${esc(T.label)}, rising at level 1</p>
           ${Shop.villainOpen(V.type) ? ownHint(V.type) : unlockPanel(V.type)}
           <label class="fld" for="v-name"><span>Name</span><span class="inrow"><input id="v-name" maxlength="28" autocomplete="off" value="${esc(V.name)}"><button class="btn sm" data-fx="vroll" title="Pick a random name and title">Roll</button></span></label>
           <label class="fld" for="v-title"><span>Title</span><input id="v-title" maxlength="40" autocomplete="off" list="v-titles" value="${esc(V.title)}"><datalist id="v-titles">${T.titles.map(t => `<option value="${esc(t)}">`).join('')}</datalist></label>
           <div class="fld"><span>Referred to as</span><div class="pills" role="group" aria-label="Pronouns">${pr}</div></div>
-          <label class="fld" for="c-name"><span>Campaign name</span><input id="c-name" maxlength="48" autocomplete="off" placeholder="The Fall of ${esc(V.name || T.names[0])}" value="${esc(F.campaign)}"></label>
+          <label class="fld" for="c-name"><span>Campaign name</span><input id="c-name" maxlength="48" autocomplete="off" placeholder="The Rise of ${esc(V.name || T.names[0])}" value="${esc(F.campaign)}"></label>
         </aside>
       </div>
       <footer class="sfoot"><button class="btn" data-fx="title">Cancel</button>${Shop.villainOpen(V.type) ? '<button class="btn big" data-fx="toparty">Next: choose the heroes</button>'
@@ -173,7 +173,7 @@ const Front = (() => {
     const T = G.BOSS_TYPES[type], M = G.MINION_TYPES[type], sku = Shop.villainSku(type), bundle = 'bundle-dark-court';
     const both = Shop.price(bundle) > Shop.price(sku);
     return `<div class="unlock"><p class="ulead">${LOCK}Unlock the ${esc(T.label)} to play it</p>
-      <ul class="plain udiff">${ownLine(type)}<li><b>Minions:</b> ${esc(M.name)}. ${esc(M.text)}</li><li><b>In the final battle:</b> ${T.powers.map(p => esc(G.BOSS_POWERS[p].name)).join(' · ')}</li></ul>
+      <ul class="plain udiff">${ownLine(type)}<li><b>Minions:</b> ${esc(M.name)}. ${esc(M.text)}</li><li><b>Powers as it levels up:</b> ${T.powers.map(p => esc(G.BOSS_POWERS[p].name)).join(' · ')}</li></ul>
       <button class="btn big" data-fx="buy" data-sku="${sku}">Unlock · ${esc(Shop.label(sku))}</button>
       ${both ? `<button class="btn" data-fx="buy" data-sku="${bundle}">All four paid villains · ${esc(Shop.label(bundle))}</button>` : ''}
       <p class="hint">Yours for good, on every device you sign in on.</p></div>`;
@@ -195,20 +195,20 @@ const Front = (() => {
         <span class="htxt"><b>${esc(r.name)}</b><span class="rc">${esc(G.RACES[r.race].label)} ${esc(G.CLASSES[r.cls].label.toLowerCase())}</span><span class="drv d-${r.drive}">${esc(D.label)}: ${esc(D.want)}</span><span class="bio">${esc(r.bio)}</span></span>
         ${on ? `<span class="seat" aria-label="Seat ${n + 1}">${n + 1}</span>` : ''}</button>`;
     }).join('');
-    return `<div class="stitle"><h2>Who sits at your table?</h2><p>Your four players each run one of these heroes. You never control them. They chase what they want, so a mix of wants keeps everyone busy.</p></div>
+    return `<div class="stitle"><h2>Who stands against you?</h2><p>Four heroes will defend Millbrook. You never control them. Each chases what they want, and a mixed party is harder to beat.</p></div>
       <div class="pbar"><div class="pslots">${slots}</div>
         <div class="ptools"><button class="btn sm" data-fx="roll" data-k="balanced">One of each class</button><button class="btn sm" data-fx="roll" data-k="random">Random party</button><button class="btn sm" data-fx="clear"${ids.length ? '' : ' disabled'}>Clear</button></div>
         ${notes ? `<ul class="pnotes">${notes}</ul>` : ''}</div>
       <div class="rhead"><div class="pills" role="group" aria-label="Show">${filters}</div><details class="races"><summary>What each race brings</summary><ul>${races}</ul></details></div>
       <div class="roster">${cards}</div>
-      <footer class="sfoot"><button class="btn" data-fx="tovillain">Back</button><span class="sum">${ids.length}/4 heroes${ids.length === 4 ? ` · against ${esc(fullName())}` : ''}</span><button class="btn big" data-fx="begin"${ids.length === 4 ? '' : ' disabled'}>Begin the campaign</button></footer>`;
+      <footer class="sfoot"><button class="btn" data-fx="tovillain">Back</button><span class="sum">${ids.length}/4 heroes${ids.length === 4 ? ` · against ${esc(fullName())}` : ''}</span><button class="btn big" data-fx="begin"${ids.length === 4 ? '' : ' disabled'}>Begin your reign</button></footer>`;
   }
   const fullName = () => { const V = F.villain; const T = G.BOSS_TYPES[V.type]; return V.title ? `${V.name || T.names[0]}, ${V.title}` : (V.name || T.names[0]); };
   function pick(id) {
     const i = F.party.indexOf(id);
     if (i >= 0) F.party.splice(i, 1);
     else if (F.party.length < 4) F.party.push(id);
-    else { toast('The table is full. Click a seated hero to make room.', 'warn'); return; }
+    else { toast('Four heroes already. Click one to make room.', 'warn'); return; }
     const y = $('setup').scrollTop; renderSetup(); $('setup').scrollTop = y;
   }
   function begin(btn) {
@@ -227,7 +227,7 @@ const Front = (() => {
   function saveRow(it, opts) {
     const m = it.meta || {}; const heroes = m.heroes || [];
     const ps = heroes.map(h => `<img src="${portraitOf(h)}" data-icon="${heroKey(h)}" alt="">`).join('');
-    const done = m.result ? `<span class="tagx ${m.result === 'victory' ? 'good' : 'bad'}">${m.result === 'victory' ? 'Won' : 'Party fell'}</span>` : '';
+    const won = m.result === 'razed' || m.result === 'wiped'; const done = m.result ? `<span class="tagx ${won ? 'good' : 'bad'}">${m.result === 'razed' ? 'Razed Millbrook' : m.result === 'wiped' ? 'Wiped them out' : m.result === 'defeat' ? 'Fell' : m.result === 'victory' ? 'Heroes won' : 'Party fell'}</span>` : '';
     return `<div class="srow" data-slot="${esc(it.slot)}" data-where="${it.where}">
       <div class="sparty"><img class="sv" src="${A.URI[vIcon(m.vtype)]}" data-icon="${vIcon(m.vtype)}" alt="">${ps}</div>
       <div class="sinfo"><b>${esc(it.name)}</b> ${done}<span>${esc(m.villain || '')}</span><small>${esc(it.label)} · ${esc(where(it))}${it.updated ? ' · ' + esc(ago(it.updated)) : ''}</small></div>
@@ -582,16 +582,16 @@ const Front = (() => {
   }
   function showHowTo() {
     UI.modal(`<h1 class="dtitle">How to play</h1>
-      <p>You are the dungeon master, and you run both towns. At the Dark Tower, your villain's minions gather gold, lumber and ore and raise monster lairs across the land. In Millbrook, you raise the buildings that make the heroes stronger. Four heroes ride out on their own and hunt the monsters you put in their way: make it hard enough to make them sweat, not so hard that they die.</p>
+      <p>You are the villain, newly risen in the Dark Tower at level 1. Your minions dig gold, lumber and ore and raise monster lairs across the land, and your lairs send waves of monsters down the roads to burn Millbrook, the heroes' town. The game runs Millbrook and its four heroes. They grow stronger every week, and one day they will come for you.</p>
       <ol class="rules">
-        <li><b>Pick a villain.</b> A lich, a dragon, a demon prince, an archmage, a vampire lord or a death knight waits at level 20 on your throne, each with its own minions.</li>
-        <li><b>Pick four heroes</b> from twenty. They choose where to go; you never control them.</li>
-        <li><b>Gather, explore and build.</b> You start with two minions, and they are your eyes: the map is dark where none have been. Click one and right-click a gold, timber or ore deposit: it spends a night opening a mine, then works it. Its menu has Move, Build and Dance. Lairs breed monsters that march out as bands; click any band you can see to make it patrol, level up or go away.</li>
-        <li><b>Set the stage.</b> Patrol bands across the heroes' road, level them up to a real fight, or send away the ones that would wipe them. A band's card shows how the fight would go. Close fights pay the most.</li>
-        <li><b>Run Millbrook.</b> The heroes bring loot home after every fight they win. Spend the town's purse on a market, a blacksmith, a temple and more, and post bounties to pull the party where you want.</li>
-        <li><b>The finale.</b> When the heroes feel ready, they storm your tower: first the gate, then your villain on the throne. The sooner they win, the higher your score.</li>
+        <li><b>Pick a villain.</b> A lich, a dragon, a demon prince, an archmage, a vampire lord or a death knight, each with its own minions, its own monster and its own talents.</li>
+        <li><b>Pick the four heroes</b> who will stand against you. They choose where to go; you never control them.</li>
+        <li><b>Gather, explore and build.</b> Your minions are your eyes: the map is dark where none have been. Right-click a gold, timber or ore deposit to put one to work. Its menu has Move, Build and Dance.</li>
+        <li><b>Lairs send waves.</b> When a lair is full, a wave marches on Millbrook by itself. At the gates it fights the town's towers and walls; once through, it sacks the town, plunders its gold and burns its buildings. Millbrook builds new defences against whatever hurts it.</li>
+        <li><b>Grow in Infamy.</b> Hurting heroes, killing them, breaking into Millbrook and keeping your lairs standing all earn Infamy. Your villain levels up on it: stronger on the throne, new powers, and a talent point every level.</li>
+        <li><b>Win or fall.</b> Burn Millbrook's hall, or wipe out its heroes once its tavern is gone, and the realm is yours. If the heroes beat you on your throne, your reign is over. They march when they think they'd win, so stay ahead of them.</li>
       </ol>
-      <p class="hint">You win when the heroes win. A fallen hero's player rolls up someone new at the same level. If all four fall at once, the campaign ends.</p>
+      <p class="hint">While Millbrook's tavern stands, a wiped-out party is followed by a new, greener one. The sooner you win, the higher your score.</p>
       <div class="row end"><button class="btn big" data-act="close">Got it</button></div>`, null, 'wide');
   }
   // a shared link like https://…/?redeem=OVM-7KQ2-XH9D: take the code out of the address bar

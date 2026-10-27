@@ -1266,7 +1266,7 @@
     const townGold = won && !b.finale && s.town ? lootGold(s, label) : 0; if (townGold) s.town.res.gold += townGold;
     s.wk.battles++;
     if (b.over !== 'tpk') for (const id of b.died) { const h = s.heroes.find(x => x.id === id && x.status === 'dead'); if (h) replaceFallen(s, h); }
-    const summary = { result: b.over, label, frac, xp, townGold, challenge: b.challenge, xpMult, attack: b.attack, bounty, home, sent: b.sent, towerGold: (s.res ? s.res.gold : 0) - gold0, noXp: !xp && b.killedHp > 0 && b.over !== 'tpk', killed: b.killed, plural: b.plural, lines, died: b.died.map(id => (b.units.find(u => u.hero === id) || {}).name), boss: b.boss, finale: b.finale, stage: b.stage, next, escaped: !!(b.units.find(u => u.boss) || {}).escaped, dungeon: !!dungeon, rounds: b.round };
+    const summary = { result: b.over, label, frac, xp, townGold, challenge: b.challenge, xpMult, attack: b.attack, bounty, home, sent: b.sent, towerGold: (s.res ? s.res.gold : 0) - gold0, noXp: !xp && b.killedHp > 0 && b.over !== 'tpk', killed: b.killed, plural: b.plural, lines, died: b.died.map(id => (b.units.find(u => u.hero === id) || {}).name), boss: b.boss, finale: b.finale, stage: b.stage, next, escaped: !!(b.units.find(u => u.boss) || {}).escaped, dungeon: !!dungeon, rounds: b.round, siege: !!b.siege };
     const killedTxt = Object.keys(b.killed).map(k => `${b.killed[k]} ${b.killed[k] > 1 ? b.plural[k] || k : k}`).join(', ');
     say(s, won ? `Victory! ${killedTxt ? 'Slain: ' + killedTxt + '. ' : ''}${label === 'Easy' ? 'An' : 'A'} ${label.toLowerCase()} fight (+${xp} XP).` : b.over === 'tpk' ? 'Total party kill.' : b.over === 'retreat' ? 'The party retreated.' : 'The monsters left the field.', b.over === 'tpk' ? 'death' : 'big');
     s.lastBattle = summary;

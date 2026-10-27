@@ -260,8 +260,9 @@ ol.rules { padding-left: 20px; display: grid; gap: 8px; margin: 10px 0; }
 .spell small { grid-column: 1 / -1; color: var(--muted); font-size: 12.5px; }
 .spell em { color: var(--warn); font-style: normal; }
 .hist { display: flex; gap: 10px; align-items: flex-end; height: 120px; padding: 8px 0; }
-.wk { flex: 1; display: grid; grid-template-rows: auto 1fr auto; justify-items: center; height: 100%; gap: 3px; font-size: 12px; color: var(--muted); }
-.wk i { align-self: end; width: 70%; background: linear-gradient(180deg, var(--lore), #5a3a9a); border-radius: 2px 2px 0 0; }
+.wk { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; gap: 3px; font-size: 12px; color: var(--muted); }
+.wk i { display: block; flex: 0 0 auto; width: 70%; max-width: 34px; background: linear-gradient(180deg, var(--lore), #5a3a9a); border-radius: 2px 2px 0 0; }
+.wk b { order: -1; }
 .wk b { font-family: var(--font-display); color: var(--ink); font-size: 13px; }
 .wk span { order: 3; }
 
