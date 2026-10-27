@@ -5,14 +5,14 @@
    in supabase/schema.sql decide what each player can read and write. */
 window.BTS_CONFIG = {
   // Supabase -> Project Settings -> Data API: Project URL, e.g. 'https://abcdefghijkl.supabase.co'
-  supabaseUrl: '',
+  supabaseUrl: 'https://turizlfqbvvdvqfauhgz.supabase.co',
   // Supabase -> Project Settings -> API Keys: the publishable key (sb_publishable_...) or the legacy "anon public" key
-  supabaseAnonKey: '',
+  supabaseAnonKey: 'sb_publishable_wh59JV0IUfCnhm1NizFX1w_SRt4jlVV',
   // Set to true after you turn on Google in Supabase -> Authentication -> Sign In / Providers
-  googleSignIn: false,
+  googleSignIn: true,
   // Optional: shown to testers if the feedback form can't reach Supabase
   feedbackEmail: '',
   // Set to true once Stripe and the two shop functions are set up (site/README.md, "The shop").
   // While false, every villain is unlocked and there's no Shop.
-  store: false
+  store: true
 };

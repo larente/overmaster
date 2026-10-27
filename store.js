@@ -87,6 +87,7 @@ const Store = (() => {
     if (/password should be at least|password.*characters/i.test(m)) return 'Use a password of at least 8 characters.';
     if (/rate limit|too many/i.test(m)) return 'Too many tries in a short time. Wait a minute and try again.';
     if (/failed to fetch|network/i.test(m)) return 'Can\'t reach the save server. Check your connection and try again.';
+    if (/provider is not enabled|unsupported provider/i.test(m)) return 'Google sign-in isn\'t switched on for this site yet. Use email for now.';
     return m;
   };
   async function signUp(email, password, name) {
@@ -107,6 +108,11 @@ const Store = (() => {
   }
   async function google() {
     if (!sb) return { error: 'Accounts aren\'t set up on this site.' };
+    // 0.31: before leaving for Google, check Supabase has Google switched on (otherwise the player lands on a bare error page)
+    try {
+      const r = await fetch(CFG.supabaseUrl.replace(/\/$/, '') + '/auth/v1/settings', { headers: { apikey: CFG.supabaseAnonKey } });
+      if (r.ok) { const j = await r.json(); if (j && j.external && j.external.google === false) return { error: 'Google sign-in isn\'t switched on for this site yet. Use email for now.' }; }
+    } catch (e) { /* can't tell: try anyway */ }
     const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: redirect() } });
     return error ? { error: friendly(error) } : { ok: true };
   }
