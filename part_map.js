@@ -21,7 +21,13 @@ const Game = (() => {
   const clone = o => JSON.parse(JSON.stringify(o));
 
   /* ================= map data ================= */
-  const MW = 40, MH = 28;
+  // 0.31: the map's size belongs to the campaign. New ones are 80 x 56; saves from before keep 40 x 28. useSize() is
+  // called by newGame and migrate, so everything below works on the campaign that's open.
+  let MW = 40, MH = 28;
+  const MAP_SMALL = [40, 28], MAP_BIG = [80, 56];
+  function useSize(w, h) { MW = w || MAP_SMALL[0]; MH = h || MAP_SMALL[1]; }
+  const sizeKey = () => MW + 'x' + MH;
+  const mapScale = () => Math.min(MW / MAP_SMALL[0], MH / MAP_SMALL[1]);   // 1 on the old maps, 2 on the big ones
   const TERRAIN = {
     grass: { cost: 10, name: 'Grassland' }, dirt: { cost: 10, name: 'Rough dirt' }, forest: { cost: 15, name: 'Forest' },
     swamp: { cost: 17, name: 'Swamp' }, snow: { cost: 15, name: 'Snowfield' }, waste: { cost: 12, name: 'Ashen waste' },
@@ -83,8 +89,12 @@ const Game = (() => {
   // Saves from before 0.14 keep the classic layout (s.layout === 'classic'), so their maps don't change under them.
   const CLASSIC_LAKES = [{ x: 19.5, y: 18, rx: 5.2, ry: 3.1 }];
   const TOWER_MIN = 26, MARK_MIN = 9, EDGE = 4, NEAR_RING = [8, 12.5], FAR_RING = [12, 25];
+  // 0.31: on the big map things spread out, though not twice as far: the tower is a few days' walk from Millbrook
+  const LAYOUT_BIG = { tower: 36, mark: 12, edge: 5, near: [10, 17], far: [16, 34], toTower: 22, fromTower: 10, lakes: [2, 3], lakeK: 1.4, lakeGap: 14 };
   function genLayout(seed) {
     const r = mulberry((seed * 31 + 17) | 0);
+    const big = mapScale() > 1.5;
+    const TOWER_MIN = big ? LAYOUT_BIG.tower : 26, MARK_MIN = big ? LAYOUT_BIG.mark : 9, EDGE = big ? LAYOUT_BIG.edge : 4, NEAR_RING = big ? LAYOUT_BIG.near : [8, 12.5], FAR_RING = big ? LAYOUT_BIG.far : [12, 25];
     const at = () => [EDGE + Math.floor(r() * (MW - 2 * EDGE)), EDGE + Math.floor(r() * (MH - 2 * EDGE))];
     const d = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
     for (let tries = 0; tries < 500; tries++) {
@@ -93,20 +103,22 @@ const Game = (() => {
       if (!tower) continue;
       // two landmarks close to Millbrook, two farther out (the classic map's pacing); which ones is random
       const ids = ['woods', 'mine', 'crypt', 'peaks']; for (let i = ids.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [ids[i], ids[j]] = [ids[j], ids[i]]; }
-      const need = Math.max(6, MARK_MIN - tries / 80); const marks = []; let ok = true;
+      const need = Math.max(big ? 9 : 6, MARK_MIN - tries / 80); const marks = []; let ok = true;
       for (let n = 0; n < 4 && ok; n++) {
         // ...and one of the far ones out toward the Dark Tower, so the journey leads into the villain's country
         const [lo, hi] = n < 2 ? NEAR_RING : FAR_RING; const towardTower = n === 2; let got = null;
-        for (let k = 0; k < 200 && !got; k++) { const p = at(); const dt = d(p, town), dw = d(p, tower); if (dt >= lo && dt <= hi && dw >= 8 && (!towardTower || dw <= 16) && marks.every(m => d(p, m) >= need)) got = p; }
+        const fromT = big ? LAYOUT_BIG.fromTower : 8, toT = big ? LAYOUT_BIG.toTower : 16;
+        for (let k = 0; k < 200 && !got; k++) { const p = at(); const dt = d(p, town), dw = d(p, tower); if (dt >= lo && dt <= hi && dw >= fromT && (!towardTower || dw <= toT) && marks.every(m => d(p, m) >= need)) got = p; }
         if (got) marks.push(got); else ok = false;
       }
       if (!ok) continue;
       const pos = { town, tower }; ids.forEach((id, i) => { pos[id] = marks[i]; });
       // one or two lakes, clear of every site
-      const lakes = []; const nl = r() < 0.55 ? 2 : 1;
-      for (let k = 0; k < 120 && lakes.length < nl; k++) {
-        const L = { x: 6 + r() * (MW - 12), y: 6 + r() * (MH - 12), rx: 2.8 + r() * 2.6, ry: 1.9 + r() * 1.4 };
-        if (Object.values(pos).every(p => Math.hypot((p[0] - L.x) / (L.rx + 2.6), (p[1] - L.y) / (L.ry + 2.6)) > 1) && lakes.every(o => Math.hypot(o.x - L.x, o.y - L.y) > 10)) lakes.push(L);
+      const lakes = []; const nl = big ? (r() < 0.5 ? LAYOUT_BIG.lakes[1] : LAYOUT_BIG.lakes[0]) : r() < 0.55 ? 2 : 1;
+      const lk = big ? LAYOUT_BIG.lakeK : 1, gap = big ? LAYOUT_BIG.lakeGap : 10;
+      for (let k = 0; k < 160 && lakes.length < nl; k++) {
+        const L = { x: 6 + r() * (MW - 12), y: 6 + r() * (MH - 12), rx: (2.8 + r() * 2.6) * lk, ry: (1.9 + r() * 1.4) * lk };
+        if (Object.values(pos).every(p => Math.hypot((p[0] - L.x) / (L.rx + 2.6), (p[1] - L.y) / (L.ry + 2.6)) > 1) && lakes.every(o => Math.hypot(o.x - L.x, o.y - L.y) > gap)) lakes.push(L);
       }
       return { pos, lakes };
     }
@@ -114,7 +126,7 @@ const Game = (() => {
   }
   const layoutCache = {};
   function layoutOf(s) {
-    const key = s.layout === 'classic' ? 'classic' : s.seed;
+    const key = s.layout === 'classic' ? 'classic' : s.seed + ':' + sizeKey();
     if (layoutCache[key]) return layoutCache[key];
     let L = s.layout === 'classic' ? null : genLayout(s.seed);
     const sites = SITES.map(z => Object.assign({}, z, L ? { x: L.pos[z.id][0], y: L.pos[z.id][1] } : {}));
@@ -143,8 +155,9 @@ const Game = (() => {
     const nA = noise(4), nB = noise(2.6), nC = noise(6.5);
     // each landmark sits in its own kind of country; the classic map nudged a few region centres off their sites
     const NUDGE = lay.classic === false ? {} : { woods: [1, 0], mine: [0, 1], crypt: [1, -1], tower: [-1, -1] };
+    const rk = mapScale() > 1.5 ? 1.5 : 1;   // 0.31: wider regions on the big map
     const REG = [['woods', 'forest', 7.5], ['mine', 'dirt', 6.5], ['peaks', 'snow', 7.5], ['crypt', 'swamp', 6.5], ['tower', 'waste', 6.5]]
-      .map(([id, t, rad]) => { const S = P(id); const n = NUDGE[id] || [0, 0]; return { id, t, x: S.x + n[0], y: S.y + n[1], rad }; });
+      .map(([id, t, rad]) => { const S = P(id); const n = NUDGE[id] || [0, 0]; return { id, t, x: S.x + n[0], y: S.y + n[1], rad: rad * rk }; });
     const T = new Array(MW * MH);
     const regionOf = new Array(MW * MH).fill(null);
     for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) {
@@ -202,7 +215,7 @@ const Game = (() => {
   }
   // cache maps by seed and layout (terrain never changes during a game)
   const mapCache = {};
-  function mapOf(s) { const k = s.seed + (s.layout === 'classic' ? ':c' : ':r'); if (!mapCache[k]) mapCache[k] = genMap(s.seed, layoutOf(s)); return mapCache[k]; }
+  function mapOf(s) { const k = s.seed + (s.layout === 'classic' ? ':c' : ':r') + ':' + sizeKey(); if (!mapCache[k]) mapCache[k] = genMap(s.seed, layoutOf(s)); return mapCache[k]; }
   const tIdx = (x, y) => y * MW + x;
   function terrainAt(s, x, y) { return mapOf(s).T[tIdx(x, y)]; }
   function tileCost(s, x, y) { const M = mapOf(s); const t = M.T[tIdx(x, y)]; if (!isFinite(TERRAIN[t].cost)) return Infinity; return M.road[tIdx(x, y)] ? ROAD_COST : TERRAIN[t].cost; }

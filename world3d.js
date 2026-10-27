@@ -336,9 +336,9 @@ const World3D = (() => {
     }
   }
   function buildMap(S) {
-    if (MAP.seed === S.seed && MAP.scene) return;
+    if (MAP.seed === S.seed && MAP.size === G.sizeKey() && MAP.scene) return;
     disposeScene(MAP.scene);
-    MAP.seed = S.seed; MAP.prot = undefined; MAP.vrot = null; MAP.objs = new Map(); MAP.nodes = new Map(); MAP.mins = new Map(); for (const L of MAP.labels.values()) L.el.remove(); MAP.labels = new Map();
+    MAP.seed = S.seed; MAP.size = G.sizeKey(); MAP.prot = undefined; MAP.hintRing = null; MAP.vrot = null; MAP.objs = new Map(); MAP.nodes = new Map(); MAP.mins = new Map(); for (const L of MAP.labels.values()) L.el.remove(); MAP.labels = new Map();
     const Mp = G.mapOf(S); const MW = G.MW, MH = G.MH;
     const W = MW + 2 * EX, H = MH + 2 * EX;
     // the map's outermost ring is a border of water and mountain tiles nobody can walk on. Drawn as tiles it made square
@@ -1179,8 +1179,9 @@ const World3D = (() => {
     // the places your minions work, and the minions themselves
     if (!MAP.nodes) MAP.nodes = new Map(); if (!MAP.mins) MAP.mins = new Map();
     for (const n of S.nodes || []) {
+    // 0.30: mines and camps stand smaller than the Dark Tower (they were 1.2)
       const look = hooks.nodeLook ? hooks.nodeLook(n) : 'node-' + n.kind; const nseen = hooks.seeTile ? hooks.seeTile(n.x, n.y) : true;
-      let E = MAP.nodes.get(n.id); if (!E || E.look !== look) { if (E) MAP.scene.remove(E.grp); const grp = prop(look); grp.scale.setScalar(1.2); MAP.scene.add(grp); E = { grp, look }; MAP.nodes.set(n.id, E); }
+      let E = MAP.nodes.get(n.id); if (!E || E.look !== look) { if (E) MAP.scene.remove(E.grp); const grp = prop(look); grp.scale.setScalar(0.72); MAP.scene.add(grp); E = { grp, look }; MAP.nodes.set(n.id, E); }
       const wx = n.x + 0.5, wz = n.y + 0.5; E.grp.position.set(wx, hAt(wx, wz), wz); E.grp.visible = nseen; if (!nseen) continue;
       const html = hooks.nodeLabel ? hooks.nodeLabel(n) : ''; if (html) { const L = label(MAP.labels, 'node-' + n.id, 'l-node', html); L.pos.set(wx, hAt(wx, wz) + 0.02, wz + 0.5); }
     }
@@ -1212,6 +1213,18 @@ const World3D = (() => {
       const L = label(MAP.labels, 'site-' + s.id, 'l-site' + (s.kind === 'tower' ? ' tower' : ''), esc(s.name) + questTag(S, { kind: 'site', id: s.id }));
       L.pos.set(s.x + 0.5, hAt(s.x + 0.5, s.y + 0.5) + 0.02, s.y + 0.5 + (s.kind === 'town' ? 1.25 : s.kind === 'tower' ? 0.9 : 0.62));
     }
+    // 0.31: until you've seen Millbrook, a ring of rumour where it might be
+    { const H = hooks.townHint ? hooks.townHint() : null;
+      if (H && (!MAP.hintRing || MAP.hintRing.userData.r !== H.r)) {
+        if (MAP.hintRing) MAP.scene.remove(MAP.hintRing);
+        // a dashed ring of gold on the ground, drawn over the fog
+        const g = new T.Group(); const mat = new T.MeshBasicMaterial({ color: new T.Color('#e6c46c'), transparent: true, opacity: 0.6, depthTest: false, depthWrite: false, side: T.DoubleSide });
+        const N = Math.max(24, Math.round(H.r * 5));
+        for (let i = 0; i < N; i++) { const seg = new T.Mesh(new T.RingGeometry(H.r - 0.09, H.r + 0.09, 3, 1, i / N * Math.PI * 2, Math.PI / N), mat); seg.rotation.x = -Math.PI / 2; seg.renderOrder = 3; g.add(seg); }
+        g.userData.r = H.r; MAP.hintRing = g; MAP.scene.add(g);
+      }
+      if (MAP.hintRing) { MAP.hintRing.visible = !!H; if (H) { const hx = H.x + 0.5, hz = H.y + 0.5; MAP.hintRing.position.set(hx, hAt(hx, hz) + 0.25, hz); MAP.hintRing.rotation.y = t * 0.03; } }
+      if (H) { const L = label(MAP.labels, 'town-hint', 'l-site hint', 'Millbrook lies somewhere here'); L.pos.set(H.x + 0.5, hAt(H.x + 0.5, H.y + 0.5) + 0.3, H.y + 0.5); } }
     // villain
     const V = S.villain; const onMap = G.villainOnMap(S);
     if (onMap && !MAP.villain) { MAP.villain = makeVillain(); MAP.scene.add(MAP.villain); MAP.vrot = null; }
@@ -1226,7 +1239,7 @@ const World3D = (() => {
     }
     // party
     const P = hooks.partyPos(); const pw = { x: P.x + 0.5, z: P.y + 0.5 };
-    const pg = MAP.party; pg.position.set(pw.x, hAt(pw.x, pw.z), pw.z);
+    const pg = MAP.party; pg.position.set(pw.x, hAt(pw.x, pw.z), pw.z); pg.visible = hooks.partyShown ? hooks.partyShown() : true;   // 0.31: the heroes walk in the fog
     const head = hooks.partyHeading(); if (head !== null) { MAP.prot = MAP.prot === undefined ? head : lerpAng(MAP.prot, head, 1 - Math.exp(-dt * 8)); }
     pg.rotation.y = MAP.prot || 0;
     pg.userData.ring.rotation.z = t * 0.4;
@@ -1264,7 +1277,8 @@ const World3D = (() => {
   function objLabel(S, o) {
     const known = o.known ? `<i class="k${o.rumored ? ' r' : ''}">${o.rumored ? '?' : '!'}</i>` : '';
     const qt = questTag(S, { kind: 'obj', id: o.id });
-    if (o.kind === 'stack') return { cls: 'l-stack' + (o.patrol ? ' patrol' : ''), html: `<b>${o.count}</b>${(o.lvl || 1) > 1 ? `<span class="lv">L${o.lvl}</span>` : ''}${known}${qt}` };
+    if (o.kind === 'stack') { const ml = hooks.monLevel ? hooks.monLevel(o) : null;   // 0.31: a band of the wilds shows its level, coloured against your villain's
+      return { cls: 'l-stack' + (o.patrol ? ' patrol' : ''), html: `<b>${o.count}</b>${ml ? `<span class="mlv c-${ml.cls}">Lv ${ml.L}</span>` : (o.lvl || 1) > 1 ? `<span class="lv">★${o.lvl}</span>` : ''}${known}${qt}` }; }
     if (o.kind === 'dungeon') return { cls: 'l-lair' + (o.mine ? ' mine' : ''), below: true, html: `${esc(G.DUNGEONS[o.dtype].name)}${(o.level || 1) > 1 ? ' <span class="lv">II</span>' : ''}${o.mine && hooks.lairLabel ? ' ' + hooks.lairLabel(o) : ''}${known}${qt}` };
     if (G.ITEMS[o.kind] && G.ITEMS[o.kind].cat === 'trap') return null;
     if (known || qt) return { cls: 'l-item', html: known + qt };

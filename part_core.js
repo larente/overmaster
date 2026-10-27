@@ -599,9 +599,11 @@
     for (const id of DEFAULT_PARTY.concat(ROSTER.map(r => r.id))) if (ids.length < 4 && ids.indexOf(id) < 0) ids.push(id);
     const vil = cleanVillain(opts.villain);
     const layout = opts.layout === 'classic' ? 'classic' : 'random'; // classic: the original fixed map (for comparisons)
+    // 0.31: new campaigns are played on the big map; the classic layout only exists at the old size
+    const size = layout === 'classic' ? MAP_SMALL : (opts.size || MAP_BIG); useSize(size[0], size[1]);
     const L0 = { seed, layout }; const town = siteOf(L0, 'town'), tower = siteOf(L0, 'tower');
     const s = {
-      v: 16, layout, seed, week: 1, day: 1, name: String(opts.name || '').replace(/[<>]/g, '').trim().slice(0, 48) || `The Rise of ${vil.name}`, created: Date.now(), lore: 18, engagement: 60, railroad: 0, phase: 'map', result: null, infamyTotal: 0, wipes: 0, siegeCount: 0,
+      v: 16, layout, seed, mw: MW, mh: MH, week: 1, day: 1, name: String(opts.name || '').replace(/[<>]/g, '').trim().slice(0, 48) || `The Rise of ${vil.name}`, created: Date.now(), lore: 18, engagement: 60, railroad: 0, phase: 'map', result: null, infamyTotal: 0, wipes: 0, siegeCount: 0,
       citadel: { built: { throne: 1 }, day: 0 }, base: { library: 0, libBuild: null }, summons: [], talents: newTalents(), town: newTown(), res: { gold: 20, lumber: 12, ore: 6 }, nodes: [], minions: [], unlocked: {}, attackDay: 0, seen: {}, march: null, finaleTries: 0,
       heroes: ids.map(id => heroFrom(ROSTER_BY[id], 1)), rosterUsed: ids.slice(),
       party: { x: town.x, y: town.y, prev: { x: town.x, y: town.y }, mp: MP_PER_DAY, path: [], target: null, intent: [] },
@@ -616,7 +618,7 @@
     startingLair(s);
     const w0 = myLairs(s)[0]; if (w0) releaseWave(s, w0, 8);
     reveal(s);
-    s.dmSeen = new Array(MW * MH).fill(0); dmReveal(s);
+    s.dmSeen = new Array(MW * MH).fill(0); dmReveal(s); s.townHint = townHintFor(s);
     if (opts.wilds !== false) populateWilds(s);
     planRoute(s);
     say(s, `Day 1. ${vFull(s)} stirs in the Dark Tower, still weak. In Millbrook, four young heroes sharpen their swords.`, 'sys');
@@ -640,6 +642,7 @@
   // v11 (0.14): every campaign has its own map layout. Older saves keep the classic one they were played on.
   function migrate(s) {
     if (!s || typeof s !== 'object' || !Array.isArray(s.heroes)) return null;
+    useSize(s.mw, s.mh);   // 0.31: everything after this works on this campaign's map
     if (s.v === 16) return s;
     if (s.v === 15) return toV16(s);
     if (s.v === 14) return toV16(toV15(s));
@@ -812,9 +815,12 @@
     const cap = { goblin: 40, wolf: 26, bandit: 26 }[type] || 30;
     return Math.max(2, Math.min(cap, Math.round(partyPower(s) / ratio / stackPower(type, 1))));
   }
+  // 0.31: how much more of the wilds a big map has
+  const spread = () => mapScale() > 1.5 ? 2.4 : 1;
   function populateWilds(s) {
     const r = mulberry((s.seed * 31 + 7) | 0);
-    const ratios = [3.2, 2.6, 2.4, 2.2, 2, 2, 1.9, 1.8, 1.7, 1.6, 1.5, 1.4];
+    const R0 = [3.2, 2.6, 2.4, 2.2, 2, 2, 1.9, 1.8, 1.7, 1.6, 1.5, 1.4];
+    const ratios = spread() > 1.5 ? R0.concat(R0, [2.4, 2, 1.8, 1.6, 1.5]) : R0;
     ratios.forEach((q, i) => {
       const type = WILD_TYPES[i % 3]; const far = 6 + Math.round((3.2 - q) * 6);
       const at = wildSpot(s, r, far, 3) || wildSpot(s, r, 5, 2); if (!at) return;
@@ -822,7 +828,8 @@
     });
     const town = siteOf(s, 'town'); const near = s.objects.filter(o => o.wild && o.kind === 'stack').sort((a, b) => Math.hypot(a.x - town.x, a.y - town.y) - Math.hypot(b.x - town.x, b.y - town.y)).slice(0, 3);
     for (const o of near) { o.known = true; o.rumored = true; }
-    for (const k of ['chest', 'chest', 'artifact', 'shrine', 'omen', 'stranger', 'riddle', 'captive', 'pit']) { const at = wildSpot(s, r, 4, 2); if (at) addWild(s, { kind: k }, at[0], at[1]); }
+    const F0 = ['chest', 'chest', 'artifact', 'shrine', 'omen', 'stranger', 'riddle', 'captive', 'pit'];
+    for (const k of spread() > 1.5 ? F0.concat(F0, ['chest', 'refugees', 'pass']) : F0) { const at = wildSpot(s, r, 4, 2); if (at) addWild(s, { kind: k }, at[0], at[1]); }
   }
   // each new week a few fresh bands wander in while the heroes are still low level, and a find or two turns up
   function weeklyWilds(s) {
@@ -832,7 +839,7 @@
     const L = avgLevel(s);
     // the wilds keep up with the heroes: tougher kinds of monster wander in as they grow
     const pool = L < 4 ? ['goblin', 'wolf', 'bandit'] : L < 8 ? ['wolf', 'bandit', 'orc', 'skeleton', 'ogre'] : L < 12 ? ['ogre', 'wraith', 'troll', 'orc'] : L < 16 ? ['troll', 'giant', 'wraith', 'vampire'] : ['giant', 'vampire', 'hydra', 'dragon'];
-    const n = Math.max(0, Math.min(3, 8 - wildStacks));
+    const n = Math.max(0, Math.min(Math.round(3 * Math.sqrt(spread())), Math.round(8 * spread()) - wildStacks));
     for (let i = 0; i < n; i++) {
       const type = pool[Math.floor(r() * pool.length)]; const q = 1.5 + r() * 0.9;
       const at = wildSpot(s, r, 5, 2); if (!at) continue;
@@ -840,7 +847,7 @@
       const o = addWild(s, { kind: 'stack', type, count, size: 1 }, at[0], at[1]); o.known = true; o.rumored = true; out.push(`${CREATURES[type].name.toLowerCase()} near ${regionName(s, at[0], at[1])}`);
     }
     const finds = s.objects.filter(o => o.wild && o.kind !== 'stack').length;
-    for (let i = 0; i < (finds < 6 ? 2 : finds < 9 ? 1 : 0); i++) {
+    for (let i = 0; i < (finds < 6 * spread() ? 2 : finds < 9 * spread() ? 1 : 0); i++) {
       const k = WILD_FINDS[Math.floor(r() * WILD_FINDS.length)]; const at = wildSpot(s, r, 4, 2);
       if (at) addWild(s, { kind: k }, at[0], at[1]);
     }
@@ -1235,17 +1242,20 @@
     const taken = (x, y, gap) => nodes.some(n => Math.hypot(n.x - x, n.y - y) < gap);
     const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
     const add = (kind, x, y) => nodes.push({ id: 'n' + (nodes.length + 1), kind, x, y, known: false, raidedUntil: 0, dev: false });
-    for (const [kind, want] of [['gold', 5], ['lumber', 6], ['ore', 5]]) {
-      // one within easy reach of the tower, the rest spread over the land
-      const first = C[kind].slice().sort((a, b) => Math.hypot(a[0] - tw.x, a[1] - tw.y) - Math.hypot(b[0] - tw.x, b[1] - tw.y)).find(([x, y]) => !taken(x, y, 3));
-      if (first) add(kind, first[0], first[1]);
+    const k = spread();   // 0.31: the big map has more of everything
+    for (const [kind, want0] of [['gold', 5], ['lumber', 6], ['ore', 5]]) {
+      const want = Math.round(want0 * k);
+      // one within easy reach of the tower (two on the big map), the rest spread over the land
+      const nearT = C[kind].slice().sort((a, b) => Math.hypot(a[0] - tw.x, a[1] - tw.y) - Math.hypot(b[0] - tw.x, b[1] - tw.y));
+      for (let i = 0; i < (k > 1.5 ? 2 : 1); i++) { const first = nearT.find(([x, y]) => !taken(x, y, 3)); if (first) add(kind, first[0], first[1]); }
       for (const [x, y] of shuffle(C[kind])) { if (nodes.filter(n => n.kind === kind).length >= want) break; if (!taken(x, y, 5)) add(kind, x, y); }
     }
     return nodes;
   }
 
-  /* --- the dungeon master's fog of war: you see what your tower, minions and lairs see, and all around the heroes --- */
-  const DM_SIGHT = { tower: 5, minion: 3, lair: 2 };
+  /* --- your fog of war: you see what your tower, minions, lairs, bands and villain see. Since 0.31 the heroes walk in
+     the fog too: you only see them where one of yours can. --- */
+  const DM_SIGHT = { tower: 5, minion: 3, lair: 2, band: 2, villain: 4 };
   // pos: where a minion stands right now, for a page animating them mid-walk
   function dmVisible(s, pos) {
     const v = new Uint8Array(MW * MH);
@@ -1257,12 +1267,21 @@
     const ms = DM_SIGHT.minion + talentFx(s).sight;
     for (const m of s.minions || []) { const p = pos ? pos(m) : m; mark(p.x, p.y, ms); }
     for (const o of s.objects) if (o.kind === 'dungeon' && o.mine) mark(o.x, o.y, o.building ? 1 : DM_SIGHT.lair);
-    if (s.heroes && s.heroes.some(h => h.status === 'ok')) mark(s.party.x, s.party.y, sightRadius(s) + 1);
+    for (const o of s.objects) if (o.kind === 'stack' && (o.lair || o.yours)) mark(o.x, o.y, DM_SIGHT.band);   // your own bands and waves
+    if (villainOnMap(s)) mark(s.villain.x, s.villain.y, DM_SIGHT.villain);
     return v;
   }
   function dmReveal(s) {
     if (!s.dmSeen) s.dmSeen = new Array(MW * MH).fill(0);
     const v = dmVisible(s); for (let i = 0; i < v.length; i++) if (v[i]) s.dmSeen[i] = 1;
+    if (s.heroes && living(s).length && v[tIdx(s.party.x, s.party.y)]) s.partySeen = { x: s.party.x, y: s.party.y, w: s.week, d: s.day };
+  }
+  // 0.31: whether you can see the heroes right now, and Millbrook's whereabouts until you've seen the town itself
+  const partyVisible = s => !!(s.heroes && living(s).length && dmVisible(s)[tIdx(s.party.x, s.party.y)]);
+  const townKnown = s => { const t = siteOf(s, 'town'); return !s.dmSeen || !!s.dmSeen[tIdx(t.x, t.y)]; };
+  function townHintFor(s) {
+    const t = siteOf(s, 'town'); const r = mulberry((s.seed * 41 + 9) | 0); const R = 4.5 * mapScale();
+    return { x: clamp(Math.round(t.x + (r() - 0.5) * R), 2, MW - 3), y: clamp(Math.round(t.y + (r() - 0.5) * R), 2, MH - 3), r: Math.round(R + 3) };
   }
   const dmSees = (s, x, y) => dmVisible(s)[tIdx(x, y)] === 1;
   const dmSeen = (s, x, y) => !s.dmSeen || !!s.dmSeen[tIdx(x, y)];
@@ -2048,7 +2067,7 @@
   // walking distance in tiles from the party, remembered while the party stands still
   let PD = null;
   function partyDist(s) {
-    const key = s.seed + ':' + s.party.x + ',' + s.party.y;
+    const key = s.seed + ':' + sizeKey() + ':' + s.party.x + ',' + s.party.y;
     if (PD && PD.key === key) return PD.dist;
     const D = dijkstra(s.party.x, s.party.y, (x, y) => isFinite(tileCost(s, x, y)) ? 1 : Infinity);
     PD = { key, dist: D.dist }; return D.dist;
@@ -2504,6 +2523,210 @@
     return null;
   }
   function dismiss(s, type) { const V = s.villain; if (s.phase !== 'map' || V.state !== 'lair') return 'Only at the Dark Tower.'; V.army = V.army.filter(a => a.type !== type); return null; }
+  /* ================= 0.31: your villain on the map, and the monsters of the wilds =================
+     Send your villain out to a band of the wilds and win it over: fight it, pay it, or talk (Intimidate, Persuade,
+     Deceive, a d20 each). Bands that join you march on Millbrook; a band you beat may kneel, and marches once it has
+     healed; one that won't yield fights to the last and leaves its hoard behind. */
+  // a band's level: the level at which your villain, alone, would be an even match for it
+  const MON_MEMO = new Map();
+  function monsterLevel(s, o) {
+    if (!o || o.kind !== 'stack') return 0;
+    const t = (s.villain && s.villain.type) || 'lich'; const key = t + ':' + o.type + ':' + Math.round(o.count) + ':' + (o.lvl || 1);
+    if (MON_MEMO.has(key)) return MON_MEMO.get(key);
+    const p = bandPower(o); let L = 1;
+    for (; L < 30; L++) { const vp = forcePower([bossStats(Math.min(L, BOSS_LEVEL), {}, false, t)]) * (L > BOSS_LEVEL ? 1 + 0.15 * (L - BOSS_LEVEL) : 1); if (vp >= p) break; }
+    if (MON_MEMO.size > 4000) MON_MEMO.clear();
+    MON_MEMO.set(key, L); return L;
+  }
+  const SKILLS = { intimidate: { name: 'Intimidate', text: 'Show them what happens to those who refuse.' }, persuade: { name: 'Persuade', text: 'Offer them a place in your new order.' }, deceive: { name: 'Deceive', text: 'Tell them what they want to hear.' } };
+  // how each kind of monster takes each approach: lower is easier, null means not at all; gold: whether they'll take pay (2: and want a lot)
+  const TEMPER = {
+    goblin: { gold: 1, intimidate: -3, persuade: 0, deceive: -2, text: 'Greedy and cowardly. Gold or a show of strength will do.' },
+    wolf: { gold: 0, intimidate: -2, persuade: 4, deceive: null, text: 'A pack follows the strongest. Gold means nothing to wolves.' },
+    bandit: { gold: 1, intimidate: 0, persuade: -1, deceive: -3, text: 'Sellswords. They follow coin and a good story.' },
+    orc: { gold: 1, intimidate: -3, persuade: 2, deceive: 0, text: 'Orcs respect strength above everything.' },
+    skeleton: { gold: 0, intimidate: null, persuade: null, deceive: null, undead: true, text: 'Mindless dead. Only a master of the dead can command them.' },
+    ogre: { gold: 1, intimidate: 0, persuade: 2, deceive: -4, text: 'Hungry and dim. Easy to fool.' },
+    wraith: { gold: 0, intimidate: 2, persuade: 0, deceive: 2, undead: true, text: 'Restless spirits, bitter and proud.' },
+    troll: { gold: 1, intimidate: -1, persuade: 3, deceive: 0, text: 'Always hungry. They take payment in meat or gold.' },
+    giant: { gold: 1, intimidate: 3, persuade: -2, deceive: 2, text: 'Proud and old. Flattery works better than threats.' },
+    vampire: { gold: 1, intimidate: 2, persuade: -1, deceive: 0, undead: true, text: 'Aristocrats of the night. They expect to be courted.' },
+    hydra: { gold: 0, intimidate: 0, persuade: null, deceive: null, text: 'A beast. Only fear moves it.' },
+    dragon: { gold: 2, intimidate: 4, persuade: 0, deceive: 3, text: 'Greedy beyond measure. A big enough hoard buys anything.' }
+  };
+  // each villain's way with words: a bonus to each approach
+  const VSOCIAL = { lich: { intimidate: 4, persuade: 0, deceive: 2 }, dragon: { intimidate: 5, persuade: 1, deceive: 0 }, demon: { intimidate: 3, persuade: 0, deceive: 4 }, archmage: { intimidate: 1, persuade: 3, deceive: 3 }, vampire: { intimidate: 1, persuade: 5, deceive: 2 }, deathknight: { intimidate: 4, persuade: 2, deceive: 0 } };
+  const TOO_HIGH = 4;   // a band this many levels above your villain won't talk: it only fights
+  const SULK_DAYS = 3, VILLAIN_DAY_MP = 110, HEAL_DAYS = 2;
+  function temperOf(s, o) {
+    const T = Object.assign({}, TEMPER[o.type] || { gold: 1, intimidate: 0, persuade: 0, deceive: 0, text: 'Hard to read.' });
+    const vt = s.villain.type;
+    if (T.undead && (vt === 'lich' || vt === 'deathknight')) { T.intimidate = -4; T.text += ` The dead answer to ${vName(s)}.`; }
+    if (o.type === 'wolf' && vt === 'vampire') { T.persuade = -3; T.text += ' Wolves are the children of the night.'; }
+    if (o.type === 'dragon' && vt === 'dragon') { T.persuade = -2; T.text += ' Dragon speaks to dragon.'; }
+    return T;
+  }
+  const socialBonus = (s, k) => ((VSOCIAL[s.villain.type] || {})[k] || 0) + Math.floor(villainLevel(s) / 5);
+  function socialDC(s, o, k) { const T = temperOf(s, o); if (T[k] === null || T[k] === undefined) return null; return clamp(DC_BASE + DC_PER * (monsterLevel(s, o) - villainLevel(s)) + T[k], 4, 30); }
+  let DC_BASE = 12, DC_PER = 2;
+  const skillOdds = (bonus, dc) => clamp((21 - (dc - bonus)) / 20, 0.05, 0.95);
+  function payCost(s, o) { const T = temperOf(s, o); if (!T.gold) return null; return Math.round((6 + 5 * monsterLevel(s, o)) * (T.gold === 2 ? 1.5 : 1)); }
+  // what you can try with a band, and why not
+  function parleyOptions(s, o) {
+    const L = monsterLevel(s, o), V = villainLevel(s); const T = temperOf(s, o);
+    const tooHigh = L >= V + TOO_HIGH; const sulking = (o.sulk || 0) > dayIndex(s);
+    const out = { level: L, vlevel: V, tooHigh, sulking, temper: T.text, pay: null, talk: [] };
+    if (tooHigh) return out;
+    const c = payCost(s, o); if (c !== null) out.pay = { cost: c, err: (s.res.gold || 0) < c ? `You need ${c} gold.` : null };
+    for (const k of Object.keys(SKILLS)) {
+      const dc = socialDC(s, o, k); const bonus = socialBonus(s, k);
+      out.talk.push({ k, name: SKILLS[k].name, text: SKILLS[k].text, dc, bonus, p: dc === null ? 0 : skillOdds(bonus, dc), err: dc === null ? 'They won\'t hear it.' : sulking ? 'They won\'t listen to you again for a few days.' : null });
+    }
+    return out;
+  }
+  // a band comes over to your side: it marches on Millbrook (once it has healed, if you beat it)
+  function joinYou(s, o, how) {
+    Object.assign(o, { wild: false, yours: true, lair: null, known: true, patrol: null, sulk: 0, home: null, joined: how });
+    o.wave = !(o.healUntil > dayIndex(s));
+    const C = CREATURES[o.type]; const nm = (o.count > 1 ? C.name : C.one).toLowerCase();
+    say(s, how === 'surrender' ? `The ${nm} kneel to ${vName(s)}. Once their wounds have closed, they will march on Millbrook.` : how === 'gold' ? `${vName(s)} pays the ${nm}. They march on Millbrook.` : `The ${nm} swear themselves to ${vName(s)} and march on Millbrook.`, 'dm');
+    addInfamy(s, 1 + monsterLevel(s, o) / 4, `The ${nm} joined you`);
+    return o;
+  }
+  const villainAt = s => villainOnMap(s) ? { x: s.villain.x, y: s.villain.y } : siteOf(s, 'tower');
+  const adjacent = (a, b) => Math.abs(a.x - b.x) <= 1 && Math.abs(a.y - b.y) <= 1;
+  // where your villain will walk: to a spot, home to the tower, or up to a band of the wilds
+  function villainPathTo(s, x, y, tgt) {
+    const V = s.villain; const from = villainAt(s); const tw = siteOf(s, 'tower');
+    const enter = (ex, ey) => {
+      if (ex === tw.x && ey === tw.y) return tileCost(s, ex, ey);
+      const site = siteAt(s, ex, ey); if (site) return Infinity;
+      if (s.objects.some(z => z.x === ex && z.y === ey && (z.kind === 'stack' || z.kind === 'dungeon'))) return Infinity;
+      return tileCost(s, ex, ey);
+    };
+    const D = dijkstra(from.x, from.y, enter);
+    let end = null;
+    if (tgt) { let best = Infinity; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { if (!dx && !dy) continue; const ax = tgt.x + dx, ay = tgt.y + dy; if (ax < 0 || ay < 0 || ax >= MW || ay >= MH) continue; const d = D.dist[tIdx(ax, ay)]; if (d < best) { best = d; end = [ax, ay]; } } if (from.x === tgt.x && from.y === tgt.y) end = null; if (adjacent(from, tgt)) return []; }
+    else end = [x, y];
+    if (!end || !isFinite(D.dist[tIdx(end[0], end[1])])) return null;
+    return tracePath(D.prev, tIdx(from.x, from.y), tIdx(end[0], end[1])) || [];
+  }
+  function villainOrder(s, x, y) {
+    const V = s.villain;
+    if (s.phase !== 'map') return 'Give orders between days.';
+    if (s.march) return `The heroes are coming. ${vName(s)} awaits them on the throne.`;
+    if (V.state === 'banished') return `${vName(s)} is still recovering at the Dark Tower: ${V.banish} more day${V.banish > 1 ? 's' : ''}.`;
+    if (x < 0 || y < 0 || x >= MW || y >= MH) return 'Off the map.';
+    const tw = siteOf(s, 'tower'); const home = x === tw.x && y === tw.y;
+    if (home && !villainOnMap(s)) return `${vName(s)} is already home.`;
+    const o = objAt(s, x, y); const tgt = o && o.kind === 'stack' && o.wild ? o : null;
+    if (!tgt && !home && (!isFinite(tileCost(s, x, y)) || objAt(s, x, y) || siteAt(s, x, y))) return `${capFirst(vP(s).he)} can't go there.`;
+    const path = villainPathTo(s, x, y, tgt);
+    if (!path) return `${capFirst(vP(s).he)} can't find a way there.`;
+    if (!villainOnMap(s)) { V.state = 'map'; V.x = tw.x; V.y = tw.y; V.known = false; if (V.hpFrac === undefined) V.hpFrac = 1; say(s, `${vName(s)} rides out from the Dark Tower.`, 'dm'); }
+    V.path = path; V.target = tgt ? tgt.id : null; V.goHome = home; V.meet = null;
+    if (tgt && !path.length) V.meet = tgt.id;   // already beside them: an audience now
+    return null;
+  }
+  // the night: your villain walks a day's march along the way, round the heroes, and heals a little
+  function villainNight(s) {
+    const V = s.villain; V.trail = null;
+    if (!villainOnMap(s)) { if (V.hpFrac !== undefined) V.hpFrac = 1; return; }
+    V.hpFrac = Math.min(1, (V.hpFrac === undefined ? 1 : V.hpFrac) + 0.25);
+    if (!V.path || !V.path.length) return;
+    const P = s.party; const near = (x, y) => living(s).length && Math.abs(x - P.x) <= 1 && Math.abs(y - P.y) <= 1;
+    let left = VILLAIN_DAY_MP, px = V.x, py = V.y; const trail = [[px, py]]; let n = 0;
+    for (const [nx, ny] of V.path) {
+      const c = stepCost(s, px, py, nx, ny); if (c > left || near(nx, ny)) break;
+      if (s.objects.some(z => z.x === nx && z.y === ny && (z.kind === 'stack' || z.kind === 'dungeon'))) break;
+      left -= c; px = nx; py = ny; trail.push([px, py]); n++;
+    }
+    V.path = V.path.slice(n); V.x = px; V.y = py; if (trail.length > 1) V.trail = trail;
+    const tw = siteOf(s, 'tower');
+    if (V.goHome && px === tw.x && py === tw.y) { V.state = 'lair'; V.path = []; V.goHome = false; V.hpFrac = 1; V.known = false; say(s, `${vName(s)} returns to the Dark Tower.`, 'dm'); return; }
+    if (V.target) {
+      const t = s.objects.find(z => z.id === V.target && z.wild);
+      if (!t) { V.target = null; V.path = []; say(s, `The band ${vName(s)} was looking for is gone.`, 'dm'); }
+      else if (adjacent(V, t)) { V.meet = t.id; V.path = []; }
+      else if (!V.path.length) { const p2 = villainPathTo(s, t.x, t.y, t); if (p2) V.path = p2; }   // they moved: follow
+    }
+  }
+  function meetBand(s) { const V = s.villain; return V.meet ? s.objects.find(z => z.id === V.meet && z.wild) || null : null; }
+  // talking: a d20 plus your villain's knack for it, against how hard they are to sway
+  function parleyTalk(s, k) {
+    const o = meetBand(s); if (!o) return { err: 'They are gone.' };
+    const opt = parleyOptions(s, o); if (opt.tooHigh) return { err: 'They won\'t talk. They only want to fight.' };
+    const t = opt.talk.find(z => z.k === k); if (!t || t.err) return { err: t ? t.err : 'Not that.' };
+    const d = rint(1, 20); const total = d + t.bonus; const ok = d === 20 || (d !== 1 && total >= t.dc);
+    const C = CREATURES[o.type]; const nm = (o.count > 1 ? C.name : C.one).toLowerCase();
+    const roll = { d20: d, bonus: t.bonus, total, dc: t.dc, ok, skill: t.name };
+    if (ok) { joinYou(s, o, k); s.villain.meet = null; s.villain.target = null; return { roll, result: 'join', text: `${t.name}: ${d} + ${t.bonus} = ${total} against ${t.dc}. The ${nm} are yours.` }; }
+    if (d === 1 || total <= t.dc - 5) {
+      say(s, `${vName(s)} tries to ${t.name.toLowerCase()} the ${nm}, and they attack!`, 'boss');
+      startDuel(s, o);
+      return { roll, result: 'attack', text: `${t.name}: ${d} + ${t.bonus} = ${total} against ${t.dc}. That went badly: the ${nm} attack!` };
+    }
+    o.sulk = dayIndex(s) + SULK_DAYS;
+    say(s, `The ${nm} won't listen to ${vName(s)}.`, 'dm');
+    return { roll, result: 'refuse', text: `${t.name}: ${d} + ${t.bonus} = ${total} against ${t.dc}. The ${nm} won't hear any more of it for a few days. Gold or a fight remain.` };
+  }
+  function parleyPay(s) {
+    const o = meetBand(s); if (!o) return { err: 'They are gone.' };
+    const opt = parleyOptions(s, o); if (!opt.pay) return { err: 'They have no use for gold.' }; if (opt.pay.err) return { err: opt.pay.err };
+    s.res.gold -= opt.pay.cost; joinYou(s, o, 'gold'); s.villain.meet = null; s.villain.target = null;
+    return { result: 'join', text: `You pay ${opt.pay.cost} gold. They're yours.` };
+  }
+  function parleyLeave(s) { const V = s.villain; V.meet = null; V.target = null; return null; }
+  function startDuel(s, o) {
+    o = o || meetBand(s); if (!o) return 'They are gone.';
+    const V = s.villain; V.meet = null; V.target = null; V.path = [];
+    startBattle(s, o, { duel: true, boss: true, bossL: villainLevel(s) });
+    return null;
+  }
+  // what a band that fought to the last leaves behind
+  function duelLoot(s, o) { const L = monsterLevel(s, o); return { gold: 6 + 4 * L, lumber: 2 + Math.round(L * 1.2), ore: 2 + Math.round(L * 1.2) }; }
+  function finishDuel(s) {
+    const b = s.battle; const V = s.villain; const o = s.objects.find(z => z.id === b.objId);
+    const boss = b.units.find(u => u.boss); const W = b.units.filter(u => u.side === 'party');
+    const left = sum(W.filter(u => u.alive), u => u.count); const start = sum(W, u => u.startCount || u.count);
+    const type = o ? o.type : (W[0] || {}).type; const C = CREATURES[type] || { name: 'monsters', one: 'monster' };
+    const L = o ? monsterLevel(s, Object.assign({}, o, { count: start })) : 1;
+    const res = { duel: true, result: b.over, type, count: start, left, level: L, loot: null, joined: false, villainHp: boss ? Math.max(0, boss.hp) / boss.maxHp : 0, lines: [] };
+    V.hpFrac = boss && !boss.escaped ? clamp(boss.hp / boss.maxHp, 0.05, 1) : 0.3;
+    const tline = (l, v) => { const n = addInfamy(s, v, l); if (n) res.lines.push({ label: l, v: n }); };
+    if (b.over === 'surrender' && o) {
+      o.count = Math.max(1, left); o.healUntil = dayIndex(s) + HEAL_DAYS; o.healTo = Math.max(o.count, Math.round(start * 0.7));
+      joinYou(s, o, 'surrender'); res.joined = true; res.lines.push({ label: `The ${C.name.toLowerCase()} joined you`, v: 0 });
+      tline(`${vName(s)} broke the ${C.name.toLowerCase()}`, 1 + L / 3);
+    } else if (b.over === 'tpk') {
+      const loot = o ? duelLoot(s, Object.assign({}, o, { count: start })) : { gold: 5, lumber: 2, ore: 2 };
+      for (const k of RES_KEYS) s.res[k] = (s.res[k] || 0) + loot[k];
+      res.loot = loot; if (o) s.objects = s.objects.filter(z => z !== o);
+      say(s, `${vName(s)} cuts down the last of the ${C.name.toLowerCase()} and takes their hoard: ${priceText(loot)}.`, 'dm');
+      tline(`${vName(s)} slew the ${C.name.toLowerCase()}`, 1 + L / 3);
+    } else if (b.over === 'fled' || b.over === 'retreat') {
+      if (o) { o.count = Math.max(1, left); o.sulk = dayIndex(s) + SULK_DAYS; }
+      say(s, `${vName(s)} breaks off the fight with the ${C.name.toLowerCase()}.`, 'dm');
+    } else {
+      // your villain was beaten: home to the tower to recover
+      if (o) { o.count = Math.max(1, left); o.sulk = dayIndex(s) + SULK_DAYS; }
+      V.state = 'banished'; V.banish = 3; V.known = false; V.path = []; V.target = null; V.meet = null; V.hpFrac = 1;
+      const tw = siteOf(s, 'tower'); V.x = tw.x; V.y = tw.y;
+      say(s, `The ${C.name.toLowerCase()} drive ${vName(s)} off. ${capFirst(vP(s).he)} limps back to the Dark Tower to recover for 3 days.`, 'boss');
+    }
+    s.battle = null; s.phase = 'map'; s.lastBattle = res; s.todayActive = true;
+    dmReveal(s);
+    return res;
+  }
+  // at night, beaten bands that have knelt to you finish healing and set out for Millbrook
+  function recruitsHeal(s) {
+    const now = dayIndex(s);
+    for (const o of s.objects) if (o.kind === 'stack' && o.yours && o.healUntil && o.healUntil <= now) {
+      o.count = Math.max(o.count, o.healTo || o.count); o.healUntil = 0; o.wave = true;
+      const C = CREATURES[o.type]; say(s, `The ${C.name.toLowerCase()} who knelt to ${vName(s)} have healed. ${o.count} march on Millbrook.`, 'dm');
+    }
+  }
+
   function lairUpgrade(s, key) {
     const V = s.villain; const U = LAIR[key];
     if (s.phase !== 'map') return 'Upgrade between days.';
@@ -2715,8 +2938,11 @@
     return { rolls, msgs };
   }
 
+  // 0.31: on the big map the heroes spend longer on the road between fights, so every fight teaches them more
+  const XP_MAP = () => mapScale() > 1.5 ? XP_BIG : 1;
+  let XP_BIG = 1.35;
   function giveXp(s, xp) {
-    xp = Math.round(xp * (1 + 0.15 * townLv(s, 'yard')));
+    xp = Math.round(xp * (1 + 0.15 * townLv(s, 'yard')) * XP_MAP());
     for (const h of living(s)) {
       h.xp += xp;
       while (h.level < MAX_LEVEL && h.xp >= XP_TABLE[h.level + 1]) {
@@ -3080,6 +3306,7 @@
     if (living(s).length) giveXp(s, Math.round(xpStep(avgLevel(s)) * TRAIN_XP));
     const lv0 = villainLevel(s);
     bandsMove(s);
+    villainNight(s); recruitsHeal(s);   // 0.31
     wavesArrive(s);
     for (const o of s.objects.slice()) if (o.kind === 'dungeon' && !o.mine) { lairGrow(s, o); lairSpawn(s, o); }
     if (s.minions) {
@@ -3141,6 +3368,7 @@
     s.march = why;
     const V = s.villain;
     if (V.state !== 'lair') { V.state = 'lair'; V.banish = 0; V.known = false; }
+    V.path = []; V.target = null; V.meet = null; V.goHome = false; V.hpFrac = 1;   // 0.31: home for the showdown
     s.townEvent = null;
     for (const q of s.quests) if (q.status === 'open' && !(q.ref.kind === 'site' && q.ref.id === 'tower')) q.status = 'void';
     say(s, why === 'bored' ? 'The players have had enough of waiting around. "Let\'s just go fight the boss!" The party marches on the Dark Tower, ready or not.' : why === 'maxed' ? `The heroes can't grow any stronger. Ready or not, they march on the Dark Tower to face ${vName(s)}.` : `The heroes feel ready. They march on the Dark Tower to end ${vName(s)}'s reign. ${vName(s)} returns to the throne to meet them.`, 'boss');

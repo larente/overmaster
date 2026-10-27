@@ -551,3 +551,36 @@ ul.log small { color: #8a7a60; margin-right: 4px; }
 .bar .week { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 1560px) { .bar .week { max-width: 150px; } }
 @media (max-width: 1380px) { .bar .week { display: none; } }
+/* 0.31: Millbrook's rough whereabouts, before you've seen the town */
+.l3.l-site.hint .lc { color: #e6c46c; font-style: italic; opacity: .9; }
+/* 0.31: monster levels, your villain on the map, and an audience with a band of the wilds */
+.mlv { display: inline-block; font-family: var(--font-body); font-weight: 700; font-size: 11px; line-height: 13px; padding: 0 5px; border-radius: 3px; border: 1px solid; background: rgba(10,8,6,.85); white-space: nowrap; }
+.l3 .mlv { font-size: 9.5px; line-height: 12px; padding: 0 4px; margin-left: 3px; }
+.mlv.c-easy { color: #9fe08a; border-color: #4a7a3a; }
+.mlv.c-even { color: #ffd36a; border-color: #8a6a2a; }
+.mlv.c-hard { color: #ffaa6a; border-color: #9a5a2a; }
+.mlv.c-deadly { color: #ff7a6a; border-color: #9a2a1a; background: rgba(60,10,8,.9); }
+.wildb { margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(201,162,74,.25); }
+.wildb p { margin: 0 0 6px; }
+.vilbtn { display: flex; gap: 10px; align-items: center; width: 100%; text-align: left; margin: 0 0 8px; padding: 6px 10px; cursor: pointer; color: var(--ink); font: inherit;
+  background: linear-gradient(180deg, rgba(70,40,110,.55), rgba(30,16,50,.75)); border: 1px solid #5a3a8a; border-radius: 3px; box-shadow: 0 0 0 1px #000 inset; }
+.vilbtn:hover { border-color: #a07ad8; }
+.vilbtn.hot { border-color: #ffd36a; box-shadow: 0 0 10px rgba(255,211,106,.45); }
+.vilbtn .cicon { width: 34px; height: 34px; object-fit: contain; image-rendering: pixelated; }
+.vilbtn span { display: grid; min-width: 0; }
+.vilbtn b { font-family: var(--font-display); font-size: 13px; color: #e2ccff; letter-spacing: .04em; }
+.vilbtn small { color: #c9b8e0; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.parley .pl-who { display: flex; gap: 14px; align-items: center; margin-bottom: 8px; }
+.parley .pl-who .port { width: 84px; height: 84px; object-fit: contain; image-rendering: pixelated; }
+.parley .pl-who h2 { margin: 0 0 4px; }
+.parley .pl-who p { margin: 0 0 4px; }
+.parley .pl-acts { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 8px; }
+.parley .pbtn { display: grid; justify-items: center; gap: 2px; min-width: 112px; padding: 8px 12px; cursor: pointer; color: #f2e6c8; font: inherit;
+  background: linear-gradient(180deg, #3a2c1c, #22180e); border: 1px solid #7a5c2c; border-radius: 3px; box-shadow: 0 0 0 1px #000 inset; }
+.parley .pbtn b { font-family: var(--font-display); font-size: 13px; letter-spacing: .06em; }
+.parley .pbtn small { color: #d8c8a0; font-size: 12px; }
+.parley .pbtn:hover:not(:disabled) { border-color: #ffd36a; }
+.parley .pbtn:disabled { opacity: .45; cursor: not-allowed; }
+.parley .pbtn.fight { background: linear-gradient(180deg, #5a1c14, #2e0e0a); border-color: #a04a3a; }
+.parley .pl-result { padding: 6px 10px; border-radius: 3px; background: rgba(0,0,0,.35); border-left: 3px solid #a07ad8; }
+.parley .pl-result.refuse { border-left-color: #c86a4a; }
