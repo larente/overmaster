@@ -3,7 +3,7 @@
    players can also sign in and keep their saves in the cloud, and feedback reaches you. */
 const Store = (() => {
   'use strict';
-  const VERSION = '0.30.0-alpha';
+  const VERSION = '0.31.0-alpha';
   const CFG = window.BTS_CONFIG || {};
   const G = Game;
   const LOCAL = 'bts5-save:';           // + slot

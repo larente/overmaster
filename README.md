@@ -2,7 +2,7 @@
 
 *The heroes are coming. Be ready.*
 
-A turn-based browser strategy game by **Alex Larente**. You are the villain: rise from level 1 in the Dark Tower, set your minions to dig and build, and raise lairs that send waves of monsters down the roads to burn the heroes' town of Millbrook. The game runs Millbrook and its four heroes, who grow stronger every day and will one day march on your tower. Raze the town or wipe out its heroes before they get to you.
+A turn-based browser strategy game by **Alex Larente**. You are the villain: rise from level 1 in the Dark Tower, set your minions to dig and build, raise lairs that send waves of monsters down the roads to burn the heroes' town of Millbrook, and walk your villain out into the fog to win over the monsters of the wilds with gold, threats, lies or a beating. The game runs Millbrook and its four heroes, who grow stronger every day and will one day march on your tower. Raze the town or wipe out its heroes before they get to you.
 
 The earlier version, where you ran both the tower and the town, is kept on the `classic` branch.
 

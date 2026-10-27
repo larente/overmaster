@@ -1,5 +1,5 @@
 {
- "about": "Hero voice lines for Overmaster. elevenlabs_gen.py heroes speaks them; pixellab_gen.py talk lip-syncs the portraits; tools/voice_import.py brings both into the game. Edit the text here and redo a line with --redo.",
+ "about": "Voice lines for Overmaster: the heroes, each villain (0.31), and the monsters of the wilds you parley with (0.31). elevenlabs_gen.py voices speaks them (heroes, villains, monsters); pixellab_gen.py talk lip-syncs the portraits; tools/voice_import.py brings both into the game. Edit the text here and redo a line with --redo.",
  "categories": [
   "start",
   "danger",
@@ -14,7 +14,13 @@
   "town",
   "march",
   "boss",
-  "win"
+  "win",
+  "walls",
+  "wave",
+  "lair",
+  "villain",
+  "dying",
+  "hired"
  ],
  "heroes": {
   "brakka": {
@@ -33,7 +39,13 @@
     "town": "Millbrook! Ale, a fire, and an audience.",
     "march": "To the Dark Tower! This is the verse they'll remember!",
     "boss": "So you're the villain. You'll make a fine last chorus!",
-    "win": "Victory! Sing it loud, sing it forever!"
+    "win": "Victory! Sing it loud, sing it forever!",
+    "walls": "To the walls! Let them climb, I'll knock them down one by one!",
+    "wave": "They're marching on Millbrook? Not past me, they aren't!",
+    "lair": "A monster nest! Kick it open and let's see what crawls out!",
+    "villain": "There! The villain, out in the open! Come and fight me!",
+    "dying": "Sing it loud... and make me taller in the song...",
+    "hired": "A new hero for a new song! The name's Brakka. Remember it!"
    }
   },
   "thrain": {
@@ -52,7 +64,13 @@
     "town": "Millbrook still stands. Good. That's why we fight.",
     "march": "The Dark Tower. My oath ends where it began.",
     "boss": "I swore to drive you out, and a dwarf keeps his word!",
-    "win": "It's done. Grandfather, rest easy now."
+    "win": "It's done. Grandfather, rest easy now.",
+    "walls": "Man the walls! Not one of them sets foot in this town!",
+    "wave": "An army on the road. Then we meet it on the road.",
+    "lair": "Another of the villain's burrows. We'll bring it down stone by stone.",
+    "villain": "That's the villain, walking free as you like. Mark the spot.",
+    "dying": "Tell my clan... I kept my oath...",
+    "hired": "The fallen swore an oath. I'll finish it for them."
    }
   },
   "grukka": {
@@ -71,7 +89,13 @@
     "town": "Town! Food first. Then more fighting.",
     "march": "The Dark Tower. The biggest arena of all.",
     "boss": "So you're the champion here. Not for long!",
-    "win": "We won! Champions of the whole realm!"
+    "win": "We won! Champions of the whole realm!",
+    "walls": "They come to the walls? Good. Easy to find.",
+    "wave": "Big crowd coming! I fight all of them!",
+    "lair": "Monster house. I knock on the door. With my maul.",
+    "villain": "Hey! Big villain! Come here and fight!",
+    "dying": "Good fight... best fight...",
+    "hired": "Grukka heard there was fighting here. Grukka is here."
    }
   },
   "sylvaine": {
@@ -90,7 +114,13 @@
     "town": "So many people in one place. How do they breathe?",
     "march": "Whatever lives in that tower, I want to see it.",
     "boss": "So you're the end of the road. Show me what you are!",
-    "win": "We did it! And there's still a whole world past this one!"
+    "win": "We did it! And there's still a whole world past this one!",
+    "walls": "So many of them! Quick, everyone up on the walls!",
+    "wave": "They're all going the same way. Let's get there first!",
+    "lair": "Something lives in there. Let's find out what!",
+    "villain": "Is that the villain? Out walking, like anyone else? Strange!",
+    "dying": "The forest... I want to see the forest...",
+    "hired": "Everyone's talking about a villain. I had to see for myself!"
    }
   },
   "bramble": {
@@ -109,7 +139,13 @@
     "town": "Millbrook! Time to collect what I'm owed.",
     "march": "The Dark Tower. Danger pay, triple. Not negotiable.",
     "boss": "You're the big boss? Good. Big boss, big bounty!",
-    "win": "We won! Now, about my payment..."
+    "win": "We won! Now, about my payment...",
+    "walls": "Wall duty's extra! Double for nights, triple for monsters!",
+    "wave": "Monsters heading for town? Somebody's paying for this. Probably me.",
+    "lair": "A monster den! There's always loot in a monster den!",
+    "villain": "Oi! That's the villain! What's the bounty on that one?",
+    "dying": "I want... a refund...",
+    "hired": "Heard the last lot didn't make it. So the pay's gone up, right?"
    }
   },
   "vex": {
@@ -128,7 +164,13 @@
     "town": "Millbrook. Quaint. Nothing worth stealing, sadly.",
     "march": "The Dark Tower. I hear the treasury is enormous.",
     "boss": "Nice throne. I'll be taking it with me.",
-    "win": "We saved the realm. Now, who's paying for dinner?"
+    "win": "We saved the realm. Now, who's paying for dinner?",
+    "walls": "Defending a wall. How terribly... municipal.",
+    "wave": "They're making for Millbrook. I do hate a crowd.",
+    "lair": "A villain's lair. Let's see if they keep anything nice.",
+    "villain": "Well, well. The villain, out for a stroll. How bold.",
+    "dying": "Not like this... I'm wearing silk...",
+    "hired": "I hear there's a dark lord with a very full treasury."
    }
   },
   "pip": {
@@ -147,7 +189,13 @@
     "town": "Millbrook! I've picked every lock here twice.",
     "march": "The Dark Tower has a lot of locked doors. I can't wait.",
     "boss": "So this is what was behind the last door!",
-    "win": "We won! Can we explore the treasure room now?"
+    "win": "We won! Can we explore the treasure room now?",
+    "walls": "Up on the walls! Ooh, you can see everything from up here!",
+    "wave": "A whole army! Do armies carry snacks? Let's find out!",
+    "lair": "A secret monster hideout! I bet there's a secret door!",
+    "villain": "Look, look! The villain! Can I pick their pocket? Just once?",
+    "dying": "Hey... who ate my... last biscuit...",
+    "hired": "New in town! Pip Thistledown, at your service. Mind your purses!"
    }
   },
   "sable": {
@@ -166,7 +214,13 @@
     "town": "Millbrook. I know a man here who doesn't ask questions.",
     "march": "Whatever's in that tower, I'll know its price.",
     "boss": "Your crown's worth a fortune. I'll be needing it.",
-    "win": "Realm's saved. And our cut? Very generous, I'd say."
+    "win": "Realm's saved. And our cut? Very generous, I'd say.",
+    "walls": "On the walls, then. Nobody loots this town but me.",
+    "wave": "That lot's after Millbrook. Bad for business. Let's stop them.",
+    "lair": "A lair. Villains always hoard. Let's see the stock.",
+    "villain": "There's the villain. Out in the open. Careless.",
+    "dying": "Should have... charged more...",
+    "hired": "The last crew's gone. I'll take the job. And their shares."
    }
   },
   "korra": {
@@ -185,7 +239,13 @@
     "town": "Millbrook! I wonder if they've heard of me yet.",
     "march": "Robbing the Dark Tower? The heist of the century!",
     "boss": "Stand still. I'm about to steal your whole kingdom.",
-    "win": "We did it! Korra Blackgum, savior of the realm!"
+    "win": "We did it! Korra Blackgum, savior of the realm!",
+    "walls": "On the walls, everyone! Best seats in the house!",
+    "wave": "They're coming for the town? Not before they see my act!",
+    "lair": "A villain's lair! Now that's a stage worth stealing!",
+    "villain": "Look, the villain in the flesh! Someone fetch a painter!",
+    "dying": "Make sure... the story's good...",
+    "hired": "Heard there's a vacancy for heroes. You're welcome, Millbrook!"
    }
   },
   "nilsa": {
@@ -204,7 +264,13 @@
     "town": "Millbrook. Time to restock and check the gear.",
     "march": "The Dark Tower. Every trap in there is mine to disarm.",
     "boss": "Your defenses are impressive. They're also finished.",
-    "win": "Job complete. Best work of my career."
+    "win": "Job complete. Best work of my career.",
+    "walls": "Positions! Archers left, the rest of you on the gate!",
+    "wave": "Column on the road. We hit them before they reach the walls.",
+    "lair": "The villain's lair. Watch for traps. I'll go first.",
+    "villain": "Target sighted. The villain. Noting the route.",
+    "dying": "Should have... checked... for traps...",
+    "hired": "The guild sent me. The last team missed their deadlines."
    }
   },
   "ione": {
@@ -223,7 +289,13 @@
     "town": "Millbrook. Let's see who needs healing.",
     "march": "The Dark Tower. May the gods walk with us.",
     "boss": "Your darkness ends here! Every life you took is remembered!",
-    "win": "We're alive. We're all alive. Thank the gods."
+    "win": "We're alive. We're all alive. Thank the gods.",
+    "walls": "To the walls! Wounded come to me, everyone else, hold!",
+    "wave": "They're heading for Millbrook! We can't let them reach the children!",
+    "lair": "Something terrible is made in there. We have to end it.",
+    "villain": "That's the villain... out there in the open. Gods protect us.",
+    "dying": "Don't cry... I'll be with the gods...",
+    "hired": "Millbrook needs healers now more than ever. I'm here."
    }
   },
   "durgan": {
@@ -242,7 +314,13 @@
     "town": "Millbrook! A choir, a cask, and a warm hearth!",
     "march": "To the Dark Tower! I've saved my best hymn for this!",
     "boss": "Hear my hymn, villain! It's the last thing you'll hear!",
-    "win": "Victory! Now that deserves a hymn! All together now!"
+    "win": "Victory! Now that deserves a hymn! All together now!",
+    "walls": "Up the walls, lads! A hymn for every arrow!",
+    "wave": "An army on the march! Then let's give them a marching song!",
+    "lair": "A nest of wickedness! I'll sing it a hymn it won't forget!",
+    "villain": "Ho there, villain! Care to join us for a hymn? No? Pity!",
+    "dying": "Finish the song... for me...",
+    "hired": "The last party sang their last. Time for a new verse, friends!"
    }
   },
   "wren": {
@@ -261,7 +339,13 @@
     "town": "Millbrook! Time to pass the collection plate, dearies.",
     "march": "The Dark Tower. I hear villains keep a great deal of gold.",
     "boss": "You'll make a very generous donation, villain. Very generous.",
-    "win": "We did it, dearies! The temple thanks you. And so do I."
+    "win": "We did it, dearies! The temple thanks you. And so do I.",
+    "walls": "Oh, not the walls again. Those were very expensive.",
+    "wave": "They're going to Millbrook? My collection box is in Millbrook!",
+    "lair": "A villain's den. They must have a terrible lot of gold in there.",
+    "villain": "Is that the villain? Somebody ask if they'd like to make a donation.",
+    "dying": "Make sure... the temple gets my savings...",
+    "hired": "Such a shame about the last heroes. Now, about my fee..."
    }
   },
   "aelith": {
@@ -280,7 +364,13 @@
     "town": "Millbrook! I'm sure they'll want to see me.",
     "march": "The Dark Tower. Darkness, meet the dawn.",
     "boss": "Your shadows cannot stand against the sun!",
-    "win": "Dawn breaks over the realm, and I am its light!"
+    "win": "Dawn breaks over the realm, and I am its light!",
+    "walls": "Upon the walls I shall shine like a beacon! Behold me!",
+    "wave": "An army of darkness marches! The sun will meet it on the road!",
+    "lair": "A pit of shadow! Let the light pour in!",
+    "villain": "The villain walks beneath my sun? How bold. And how foolish.",
+    "dying": "Even the sun... must set...",
+    "hired": "Millbrook called for a hero. The sun answered!"
    }
   },
   "ushka": {
@@ -299,7 +389,13 @@
     "town": "Millbrook. There will be sick people here. Let us help them.",
     "march": "The Dark Tower waits. We go in peace, and in strength.",
     "boss": "I offer you mercy once. Only once.",
-    "win": "It is over. Now we heal the land."
+    "win": "It is over. Now we heal the land.",
+    "walls": "Hold the walls. Breathe. Let them come.",
+    "wave": "They march on the town. We meet them first.",
+    "lair": "A place of suffering. We will end it.",
+    "villain": "The villain walks alone. Interesting.",
+    "dying": "It is... peaceful...",
+    "hired": "The others have gone. I will walk the path in their place."
    }
   },
   "orrin": {
@@ -318,7 +414,13 @@
     "town": "Millbrook! I believe I left a book at the inn. Some years ago.",
     "march": "The Dark Tower at last. My footnote awaits!",
     "boss": "Before we begin, could you clarify footnote twelve? No? Fireball, then.",
-    "win": "We won! And I finally finished my footnote."
+    "win": "We won! And I finally finished my footnote.",
+    "walls": "The walls? Oh, yes, the walls. Which way is the enemy again?",
+    "wave": "An army! Fascinating. Coming here, you say? Oh dear.",
+    "lair": "A lair! I wonder if the villain keeps a library in there.",
+    "villain": "Is that the villain? Hmm. Smaller than the illustrations.",
+    "dying": "I never... finished the chapter...",
+    "hired": "I was told there's an opening for heroes? Ah. I thought it was the library."
    }
   },
   "maelis": {
@@ -337,7 +439,13 @@
     "town": "Millbrook. Their library is pitiful.",
     "march": "The tower's archives must be extraordinary. Let's go.",
     "boss": "Your magic is crude. Allow me to demonstrate.",
-    "win": "Victory. And I've learned so much. Strictly for academic reasons."
+    "win": "Victory. And I've learned so much. Strictly for academic reasons.",
+    "walls": "A siege. Let's see how they like falling fire.",
+    "wave": "They march on Millbrook. I'd like to test something on them.",
+    "lair": "The villain's workshop. I'd love to see their notes.",
+    "villain": "The villain, walking the land. Such a waste of power.",
+    "dying": "Fascinating... so this is how it feels...",
+    "hired": "The last heroes fell. I am not them."
    }
   },
   "tobias": {
@@ -356,7 +464,13 @@
     "town": "Millbrook! Prime customers!",
     "march": "The Dark Tower. Imagine the souvenir market!",
     "boss": "Before we fight, can I interest you in a spellbook?",
-    "win": "We saved the realm! Commemorative scrolls, available now!"
+    "win": "We saved the realm! Commemorative scrolls, available now!",
+    "walls": "Wall defence package! Fire, lightning, the works! Discount for the town!",
+    "wave": "An army headed for Millbrook! That's terrible for business!",
+    "lair": "A villain's lair! Ooh, think of the salvage rights!",
+    "villain": "Look, the villain! Do you think they need a good wizard? Kidding!",
+    "dying": "No refunds... no...",
+    "hired": "Millbrook's hiring heroes? Wonderful! I'll need an advance."
    }
   },
   "esk": {
@@ -375,7 +489,13 @@
     "town": "Millbrook! Time to show the smith my latest rune.",
     "march": "The Dark Tower. I'll carve my rune on its doors.",
     "boss": "Feel the power of the Grimmbrew Rune!",
-    "win": "Victory! It will be known forever as the Grimmbrew Victory!"
+    "win": "Victory! It will be known forever as the Grimmbrew Victory!",
+    "walls": "Hold the walls! I carved runes into every stone! Well, most of them!",
+    "wave": "An army on the road! Time for my Rune of Stopping Armies!",
+    "lair": "A lair, eh? I'll carve a demolition rune on the front door!",
+    "villain": "Is that the villain? Hmph. I've seen better armour on a goat.",
+    "dying": "Carve my name... in the biggest rune...",
+    "hired": "Heroes wanted? You'll want a runesmith. You'll want the best one."
    }
   },
   "zarga": {
@@ -394,7 +514,294 @@
     "town": "Millbrook. The bones say nothing happens here. I hope they're right.",
     "march": "The Dark Tower. The bones say this is the end. Of what, they won't say.",
     "boss": "I've seen how this ends, villain. Have you?",
-    "win": "So that's how it ends. I always wanted to know."
+    "win": "So that's how it ends. I always wanted to know.",
+    "walls": "The bones said they'd come to the walls tonight. I hate being right.",
+    "wave": "An army on the road. The bones say we meet it before Millbrook does.",
+    "lair": "The bones rattle near this place. Something dark is born in there.",
+    "villain": "The villain walks the land. The bones have gone very quiet.",
+    "dying": "The bones... they said... this...",
+    "hired": "The bones told me the old heroes would fall. And that I'd come."
+   }
+  }
+ },
+ "villain_categories": [
+  "intro",
+  "ride",
+  "spotted",
+  "lair",
+  "wave",
+  "breach",
+  "kill",
+  "levelup",
+  "march",
+  "throne",
+  "win",
+  "lose",
+  "parley",
+  "intimidate",
+  "persuade",
+  "deceive",
+  "pay",
+  "fight",
+  "beaten"
+ ],
+ "villains": {
+  "lich": {
+   "key": "villain-lich",
+   "voice": "An ancient, hollow, echoing male voice, cold and whispery yet commanding, a skeletal undead sorcerer-king, slow and contemptuous, with a dry rasp like wind through a tomb.",
+   "lines": {
+    "intro": "The tower is mine again. Let the living count their days.",
+    "ride": "I will walk among the living. Let them see what they fear.",
+    "spotted": "There you are, little heroes. I see you now.",
+    "lair": "Another pit for my servants. The land grows darker.",
+    "wave": "Go. March on Millbrook. Fill my graves.",
+    "breach": "Their walls are broken. Burn it. Burn all of it.",
+    "kill": "One more soul for my collection.",
+    "levelup": "My power grows. Death itself bends closer.",
+    "march": "So the heroes come at last. Good. I grew tired of waiting.",
+    "throne": "Welcome, heroes. Your bones will serve me well.",
+    "win": "The realm is a graveyard now. And I am its king.",
+    "lose": "This is not the end. I will return. I always return.",
+    "parley": "You. Creatures of the wild. Hear me.",
+    "intimidate": "Serve me, or I will raise your corpses and they will serve me instead.",
+    "persuade": "The living hunt you. Join me, and you will hunt them.",
+    "deceive": "Join me, and you will never die. I promise.",
+    "pay": "Gold means nothing to the dead. Take it.",
+    "fight": "Then I will take your bones instead.",
+    "beaten": "Enough. I return to my tower. This is not forgotten."
+   }
+  },
+  "dragon": {
+   "key": "villain-dragon",
+   "voice": "A colossal, deep, rumbling voice of an ancient dragon, slow and resonant, smoky and gravelly, vain and amused, every word heavy with heat and power.",
+   "lines": {
+    "intro": "Wake, my tower. The age of ash begins again.",
+    "ride": "I will spread my wings over this land. Let them look up and tremble.",
+    "spotted": "I smell heroes. Small, warm, and so very afraid.",
+    "lair": "A new den for my brood. All this land is my hoard.",
+    "wave": "Fly, march, crawl. Bring me Millbrook in ashes.",
+    "breach": "Their walls crack like eggshells. Burn the town.",
+    "kill": "Another little hero, turned to ash.",
+    "levelup": "My fire burns hotter. The sky remembers me.",
+    "march": "The heroes come to my lair. How generous. They bring their gold with them.",
+    "throne": "You came all this way to die in my fire? I admire the effort.",
+    "win": "The realm burns, and every coin in it is mine.",
+    "lose": "Impossible. I am... eternal...",
+    "parley": "Small creatures. Look at me when I speak.",
+    "intimidate": "Kneel before me, or I'll roast you where you stand.",
+    "persuade": "Serve me, and you may eat whatever the fire leaves behind.",
+    "deceive": "Join me, and I will share my hoard with you. Of course I will.",
+    "pay": "Take this gold. A few coins from my endless hoard.",
+    "fight": "So be it. I was getting hungry anyway.",
+    "beaten": "Enough. My wounds need the warmth of my tower."
+   }
+  },
+  "demon": {
+   "key": "villain-demon",
+   "voice": "A deep, menacing male voice with a crackling, fiery edge, a demon prince who is gleefully cruel and playful, smooth and theatrical, with a dark chuckle in his words.",
+   "lines": {
+    "intro": "Ah, a new world to burn. Let's begin.",
+    "ride": "I'm going for a walk. Try not to miss me.",
+    "spotted": "Found you, little heroes. Run. It's more fun that way.",
+    "lair": "Another crack in the world. Another door for my children.",
+    "wave": "Go, my darlings. Go and break their pretty little town.",
+    "breach": "Their walls are down! Burn everything!",
+    "kill": "Oh, that one screamed beautifully.",
+    "levelup": "Yes! More! The Pit is pouring into me!",
+    "march": "They're coming here? Oh, I am going to enjoy this.",
+    "throne": "Welcome to my throne room. Please, scream as loud as you like.",
+    "win": "The realm burns. Let the rest of the Pit come through.",
+    "lose": "Back to the Pit... I'll be back... I always come back...",
+    "parley": "Well, well. What do we have here? Let's talk.",
+    "intimidate": "Join me, or I'll show you what the Pit does to the stubborn.",
+    "persuade": "Just imagine what we could break together.",
+    "deceive": "Serve me, and you'll walk free once Millbrook falls. You have my word.",
+    "pay": "Here, gold. I hear mortals love this stuff.",
+    "fight": "Oh, good. I was hoping you'd say no.",
+    "beaten": "Ugh. Fine. Back to the tower. This isn't over."
+   }
+  },
+  "archmage": {
+   "key": "villain-archmage",
+   "voice": "A cool, precise, imperious female voice, a mature archmage with a refined English accent, calm and cold, every word measured, quietly menacing.",
+   "lines": {
+    "intro": "The tower is mine. Let the great work begin.",
+    "ride": "I will see this land for myself.",
+    "spotted": "There are the heroes. Every move they make, I will know.",
+    "lair": "Another piece in place. The design is coming together.",
+    "wave": "Go. March on Millbrook. Test their walls for me.",
+    "breach": "Their walls have failed. Exactly as I calculated.",
+    "kill": "One less variable.",
+    "levelup": "Yes. The stars reveal another secret to me.",
+    "march": "The heroes approach. I have prepared for every possibility.",
+    "throne": "You have come far. Not far enough.",
+    "win": "The realm is mine. Now I can rewrite it.",
+    "lose": "This was not... in my calculations...",
+    "parley": "Listen carefully. I will not repeat myself.",
+    "intimidate": "I can unmake you with a single word. Choose wisely.",
+    "persuade": "Serve me, and you will be part of something far greater than yourselves.",
+    "deceive": "Join me, and I'll teach you magic beyond your wildest dreams.",
+    "pay": "Gold. A crude tool, but it works on crude minds.",
+    "fight": "Very well. Let this be a lesson.",
+    "beaten": "A miscalculation. I will withdraw and correct it."
+   }
+  },
+  "vampire": {
+   "key": "villain-vampire",
+   "voice": "A silky, velvety, aristocratic male voice with a soft Eastern European accent, a charming vampire lord, slow, seductive and amused, with quiet menace.",
+   "lines": {
+    "intro": "Ah, home. The night is young, and so is my reign.",
+    "ride": "I think I'll take a stroll beneath the moon.",
+    "spotted": "Ah, the heroes. I can hear their hearts from here.",
+    "lair": "A new nest. My children need somewhere to sleep.",
+    "wave": "Go, my children. Millbrook's blood is waiting.",
+    "breach": "Their walls are open. Supper is served.",
+    "kill": "Such a waste. That one had excellent blood.",
+    "levelup": "I grow stronger with every drop.",
+    "march": "Guests! Prepare the hall. It's been so long since I entertained.",
+    "throne": "Welcome to my court. Do stay for dinner. You are dinner.",
+    "win": "The realm is mine. Every village will pay its tithe in blood.",
+    "lose": "No... the light... not the light...",
+    "parley": "Good evening. Let's discuss your future, shall we?",
+    "intimidate": "Join me willingly, or I'll drain you and you'll join me anyway.",
+    "persuade": "Serve the night, and the night will feed you forever.",
+    "deceive": "Join me, and I'll make you immortal. One small bite, nothing more.",
+    "pay": "Gold, for your loyalty. A gentleman always pays.",
+    "fight": "How rude. Very well, I'll have you for supper.",
+    "beaten": "How tiresome. I'll return to my coffin and rest."
+   }
+  },
+  "deathknight": {
+   "key": "villain-deathknight",
+   "voice": "A grim, deep, iron-hard male voice, a cursed fallen knight, weary and bitter, slow and resonant, as if speaking from inside a steel helmet.",
+   "lines": {
+    "intro": "I broke one oath. Now I'll break this whole realm.",
+    "ride": "I ride out. Let the land know my shadow.",
+    "spotted": "There are the heroes. I was one of them, once.",
+    "lair": "A new garrison. My legion grows.",
+    "wave": "Forward. March on Millbrook. Show no mercy.",
+    "breach": "The gate is broken. Take the town.",
+    "kill": "Another hero falls. I remember how that feels.",
+    "levelup": "The curse grows stronger. And so do I.",
+    "march": "The heroes ride to my tower. I will meet them with steel.",
+    "throne": "You swore an oath to stop me. Let's see if you keep it.",
+    "win": "The realm kneels. As it should.",
+    "lose": "At last... rest...",
+    "parley": "Stand and listen. I will speak once.",
+    "intimidate": "Kneel, or I will cut you down where you stand.",
+    "persuade": "Join my legion. I lead soldiers, not slaves.",
+    "deceive": "Serve me, and you will share the spoils of the whole realm.",
+    "pay": "Take the gold. A soldier should be paid.",
+    "fight": "Then draw your weapons. I will not hold back.",
+    "beaten": "I yield the field. For now. Back to the tower."
+   }
+  }
+ },
+ "monster_categories": [
+  "greet",
+  "join",
+  "refuse",
+  "attack",
+  "kneel"
+ ],
+ "monsters": {
+  "goblin": {
+   "name": "Goblin Boss",
+   "voice": "A squeaky, nasal, high-pitched male voice, a sneaky and cowardly goblin, fast and jittery, greedy and whiny, with a nervous cackle.",
+   "lines": {
+    "greet": "Eek! Big scary boss! What you want with us, eh?",
+    "join": "Okay, okay! We fight for you! We get shinies, yes?",
+    "refuse": "No, no! Go away! We not listening!",
+    "attack": "Get the big one! Stab, stab, stab!",
+    "kneel": "Mercy! Mercy! We serve! We serve!"
+   }
+  },
+  "bandit": {
+   "name": "Bandit Captain",
+   "voice": "A rough, streetwise male voice in his forties, a highway bandit captain with a cockney accent, sly and mocking, a grin in every word.",
+   "lines": {
+    "greet": "Well, look who it is. You lost, or looking for hired blades?",
+    "join": "Your coin's as good as anyone's. We're in.",
+    "refuse": "Nice story. Not buying it. Move along.",
+    "attack": "Right, lads! Let's take everything they've got!",
+    "kneel": "All right, all right! We yield! We'll work for you!"
+   }
+  },
+  "orc": {
+   "name": "Orc Warchief",
+   "voice": "A deep, harsh, guttural male voice, an orc war chief, loud and aggressive, short barking words, brutal and proud.",
+   "lines": {
+    "greet": "Who comes to the war camp? Speak, or bleed.",
+    "join": "Strong. You are strong. We follow strength. We march!",
+    "refuse": "Words. Only words. Orcs do not follow words.",
+    "attack": "Enough talk! Blood and iron! Crush them!",
+    "kneel": "You are stronger. We follow you now."
+   }
+  },
+  "ogre": {
+   "name": "Ogre",
+   "voice": "A very deep, slow, dim-witted booming male voice, a huge hungry ogre, simple and slurred, dopey but dangerous.",
+   "lines": {
+    "greet": "Huh? Who you? You food?",
+    "join": "Okay! We go smash town! Is there food in town?",
+    "refuse": "No. Me not like you. Me think hard about it.",
+    "attack": "Me hungry! Me eat you now!",
+    "kneel": "Ow. Okay. Ogre on your side now. Ow."
+   }
+  },
+  "wraith": {
+   "name": "Wraith",
+   "voice": "A ghostly, breathy, echoing whisper of a sorrowful spirit, cold and bitter, drawn-out words, eerie and hollow.",
+   "lines": {
+    "greet": "Who disturbs our endless grief?",
+    "join": "Yes... the living will pay for our suffering... we will follow...",
+    "refuse": "Your words are empty, like us... leave...",
+    "attack": "Then join us... in the cold...",
+    "kneel": "We fade... we yield... command us..."
+   }
+  },
+  "troll": {
+   "name": "Troll",
+   "voice": "A gravelly, rumbling, grunting male voice, a hunched hungry troll, slow and growly, with wet snarls between words.",
+   "lines": {
+    "greet": "Hrr. Smells like trouble. What you want, eh?",
+    "join": "Meat in the town? Troll will go. Troll will eat.",
+    "refuse": "Hrr. No. Troll likes it here. Go away.",
+    "attack": "Troll smash! Troll eat bones after!",
+    "kneel": "Hrr... troll heals... then troll fights for you."
+   }
+  },
+  "giant": {
+   "name": "Hill Giant",
+   "voice": "A huge, booming, proud and ancient male voice, a hill giant, slow and resonant, pompous and grand, deep as a mountain.",
+   "lines": {
+    "greet": "Who dares stand before a giant of the hills?",
+    "join": "Ha! At last, someone who sees a giant's worth. We march!",
+    "refuse": "Hmph. You do not speak to a giant like that.",
+    "attack": "Then I will crush you under my heel, little one!",
+    "kneel": "Enough... you have earned my respect. My strength is yours."
+   }
+  },
+  "vampire": {
+   "name": "Vampire",
+   "voice": "A cold, elegant, haughty female voice, an aristocratic vampire with a refined accent, bored and disdainful, quietly dangerous.",
+   "lines": {
+    "greet": "How unexpected. To what do we owe this visit?",
+    "join": "Very well. Millbrook's blood will make a fine feast.",
+    "refuse": "How terribly dull. We decline.",
+    "attack": "How rude. We'll drink you dry for this.",
+    "kneel": "Enough! We yield. We are yours to command."
+   }
+  },
+  "dragon": {
+   "name": "Young Dragon",
+   "voice": "A deep, smoky, rumbling voice of a young and arrogant dragon, hissing and fiery, proud and greedy, powerful and resonant.",
+   "lines": {
+    "greet": "A visitor. Have you come to offer tribute?",
+    "join": "A worthy offer. I will burn Millbrook for you.",
+    "refuse": "You bore me. Leave, before I grow hungry.",
+    "attack": "Fool! You will burn for this insult!",
+    "kneel": "Enough! I yield. My fire is yours."
    }
   }
  }

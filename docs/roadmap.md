@@ -1,5 +1,28 @@
 # Overmaster — roadmap
 
+## Delivered in alpha 0.31: the big map, the fog, the monsters of the wilds, and more voices (step 2 of 3)
+- **A map four times the size.** New campaigns are 80 by 56 tiles (they were 40 by 28), with Millbrook and the Dark Tower about 36 tiles apart, more lakes, wider regions, and about two and a half times the resource sites, wild bands and finds. Campaigns started before 0.31 keep their 40 by 28 map.
+- **Smaller resource sites.** Mines, quarries and the rest are drawn at about 70% of their old size on the 3D map, so they no longer crowd the tiles around them.
+- **Heroes in the fog.** You only see the heroes where your tower, minions, lairs, bands or villain can see. Elsewhere the sidebar says when and where they were last seen, and the minimap marks that spot. Millbrook's place is only rumoured at first: a dashed ring on the map and minimap marks roughly where it is until you've found it.
+- **Your villain walks the map.** Select your villain in the sidebar (or press V) and right-click a band of the wilds to go and meet it, or anywhere to walk there. Your villain covers about 11 tiles a night, stays clear of the heroes, and heals a quarter of its health each night on the road (fully at the tower).
+- **Every wild band shows its level** on the map and on its card: green well below your villain, yellow about even, orange two or more levels above, red too strong to bargain with. A band four or more levels above your villain won't talk; it only fights.
+- **An audience with the wilds.** When your villain reaches a band, you choose:
+  - **Pay** (for monsters that take gold; dragons want a lot, wolves, skeletons, wraiths and hydras take none).
+  - **Intimidate, Persuade or Deceive:** a d20 plus your villain's knack for it (each villain is better at some than others) plus one for every five levels, against how hard that kind of monster is to sway, which climbs two for every level the band has over your villain. The odds show on each button. Goblins fold to threats, giants want flattery, ogres are easy to fool, and only a Lich or Death Knight can command the mindless dead. Fail by a little and they won't listen for three days; fail badly (or roll a 1) and they attack.
+  - **Fight:** your villain alone against the band, in a full battle.
+  - **Leave.**
+- **Fights with the wilds.** Beat a band down below 40% and it may kneel (goblins and bandits usually do, skeletons never, unless your villain is a Lich or Death Knight). A band that kneels heals for two days, then marches on Millbrook for you. A band that fights to the last leaves its hoard: gold, lumber and ore by its level. If your villain loses, it limps home to the tower and rests for three days.
+- **Your banner.** One band of the wilds follows you at a time at first, and one more every five levels. Recruits count until they fall at Millbrook. With your banner full, a band that kneels buys its life with part of its hoard instead.
+- **Infamy** for every band that joins you, breaks before you, or dies.
+- **More voices.** Your villain now speaks: when you start, ride out, spot the heroes in the fog, finish a lair, send a wave, break into Millbrook, kill a hero, level up, bargain with the wilds, lose a duel, greet the heroes on the throne, and win or fall. Each villain has 19 lines in its own voice, in a violet pop-up with its talking portrait.
+- **The monsters answer.** Goblins, bandits, orcs, ogres, wraiths, trolls, giants, vampires and dragons each have a speaker (a Goblin Boss, a Bandit Captain, an Orc Warchief...) who greets your villain, joins, refuses, attacks or kneels, in a green pop-up. Wolves, skeletons and hydras don't talk.
+- **The heroes talk more.** Six new lines each, for the villain edition's moments: manning the walls, cutting off a wave, storming your lair, catching sight of your villain, their dying words, and a new hero's first words at the tavern. You also overhear them whenever they step out of the fog, and their travel chatter comes about twice as often (but only where something of yours can see them).
+- **Conversations.** Lines can now answer each other: your villain speaks, then the band (or the heroes) reply right after. A villain's line, a dying hero and the parley interrupt anything less important.
+- **Until the recordings are made,** the new lines show as text with the portrait bobbing (the heroes' mouths move with their existing mouth shapes). `elevenlabs_gen.py voices` and `pixellab_gen.py talk` make the voices and lip-sync; `tools/voice_import.py` brings them in.
+- **Settings:** "Heroes talk" is now "Voices and portraits", and the "Hero voices" volume is "Voices".
+- **Balance.** On the big map Millbrook's taxes are 75% higher (11 gold, 4 lumber and 4 ore a day), and the heroes no longer cross the map to chase a wave their walls would crush on their own (recruits were working as decoys). In 48 simulated campaigns with a scripted villain that recruits (8 per villain), the villain won 54%: Millbrook fell in week 4 to 10, and the losses came in week 5 to 14. The Ancient Dragon did best (6 of 8), the Vampire Lord worst (2 of 8). The same villain without recruiting won 38%, so the wilds are worth your time.
+- **Saves:** still version 16. The map size is stored with each campaign.
+
 ## Delivered in alpha 0.30: the villain edition (step 1 of 3)
 You play only the villain now, in the spirit of Dungeon Keeper. The dungeon-master version, where you ran both sides, is kept on the `classic` branch and as the "Overmaster Classic" preview.
 - **Your villain rises from level 1.** Infamy levels it up: hurting, downing and killing heroes, breaking into Millbrook, plunder, burned buildings, and every lair you keep standing. Each level is a talent point and a stronger villain on the throne, and its battle powers unlock at levels 6, 11 and 16. A window marks each level-up.
@@ -14,7 +37,7 @@ You play only the villain now, in the spirit of Dungeon Keeper. The dungeon-mast
 - **Balance.** In 60 simulated campaigns with a scripted villain (10 per villain), the villain won 58%: Millbrook was razed in week 3 to 11 (usually 6 to 8), and the losses came in week 6 to 13, once one at 18. No villain won fewer than half. The villain reaches level 20 around week 9 to 10, about when the heroes reach 14 to 16.
 - **Saves:** version 16. Older campaigns carry on with a villain two levels above their heroes.
 
-**Next, step 2:** a much bigger map (about 80 by 56 tiles instead of 40 by 28), with several roads into Millbrook and longer quests for the heroes. **Step 3:** a Siegecraft talent path (war drums, battering rams, plunder), then each paid villain's own map rules on top (the Death Knight's Legion raiding farms, the Vampire Lord's thralls draining the town, the Dragon burning a watchtower).
+**Step 2** (the bigger map) came in 0.31. **Step 3:** a Siegecraft talent path (war drums, battering rams, plunder), then each paid villain's own map rules on top (the Death Knight's Legion raiding farms, the Vampire Lord's thralls draining the town, the Dragon burning a watchtower).
 
 ## Delivered in alpha 0.24
 - **Talents instead of research.** The villain no longer buys research with gold and ore. Instead the villain earns **talent points**:

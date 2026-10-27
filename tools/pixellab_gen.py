@@ -13,8 +13,9 @@ Run it in Terminal:
     python3 ~/Documents/bts-art/pixellab_gen.py colossus drake hellhound irongolem werewolf rider   # each villain's own monster
     python3 ~/Documents/bts-art/pixellab_gen.py objects villain-lairs   # and their lairs
     python3 ~/Documents/bts-art/pixellab_gen.py objects defences   # Millbrook's walls and towers (0.30)
-    python3 ~/Documents/bts-art/pixellab_gen.py talk            # talking portraits: mouth shapes for every hero, lip-sync for their lines
+    python3 ~/Documents/bts-art/pixellab_gen.py talk            # talking portraits: mouth shapes for everyone who speaks, lip-sync for their lines
     python3 ~/Documents/bts-art/pixellab_gen.py talk ione pip   # just these heroes
+    python3 ~/Documents/bts-art/pixellab_gen.py talk villains   # 0.31: the six villains (or: talk heroes, talk monsters)
 
 It reads your PixelLab token from pixellab-token.txt (or the .rtf TextEdit makes) in this folder and
 never prints it. Each character's 8 directions are saved in out/<name>/. Progress goes to log.txt.
@@ -849,7 +850,19 @@ def talk(tok, which):
     path = os.path.join(HERE, 'hero_lines.json')
     if not os.path.exists(path):
         sys.exit('hero_lines.json is missing. It goes next to this script.')
-    H = json.load(open(path))['heroes']; keys = which or list(H)
+    data = json.load(open(path))
+    # 0.31: the villains (their portraits are out/villain-<type>) and the monsters of the wilds talk too
+    groups = {'heroes': {k: h for k, h in data['heroes'].items()},
+              'villains': {v.get('key', 'villain-' + t): v for t, v in data.get('villains', {}).items()},
+              'monsters': {t: m for t, m in data.get('monsters', {}).items()}}
+    H = {}
+    for g in groups.values(): H.update(g)
+    keys = []
+    for w in which or ['heroes', 'villains', 'monsters']:
+        keys += list(groups[w]) if w in groups else [w]
+    bad = [k for k in keys if k not in H]
+    if bad:
+        sys.exit('Unknown speakers: %s\nKnown: %s' % (', '.join(bad), ', '.join(H)))
     before = gens_left(tok); results = {}
     if keys:
         results[keys[0]] = make_talk(tok, keys[0], H[keys[0]]['lines'])

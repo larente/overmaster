@@ -325,6 +325,15 @@ ul.dpw li.off { opacity: .5; }
 .bkbody { display: grid; gap: 3px; min-width: 0; }
 .bkname { font-family: var(--font-display); font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--gold); }
 .bktext { margin: 0; font-family: var(--font-body); font-size: 15px; line-height: 1.35; color: var(--ink); font-style: italic; }
+/* 0.31: your villain speaks in violet, the monsters of the wilds in moss green */
+.bark.k-villain { background: linear-gradient(180deg, rgba(48,26,72,.97), rgba(18,10,30,.97)); box-shadow: 0 0 0 1px #8a5ac8, 0 10px 26px rgba(0,0,0,.6), inset 0 1px 0 rgba(220,190,255,.12); }
+.bark.k-villain .bkport { background: radial-gradient(circle at 50% 40%, #4a2a6a, #140a20 75%); box-shadow: inset 0 0 0 2px #a07ad8, inset 0 0 12px rgba(0,0,0,.6); }
+.bark.k-villain.talking .bkport { box-shadow: inset 0 0 0 2px #d8b8ff, inset 0 0 12px rgba(0,0,0,.5), 0 0 12px rgba(190,140,255,.4); }
+.bark.k-villain .bkname { color: #e2ccff; }
+.bark.k-monster { background: linear-gradient(180deg, rgba(30,40,22,.97), rgba(12,16,8,.97)); box-shadow: 0 0 0 1px #6a8a4a, 0 10px 26px rgba(0,0,0,.6), inset 0 1px 0 rgba(200,240,160,.1); }
+.bark.k-monster .bkport { background: radial-gradient(circle at 50% 40%, #34462a, #0e140a 75%); box-shadow: inset 0 0 0 2px #8aaa5a, inset 0 0 12px rgba(0,0,0,.6); }
+.bark.k-monster.talking .bkport { box-shadow: inset 0 0 0 2px #c8e890, inset 0 0 12px rgba(0,0,0,.5), 0 0 12px rgba(180,230,120,.35); }
+.bark.k-monster .bkname { color: #cfe8a8; }
 @media (prefers-reduced-motion: reduce) { .bark { transition: none; } }
 @media (max-width: 760px) { .bark { grid-template-columns: 60px minmax(0, 1fr); } .bkport, .bkport canvas { width: 60px; height: 60px; } .bktext { font-size: 13.5px; } }
 

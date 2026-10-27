@@ -1098,7 +1098,8 @@
         const fv = fightValue(fightRatio(s, o), q ? q.reward : 0, name);
         // 0.30: a wave on its way to Millbrook: the heroes want to stop it before it gets there, more if the walls won't
         let dv = 0, dwhy = null;
-        if (o.wave && fv.v > 0) { const out = siegeOutlook(s, o); const d = byDrive('duty'); dv = 3 + (d ? 3 : 0) + Math.min(8, (out.hallDmg * 2 + out.wallDmg * 0.5) / 20); dwhy = `${d ? d.name : 'The party'} won't let the ${name} reach Millbrook.`; }
+        // 0.31: a wave the walls will crush on their own isn't worth a detour (decoys don't drag the heroes across the map)
+        if (o.wave && fv.v > 0) { const out = siegeOutlook(s, o); if (out.hallDmg > 0 || out.wallDmg >= 40) { const d = byDrive('duty'); dv = 3 + (d ? 3 : 0) + Math.min(8, (out.hallDmg * 2 + out.wallDmg * 0.5) / 20); dwhy = `${d ? d.name : 'The party'} won't let the ${name} reach Millbrook.`; } }
         const t = bestZoneTile(o.x, o.y);
         if (t) add(o.id, t[0], t[1], fv.v * rum + rb + (fv.v > 0 ? qb : 0) + dv, q ? `The quest board offers a reward for the ${name}. ${fv.why}` : dwhy || fv.why, o, name);
         continue;
@@ -1498,8 +1499,10 @@
     const B = s.town.build; if (!B) return 'Nothing to cancel.';
     for (const r of Object.keys(B.cost)) s.town.res[r] += B.cost[r]; s.town.build = null; return null;
   }
+  let TAX_BIG = 1.75;   // 0.31: on the big map Millbrook taxes a bigger realm
+  function townTax() { const out = Object.assign({}, TOWN_TAX); if (mapScale() > 1.5) for (const r of Object.keys(out)) out[r] = Math.round(out[r] * TAX_BIG); return out; }
   function townIncome(s) {
-    const out = Object.assign({}, TOWN_TAX);
+    const out = townTax();
     for (const k of TOWN_ORDER) { const B = TOWN_B[k]; const l = townLv(s, k); if (l && B.income) for (const [r, v] of Object.entries(B.income[l - 1])) out[r] = (out[r] || 0) + v; }
     return out;
   }

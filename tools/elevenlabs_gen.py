@@ -11,9 +11,14 @@ Run it in Terminal:
     python3 ~/Documents/bts-art/elevenlabs_gen.py heroes            # a voice for every hero, then all their lines
     python3 ~/Documents/bts-art/elevenlabs_gen.py heroes ione pip   # just these heroes
     python3 ~/Documents/bts-art/elevenlabs_gen.py --redo heroes pip  # speak Pip's lines again (his voice stays)
+    python3 ~/Documents/bts-art/elevenlabs_gen.py villains          # 0.31: a voice for each villain, then its lines
+    python3 ~/Documents/bts-art/elevenlabs_gen.py monsters          # 0.31: the monsters of the wilds you parley with
+    python3 ~/Documents/bts-art/elevenlabs_gen.py voices            # all three: heroes, villains, monsters
 
-Hero lines and voice descriptions are in hero_lines.json next to this script. Each hero's voice is designed once
+Lines and voice descriptions are in hero_lines.json next to this script. Each speaker's voice is designed once
 and saved in your ElevenLabs voices (one of your custom voice slots each); its id is kept in out-voice/voices.json.
+Lines already spoken are skipped, so running it again only speaks the new ones. Villains get their voices before
+the monsters: if your plan runs out of voice slots, the monsters that didn't get one are listed in log.txt.
 
 It reads your ElevenLabs API key from elevenlabs-key.txt (or the .rtf TextEdit makes) in this folder and
 never prints it. Everything is saved in out-audio/ as MP3. Progress goes to log.txt.
@@ -315,14 +320,29 @@ def save_voice(hero, rec):
         with open(os.path.join(VOICE_OUT, 'voices.json'), 'w') as f:
             json.dump(d, f, indent=1)
 
+SLOTS_FULL = [False]
+
+def speakers(data, group):
+    """key -> {'voice', 'lines', 'name'}: heroes by id, villains as villain-<type>, monsters by type (0.31)"""
+    out = {}
+    if group in ('heroes', 'voices'):
+        for k, h in data['heroes'].items(): out[k] = {'voice': h['voice'], 'lines': h['lines'], 'name': k.capitalize()}
+    if group in ('villains', 'voices'):
+        for t, v in data.get('villains', {}).items(): out[v.get('key', 'villain-' + t)] = {'voice': v['voice'], 'lines': v['lines'], 'name': 'Villain ' + t.capitalize()}
+    if group in ('monsters', 'voices'):
+        for t, m in data.get('monsters', {}).items(): out[t] = {'voice': m['voice'], 'lines': m['lines'], 'name': 'Monster ' + t.capitalize()}
+    return out
+
 def design_voice(hero, H):
     """design a voice from the description, keep the first take, save it to the account"""
     if STOP[0]: return 'skipped'
     have = voices_file().get(hero)
     if have and have.get('voice_id'):
         return 'had'
+    if SLOTS_FULL[0]: return 'no slot'
     folder = os.path.join(VOICE_OUT, hero); os.makedirs(folder, exist_ok=True)
-    sample = ' '.join(H['lines'][k] for k in ('start', 'hard', 'rest', 'explore1', 'town'))
+    sample = ' '.join(H['lines'].values())
+    while len(sample) < 120: sample = sample + ' ' + sample
     for model in ('eleven_ttv_v3', 'eleven_multilingual_ttv_v2'):
         body = {'voice_description': H['voice'], 'model_id': model, 'text': sample[:1000], 'guidance_scale': 5}
         log('%s: designing a voice (%s)' % (hero, model))
@@ -337,11 +357,15 @@ def design_voice(hero, H):
         log('%s: no voice came back' % hero); return 'fail'
     import base64
     open(os.path.join(folder, 'voice-preview.mp3'), 'wb').write(base64.b64decode(prev['audio_base_64']))
-    body = {'voice_name': 'BTS %s' % hero.capitalize(), 'voice_description': H['voice'], 'generated_voice_id': prev['generated_voice_id']}
+    body = {'voice_name': 'BTS %s' % H.get('name', hero.capitalize()), 'voice_description': H['voice'], 'generated_voice_id': prev['generated_voice_id']}
     code, b = ask(hero, '/v1/text-to-voice', body)
     if code != 200:
         if stopper(hero, code, b): return 'stop'
-        log('%s: saving the voice failed (%s): %s' % (hero, code, reason(b))); return 'fail'
+        r = reason(b)
+        if 'limit' in r.lower() or 'slot' in r.lower():
+            SLOTS_FULL[0] = True
+            log('%s: no free voice slot on your ElevenLabs plan (%s). Speakers without a voice stay text-only in the game.' % (hero, r)); return 'no slot'
+        log('%s: saving the voice failed (%s): %s' % (hero, code, r)); return 'fail'
     vid = json.loads(b).get('voice_id')
     save_voice(hero, {'voice_id': vid, 'generated_voice_id': prev['generated_voice_id']})
     log('%s: voice ready' % hero); return 'ok'
@@ -368,24 +392,25 @@ def speak(job):
         log('%s/%s: %s refused (%s): %s' % (hero, cat, model, code, reason(b)))
     return 'fail'
 
-def heroes(which):
-    data = load_lines(); H = data['heroes']
+def heroes(which, group='heroes'):
+    data = load_lines(); H = speakers(data, group)
     keys = which or list(H)
     bad = [k for k in keys if k not in H]
     if bad:
-        sys.exit('Unknown heroes: %s\nKnown: %s' % (', '.join(bad), ', '.join(H)))
+        sys.exit('Unknown speakers: %s\nKnown: %s' % (', '.join(bad), ', '.join(H)))
     os.makedirs(VOICE_OUT, exist_ok=True)
     left, tier = credits_left(KEY[0])
-    log('--- %s: hero voices for %d heroes · plan %s · %s credits left' % (time.strftime('%Y-%m-%d %H:%M'), len(keys), tier, left))
+    log('--- %s: %s: voices for %d speakers · plan %s · %s credits left' % (time.strftime('%Y-%m-%d %H:%M'), group, len(keys), tier, left))
     redo = REDO[0]; REDO[0] = False   # --redo speaks lines again; it never replaces a voice
-    res = run(keys, lambda k: design_voice(k, H[k]), WORKERS)
+    # one at a time, in order (heroes, villains, then monsters), so a full plan leaves the monsters without, not a villain
+    res = run(keys, lambda k: design_voice(k, H[k]), 1)
     REDO[0] = redo
     log('voices: %s' % ', '.join('%s %s' % kv for kv in res.items()))
     if STOP[0]: return
     l2, _ = credits_left(KEY[0])
     if left is not None and l2 is not None: log('voice design used %d credits; %d left' % (left - l2, l2)); left = l2
     vs = voices_file()
-    jobs = [(k, c, H[k]['lines'][c], vs[k]['voice_id']) for k in keys if vs.get(k) for c in data['categories']]
+    jobs = [(k, c, t, vs[k]['voice_id']) for k in keys if vs.get(k) for c, t in H[k]['lines'].items()]
     log('speaking %d lines' % len(jobs))
     res = run(jobs, speak, 3)
     bad = ['%s/%s %s' % (j[0], j[1], r) for j, r in res.items() if r not in ('ok', 'had')]
@@ -400,11 +425,11 @@ def main():
     args = sys.argv[1:] or ['test']
     if '--redo' in args:
         REDO[0] = True; args = [a for a in args if a != '--redo']
-    if args and args[0] == 'heroes':
+    if args and args[0] in ('heroes', 'villains', 'monsters', 'voices'):
         KEY[0] = read_key()
         if not KEY[0]:
             sys.exit('No key found. Save it in %s/elevenlabs-key.txt' % HERE)
-        return heroes(args[1:])
+        return heroes(args[1:], args[0])
     if args == ['test']: keys = TEST
     elif args == ['sfx']: keys = list(SFX)
     elif args == ['music']: keys = list(MUSIC)

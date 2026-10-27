@@ -453,8 +453,8 @@ const Front = (() => {
       ${row('log', 'Battle log', 'A running account of every roll beside the battlefield.', st.log)}
       </div>
       <h2 class="cap">Sound</h2><div class="form vols">
-      ${vol('volMaster', 'Volume', st.volMaster, 80)}${vol('volMusic', 'Music', st.volMusic, 50)}${vol('volSfx', 'Sound effects', st.volSfx, 80)}${vol('volAmb', 'Ambience', st.volAmb, 50)}${vol('volVoice', 'Hero voices', st.volVoice, 90)}
-      ${row('chatter', 'Heroes talk', 'Their portraits pop up with a line when a fight starts or ends, while they travel, when they find something or need a rest.', st.chatter !== false)}
+      ${vol('volMaster', 'Volume', st.volMaster, 80)}${vol('volMusic', 'Music', st.volMusic, 50)}${vol('volSfx', 'Sound effects', st.volSfx, 80)}${vol('volAmb', 'Ambience', st.volAmb, 50)}${vol('volVoice', 'Voices', st.volVoice, 90)}
+      ${row('chatter', 'Voices and portraits', 'Your villain, the heroes and the monsters you parley with speak: a portrait pops up with a line when a fight starts or ends, when your villain bargains, when the heroes step out of the fog, and more.', st.chatter !== false)}
       ${row('muted', 'Mute everything', 'The speaker button beside Menu does the same.', st.muted)}
       </div><p class="hint">Settings are kept in this browser.</p><div class="row end"><button class="btn" data-act="close">Done</button></div>`);
   }

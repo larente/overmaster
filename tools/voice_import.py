@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Bring the heroes' voice lines and talking portraits into the game.
+"""Bring the voice lines and talking portraits (heroes; 0.31: villains and monsters too) into the game.
 
     python3 tools/voice_import.py --voice PATH/TO/out-voice --talk PATH/TO/out [--art art]
 
@@ -140,7 +140,7 @@ def main():
             if re.match(r'.+-\w+\.(mp3|webp)$', f) and not f.split('.')[0] in voice and not f.split('.')[0] in talk:
                 os.remove(os.path.join(args.art, d, f))
     size = sum(os.path.getsize(os.path.join(args.art, d, f)) for d in ('voice', 'talk') for f in os.listdir(os.path.join(args.art, d)))
-    print('%d heroes. art/voice + art/talk: %.1f MB. Manifest: %s' % (len(report), size / 1e6, mpath))
+    print('%d speakers. art/voice + art/talk: %.1f MB. Manifest: %s' % (len(report), size / 1e6, mpath))
 
 
 if __name__ == '__main__':

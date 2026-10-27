@@ -786,8 +786,10 @@
   // 0.31: your villain walks the map: to a band of the wilds to win it over, to a spot, or home
   function sendVillain(x, y) {
     const o = G.objAt(S, x, y); const band = o && o.kind === 'stack' && o.wild && canSeeObj(o) ? o : null;
+    const wasOut = G.villainOnMap(S);
     const err = G.villainOrder(S, band ? band.x : x, band ? band.y : y); if (err) { toast(err, 'bad'); sfx('deny'); return; }
     const V = S.villain; const tw = G.siteOf(S, 'tower');
+    if (!wasOut && G.villainOnMap(S)) vsay('ride');
     ui.floats.push({ x: x * TILE + TILE / 2, y: y * TILE + TILE * 0.3, text: band ? 'Parley' : x === tw.x && y === tw.y ? 'Home' : 'Go', color: '#d0aaff', t0: performance.now() });
     sfx('dark', { vol: 0.5 }); ui.sel = { type: 'villain', x: V.x, y: V.y }; commit(); kick();
     if (V.meet) showParley();
@@ -824,10 +826,19 @@
     const o = G.meetBand(S); if (!o) return;
     centerOn(o.x, o.y);
     modal(parleyHtml(o, result), null, 'wide parley-m');
+    // 0.31: your villain opens the audience and the band answers (the mindless and the beasts just stare)
+    if (!result) { const said = vsay('parley', { prio: 3, force: true }); msay(o.type, G.parleyOptions(S, o).tooHigh ? 'attack' : 'greet', said ? { queue: true } : { prio: 3 }); }
   }
   function parleyAct(act, k) {
+    const band = G.meetBand(S); const type = band && band.type;
     const r = act === 'ptalk' ? G.parleyTalk(S, k) : act === 'ppay' ? G.parleyPay(S) : act === 'pfight' ? (G.startDuel(S) ? { err: 'They are gone.' } : { result: 'fight' }) : (G.parleyLeave(S), { result: 'leave' });
     if (r.err) { toast(r.err, 'bad'); sfx('deny'); return; }
+    // what your villain says, and the band's answer
+    if (type && act !== 'pleave') {
+      const said = vsay(act === 'ptalk' ? k : act === 'ppay' ? 'pay' : 'fight', { prio: 3, force: true });
+      const reply = r.result === 'join' ? 'join' : r.result === 'attack' || r.result === 'fight' ? 'attack' : 'refuse';
+      msay(type, reply, said ? { queue: true } : { prio: 3 });
+    }
     save(true);
     if (r.result === 'join') { sfx(act === 'ppay' ? 'coins' : 'dark'); closeModal(); toast(r.text, 'good'); ui.threat = null; commit(); kick(); return; }
     if (r.result === 'attack' || r.result === 'fight') { closeModal(); if (r.result === 'attack') toast(r.text, 'bad'); enterBattle(); return; }
@@ -1066,28 +1077,58 @@
     SND.amb(over || b ? null : ui.screen === 'tower' ? 'amb-tower' : ui.screen === 'town' && SND.has('amb-town') ? 'amb-town' : ui.night ? 'amb-night' : 'amb-day');
   }
   /* ============ the heroes talk: a portrait pops up and says a line, voiced and lip-synced when it's been recorded ============ */
-  const VO = { last: -1e9, cat: {}, cur: null, said: {} };
-  const HLINES = () => (window.HERO_LINES && window.HERO_LINES.heroes) || {};
-  const VO_PRIORITY = { boss: 3, win: 3, march: 2, down: 2 };
-  const VO_GAP = { explore: 150000, rest: 120000, town: 60000, start: 20000, danger: 20000, hard: 25000, easy: 25000, down: 12000, levelup: 8000, loot: 8000, march: 3e9, boss: 3e9, win: 3e9 };
-  // cat: start, danger, hard, easy, down, rest, explore, levelup, loot, town, march, boss, win. who: the hero who should say it
+  // 0.31: so do your villain and the monsters of the wilds. A speaker is { key (voice and mouth shapes in the manifest),
+  // id, name, lines, port() (the portrait to fall back on), kind: hero | villain | monster }
+  const VO = { last: -1e9, cat: {}, cur: null, said: {}, queue: [] };
+  const LINES = () => window.HERO_LINES || {};
+  const HLINES = () => LINES().heroes || {};
+  const VO_PRIORITY = { boss: 3, win: 3, dying: 3, march: 2, down: 2, hired: 2, walls: 2 };
+  const VO_GAP = { explore: 70000, rest: 120000, town: 45000, start: 20000, danger: 20000, hard: 25000, easy: 25000, down: 12000, levelup: 8000, loot: 8000, march: 3e9, boss: 3e9, win: 3e9,
+    walls: 30000, wave: 40000, lair: 40000, villain: 120000, dying: 0, hired: 0,
+    'v:ride': 90000, 'v:spotted': 150000, 'v:lair': 60000, 'v:wave': 90000, 'v:breach': 60000, 'v:kill': 15000, 'v:levelup': 0, 'v:march': 3e9, 'v:intro': 3e9 };
+  const portImg = key => { if (!key) return null; if (A.IMG[key]) return A.IMG[key]; const u = A.URI[key]; if (!u) return null; const im = new Image(); im.src = u; A.IMG[key] = im; return im; };
+  function heroSpeaker(h) {
+    const H = HLINES()[h && h.rid]; if (!H) return null;
+    return { key: h.rid, id: h.id, name: shortName(h.name), lines: H.lines, port: () => A.IMG[A.ensureHero(h)], kind: 'hero' };
+  }
+  function villainSpeaker() {
+    const t = S && S.villain && S.villain.type; const V = (LINES().villains || {})[t]; if (!V) return null;
+    return { key: V.key || 'villain-' + t, id: 'villain', name: VN(), lines: V.lines, port: () => portImg(vIcon()), kind: 'villain' };
+  }
+  function monsterSpeaker(type) {
+    const M = (LINES().monsters || {})[type]; if (!M) return null; const C = G.CREATURES[type] || {};
+    return { key: type, id: 'm-' + type, name: M.name || C.one || type, lines: M.lines, port: () => portImg('unit-' + type), kind: 'monster' };
+  }
+  // a hero says something: the one the moment is about, or whoever has been quiet longest
+  // cat: start, danger, hard, easy, down, rest, explore, levelup, loot, town, march, boss, win; 0.31: walls, wave, lair, villain, dying, hired
   function bark(cat, who, o) {
     o = o || {};
     if (!S || !ui.active || ui.chatter === false) return false;
-    const now = performance.now(); const pr = VO_PRIORITY[cat] || 0;
-    if (VO.cur && pr < 2) return false;
-    if (!pr && now - VO.last < (S.phase === 'battle' ? 5000 : 15000)) return false;
-    if (!o.force && VO.cat[cat] && now - VO.cat[cat] < (VO_GAP[cat] || 10000)) return false;
     const H = HLINES();
-    let h = who && who.status !== 'dead' && H[who.rid] ? who : null;
+    let h = who && (who.status !== 'dead' || cat === 'dying') && H[who.rid] ? who : null;
     if (!h) {
       const live = S.heroes.filter(x => x.status === 'ok' && H[x.rid]); if (!live.length) return false;
       h = live.map(x => [x, (VO.said[x.id] || 0) + Math.random() * 30000]).sort((a, b) => a[1] - b[1])[0][0];
     }
     const key = cat === 'explore' ? (Math.random() < 0.5 ? 'explore1' : 'explore2') : cat;
-    const text = H[h.rid].lines[key]; if (!text) return false;
-    VO.last = now; VO.cat[cat] = now; VO.said[h.id] = now;
-    showBark(h, key, text); return true;
+    return speak(heroSpeaker(h), key, Object.assign({ gapKey: cat }, o));
+  }
+  // your villain says something (vsay) or the band you're parleying with (msay)
+  const vsay = (cat, o) => speak(villainSpeaker(), cat, Object.assign({ gapKey: 'v:' + cat }, o));
+  const msay = (type, cat, o) => speak(monsterSpeaker(type), cat, Object.assign({ gapKey: 'm:' + cat, force: true }, o));
+  // o: force (skip the waits), queue (wait for the line that's playing, then speak), prio (interrupt a lower one)
+  function speak(sp, key, o) {
+    o = o || {};
+    if (!sp || !S || !ui.active || ui.chatter === false) return false;
+    const text = sp.lines && sp.lines[key]; if (!text) return false;
+    const gk = o.gapKey || key; const now = performance.now();
+    const pr = o.prio !== undefined ? o.prio : VO_PRIORITY[gk] || (sp.kind === 'hero' ? 0 : 1);
+    if (VO.cur && o.queue) { if (VO.queue.length < 3) VO.queue.push({ sp, key, text, o }); return true; }
+    if (VO.cur && pr < 2 && !(VO.cur.ending)) return false;
+    if (!o.force && !pr && now - VO.last < (S.phase === 'battle' ? 4000 : 9000)) return false;
+    if (!o.force && VO.cat[gk] && now - VO.cat[gk] < (VO_GAP[gk] !== undefined ? VO_GAP[gk] : 10000)) return false;
+    VO.last = now; VO.cat[gk] = now; VO.said[sp.id] = now;
+    showBark(sp, key, text); return true;
   }
   function barkEl() {
     let el = $('bark'); if (el) return el;
@@ -1102,17 +1143,18 @@
     const r = area ? area.getBoundingClientRect() : { left: 20, top: 20 };
     el.style.left = Math.round(r.left + 26) + 'px'; el.style.top = Math.round(r.top + 26) + 'px';
   }
-  function showBark(h, key, text) {
-    const el = barkEl(); const V = ART.voice && ART.voice[h.rid] && ART.voice[h.rid][key]; const T = ART.talk && ART.talk[h.rid];
+  function showBark(sp, key, text) {
+    const el = barkEl(); const V = ART.voice && ART.voice[sp.key] && ART.voice[sp.key][key]; const T = ART.talk && ART.talk[sp.key];
     if (VO.cur && VO.cur.stop) VO.cur.stop();
-    // the mouth shapes: one strip per hero (0.20.1), or one file each (older art)
+    // the mouth shapes: one strip per speaker (0.20.1), or one file each (older art)
     if (T && !T.imgs) { if (T.strip) { const im = new Image(); im.src = 'art/' + T.strip; T.imgs = [im]; } else T.imgs = (T.frames || []).map(f => { const im = new Image(); im.src = 'art/' + f; return im; }); }
-    el.querySelector('.bkname').textContent = shortName(h.name);
+    el.querySelector('.bkname').textContent = sp.name;
     el.querySelector('.bktext').textContent = text;
+    el.classList.remove('k-hero', 'k-villain', 'k-monster'); el.classList.add('k-' + sp.kind);
     el.hidden = false; el.classList.remove('out'); void el.offsetWidth; el.classList.add('in'); placeBark();
     const cv = el.querySelector('canvas'); const c = cv.getContext('2d');
-    const portrait = A.IMG[A.ensureHero(h)];
-    const cur = VO.cur = { h, t0: performance.now(), dur: V ? V.dur : Math.max(2.2, text.length * 0.065), sync: V && V.sync, play: null, stop: null };
+    const portrait = sp.port();
+    const cur = VO.cur = { sp, t0: performance.now(), dur: V ? V.dur : Math.max(2.2, text.length * 0.065), sync: V && V.sync, play: null, stop: null, ending: false };
     const draw = () => {
       if (VO.cur !== cur) return;
       const t = cur.play ? cur.play.now() : (performance.now() - cur.t0) / 1000;
@@ -1130,18 +1172,37 @@
       }
       if (im && fw) c.drawImage(im, fx, 0, fw, im.naturalHeight, 0, 0, cv.width, cv.height);
       else if (im) c.drawImage(im, 0, 0, cv.width, cv.height);
-      else if (portrait) { const bob = talking ? Math.abs(Math.sin(t * 10)) * 4 : 0; c.drawImage(portrait, 0, 4 - bob, cv.width, cv.height); }
+      else if (portrait && (portrait.naturalWidth || (portrait.width && portrait.complete !== false))) { const bob = talking ? Math.abs(Math.sin(t * 10)) * 4 : 0; c.drawImage(portrait, 0, 4 - bob, cv.width, cv.height); }
       el.classList.toggle('talking', talking);
+      // a reply waits for the line before it: it starts a moment after this one ends, not after the pop-up fades
+      if (!talking && t >= cur.dur) cur.ending = true;
+      if (cur.ending && VO.queue.length && t >= cur.dur + 0.25) { const n = VO.queue.shift(); VO.cur = null; VO.last = performance.now(); VO.cat[n.o.gapKey || n.key] = VO.last; VO.said[n.sp.id] = VO.last; showBark(n.sp, n.key, n.text); return; }
       if (t < cur.dur + 1.8) requestAnimationFrame(draw); else hideBark(cur);
     };
-    if (V && window.SND) SND.voice('voice/' + V.file.replace(/^voice\//, ''), V.at, V.dur).then(p => { if (VO.cur === cur && p) { cur.play = p; cur.dur = p.dur; cur.stop = p.stop; } });
+    if (V && window.SND) SND.voice('voice/' + V.file.replace(/^voice\//, ''), V.at, V.dur).then(p => { if (VO.cur === cur && p) { cur.play = p; cur.dur = p.dur; cur.stop = p.stop; } else if (p && p.stop) p.stop(); });
     requestAnimationFrame(draw);
   }
   addEventListener('resize', () => placeBark());
   function hideBark(cur) {
     if (VO.cur !== cur) return; VO.cur = null;
+    if (VO.queue.length) { const n = VO.queue.shift(); showBark(n.sp, n.key, n.text); return; }
     const el = $('bark'); if (!el) return;
     el.classList.remove('in'); el.classList.add('out'); setTimeout(() => { if (!VO.cur) el.hidden = true; }, 350);
+  }
+  // 0.31: moments to speak that nothing else announces: the heroes stepping out of the fog (your villain notices, or you
+  // overhear them), the heroes catching sight of your villain, and a new party taking up the sword at the tavern
+  function voiceWatch() {
+    if (!S || S.title || S.phase !== 'map' || ui.modal) return;
+    const w = ui.vwatch || (ui.vwatch = { shown: partyShown(), wipes: S.wipes || 0, hidden: 0 });
+    if ((S.wipes || 0) > w.wipes) { w.wipes = S.wipes || 0; const h = S.heroes.find(x => x.status === 'ok'); if (h) setTimeout(() => bark('hired', h, { force: true }), 900); return; }
+    const shown = partyShown(); const day = G.dayIndex(S);
+    if (!shown && w.shown) w.hidden = day;
+    if (shown && !w.shown && day > w.hidden) {
+      if (Math.random() < 0.55 && vsay('spotted')) bark('explore', null, { queue: true, force: true });
+      else bark('explore', null, { force: true });
+    }
+    w.shown = shown;
+    if (shown && G.villainOnMap(S) && Math.hypot(S.villain.x - S.party.x, S.villain.y - S.party.y) <= G.sightRadius(S) + 1) bark('villain');
   }
   // after anything that might have handed a hero a magic item, the one who got it says so
   function lootCheck(quiet) {
@@ -1160,8 +1221,10 @@
       const d = unit(ev.target);
       if (ev.dodge) return sfx('miss');
       if (ev.escaped) return sfx('dark', { vol: 0.7 });
-      if (d && d.side === 'party' && (ev.down || ev.died)) {
+      if (d && d.side === 'party' && !d.wild && (ev.down || ev.died)) {
         sfx('hit'); sfx('down', { delay: 0.15 });
+        const dead = ev.died && S.heroes.find(x => x.id === d.hero);
+        if (dead) { setTimeout(() => { if (bark('dying', dead, { force: true })) vsay('kill', { queue: true }); else vsay('kill'); }, 600); return; }
         const up = b.units.filter(u => u.side === 'party' && u.alive && !u.down && u.id !== d.id).map(u => S.heroes.find(x => x.id === u.hero)).filter(Boolean);
         if (up.length) setTimeout(() => bark('down', up[Math.floor(Math.random() * up.length)]), 700);
         return;
@@ -1177,8 +1240,8 @@
   function endDay() {
     if (S.phase !== 'map' || ui.moving || ui.manim || ui.fair) return;
     { const live = S.heroes.filter(h => h.status === 'ok'); const f = live.reduce((t, h) => t + h.hp / h.maxHp, 0) / Math.max(1, live.length);
-      if (S.march && !(S.vo && S.vo.march)) { S.vo = Object.assign(S.vo || {}, { march: true }); bark('march'); }
-      else if (f < 0.5) bark('rest'); }
+      if (S.march && !(S.vo && S.vo.march)) { S.vo = Object.assign(S.vo || {}, { march: true }); if (vsay('march', { prio: 3, force: true })) bark('march', null, { queue: true, force: true }); else bark('march'); }
+      else if (f < 0.5 && partyShown()) bark('rest'); }
     clearTimeout(ui.meterT); ui.meterTok++;
     ui.tool = null; ui.place = null; ui.mode = null; if (!(ui.sel && ui.sel.type === 'minion')) ui.sel = null; ui.moving = true; renderSide(); stepLoop();
   }
@@ -1190,12 +1253,12 @@
     const ev = G.partyStep(S);
     if (ev.t === 'move') {
       const site = G.siteAt(S, ev.x, ev.y);
-      if (site && site.kind === 'town') { if (!ui.inTown) { ui.inTown = true; bark('town'); } } else ui.inTown = false;
-      if (Math.random() < 0.04) bark('explore');
+      if (site && site.kind === 'town') { if (!ui.inTown) { ui.inTown = true; if (partyShown()) bark('town'); } } else ui.inTown = false;
+      if (Math.random() < 0.06 && partyShown()) bark('explore');
     }
     if (['move', 'event', 'battle', 'trap', 'encounter'].indexOf(ev.t) >= 0) {
       animateParty(ev.from, { x: ev.x, y: ev.y }, () => {
-        renderBar();
+        renderBar(); voiceWatch();
         const seenHere = canSee(ev.x, ev.y);
         if (ev.spotted && seenHere) ui.floats.push({ x: ev.x * TILE + TILE / 2, y: ev.y * TILE, text: '!', color: '#ffe066', t0: performance.now() });
         if (ev.t === 'battle') { save(); enterBattle(); return; }
@@ -1242,6 +1305,9 @@
       // 0.30: the night's sieges, and what Millbrook is up to
       for (const r of n.sieges || []) { toast(r.text, r.breached ? 'good' : 'sys'); if (r.breached) later('coins'); }
       for (const o of S.objects.filter(z => z.wave && z.atGates)) toast(`${G.bandName(o)} wait at Millbrook's gates. The heroes will man the walls.`, 'warn');
+      // 0.31: your villain has something to say about the night
+      { const br = (n.sieges || []).some(r => r.breached || r.hallDmg > 0); const wv = (n.released || []).some(id => { const b = S.objects.find(z => z.id === id); return b && b.wave; });
+        const cat = br ? 'breach' : n.built.length ? 'lair' : wv ? 'wave' : null; if (cat) setTimeout(() => vsay(cat), 900); }
       if (n.town && n.town.started) { const k = n.town.started; toast(`Millbrook starts work on ${k === 'walls' ? G.TOWN_B.walls.names[G.townLv(S, 'walls')].toLowerCase() : 'the ' + G.TOWN_B[k].name + (G.townLv(S, k) ? ' ' + G.roman(G.townLv(S, k) + 1) : '')}.`, 'sys'); }
     }
     if (S.phase === 'over') { commit(); showOver(); return; }
@@ -1498,7 +1564,7 @@
   function updateSoundBtn() { const b = $('b-sound'); if (!b || !window.SND) return; b.classList.toggle('off', SND.muted); b.setAttribute('aria-pressed', SND.muted ? 'true' : 'false'); b.title = SND.muted ? 'Sound is off. Click to turn it on.' : 'Sound is on. Click to mute (volumes are in Settings).'; }
   function renderSide() {
     const el = $('sidebody'); if (!el || !S) return;
-    syncAudio(); lootCheck(!ui.items); talentNews();
+    syncAudio(); lootCheck(!ui.items); talentNews(); voiceWatch();
     const keep = el.scrollTop; const P = S.party;
     clampComp();
     const waiting = S.heroes.filter(h => h.status === 'waiting');
@@ -1733,7 +1799,7 @@
       : '<p class="hint">The builders are idle: Millbrook is saving up for its next building.</p>';
     const cards = G.TOWN_ORDER.map(townCard).join('');
     return `<div class="tgrid two">
-      <section class="tcard"><h2 class="cap">The town's purse</h2>${purseHtml('town')}<p>Every day: <b>${esc(G.priceText(inc))}</b>.</p><p class="hint">Taxes bring ${esc(G.priceText(G.TOWN_TAX))} a day; the market, sawmill and ironworks add more. The heroes bring home a share of the loot from every fight they win. Your waves plunder it when they break in${d && d.built ? `. Finished last night: the ${esc(townBName(d.built))}` : ''}.</p></section>
+      <section class="tcard"><h2 class="cap">The town's purse</h2>${purseHtml('town')}<p>Every day: <b>${esc(G.priceText(inc))}</b>.</p><p class="hint">Taxes bring ${esc(G.priceText(G.townTax()))} a day; the market, sawmill and ironworks add more. The heroes bring home a share of the loot from every fight they win. Your waves plunder it when they break in${d && d.built ? `. Finished last night: the ${esc(townBName(d.built))}` : ''}.</p></section>
       <section class="tcard"><h2 class="cap">Builders</h2>${now}<p class="hint">Millbrook decides for itself: trade first, then the heroes' buildings, and walls and towers whenever your waves have been getting through.</p></section>
     </div>
     <section class="rsec"><h3>Buildings</h3><p class="hint">What makes the town money, and what makes its heroes stronger. Their effects show on the heroes' sheets.</p><div class="towncards">${cards}</div></section>`;
@@ -2123,7 +2189,7 @@
     const U = (S.vUps || []).splice(0); S.vUps = [];
     if (!U.length || S.phase === 'over') { if (then) then(); return; }
     const from = U[0].from, to = U[U.length - 1].to; const powers = [].concat.apply([], U.map(u => u.powers || []));
-    sfx('research'); renderBar();
+    sfx('research'); renderBar(); setTimeout(() => vsay('levelup', { prio: 3, force: true }), 400);
     const next = G.villainNext(S);
     modal(`<h1 class="dtitle">${esc(VN())} grows stronger</h1><div class="lvrow">${img(vIcon(), 'port lg')}<div><b>Level ${to}</b>${to - from > 1 ? ` <span class="hint">(up from ${from})</span>` : ''}<br><span class="hint">Stronger on the throne: more hit points, harder blows, a surer aim. ${to - from > 1 ? `${to - from} talent points` : 'A talent point'} to spend at the Dark Tower.${next ? ` ${next - Math.floor(S.villain.xp || 0)} more Infamy to level ${to + 1}.` : ''}</span>
       ${powers.map(k => `<p><b class="gold">${esc(G.BOSS_POWERS[k].name)}.</b> ${esc(G.BOSS_POWERS[k].text)}</p>`).join('')}</div></div>
@@ -2211,12 +2277,13 @@
         <li><b>Winning and losing.</b> You win if Millbrook's hall falls, or if your monsters wipe out the whole party while the tavern lies in ashes (with a tavern, a new and greener party takes up the sword). You lose if the heroes beat you on your throne. From level ${G.MARCH_LV} they size up the showdown, and they march when they think they'd win, so stay ahead of them. The sooner you win, the higher your score.</li>
       </ol>
       <p class="hint">The game autosaves; the Menu has saving, loading, settings and the chronicle. Drag the map to look around, scroll to zoom, click the minimap to jump, Esc to deselect. Keys: E end day · I next idle minion (Shift+I all of them) · with minions selected: M move, B build. In command: M move · F attack · B bonus · E end turn · W wait · D defend · A let the AI play this turn.</p>
-      <div class="row end"><button class="btn big" data-act="close">${first ? 'Begin your reign' : 'Back to the game'}</button></div>`, null, 'wide');
+      <div class="row end"><button class="btn big" data-act="close">${first ? 'Begin your reign' : 'Back to the game'}</button></div>`, first ? () => setTimeout(() => vsay('intro', { prio: 3, force: true }), 500) : null, 'wide');
   }
   function showOver() {
     const res = S.result; const won = res === 'razed' || res === 'wiped';
     save(true); syncAudio(); sfx(won ? 'win' : 'lose');
-    if (!won && res === 'defeat') setTimeout(() => bark('win', null, { force: true }), 1500);
+    if (!won && res === 'defeat') setTimeout(() => { if (vsay('lose', { prio: 3, force: true })) bark('win', null, { queue: true, force: true }); else bark('win', null, { force: true }); }, 1500);
+    if (won) setTimeout(() => vsay('win', { prio: 3, force: true }), 1500);
     const title = res === 'razed' ? 'Millbrook burns' : res === 'wiped' ? 'The heroes are no more' : `${esc(VN())} falls`;
     const text = res === 'razed' ? `Your monsters broke Millbrook's walls and burned its hall to the ground. With the heroes' town gone, the realm is yours. ${esc(VF())} reigns at level ${G.villainLevel(S)}.`
       : res === 'wiped' ? `The last of Millbrook's heroes is dead, and with its tavern in ashes nobody is left to take up the sword. ${esc(VF())} reigns at level ${G.villainLevel(S)}.`
@@ -2316,7 +2383,16 @@
     if (ui.autoSkip) setTimeout(() => { if (S.phase === 'battle') skipBattle(); }, 500);
     ui.itemsAtStart = S.heroes.reduce((t, h) => t + h.items.length, 0);
     sfx(S.battle.finale && S.battle.stage !== 1 ? 'laugh' : 'battle', { vol: 0.8 }); syncAudio();
-    { const b = S.battle; if (b.finale && b.stage !== 1) setTimeout(() => bark('boss'), 3200); else if (Math.random() < 0.65) setTimeout(() => bark(b.boss || b.challenge === 'avoid' || b.finale ? 'danger' : 'start'), 1100); }
+    { const b = S.battle;
+      // 0.31: your villain greets the heroes on the throne, then they answer; at the walls, on the road after a wave, at your lair, each has its line
+      if (b.duel) { /* the parley already spoke */ }
+      else if (b.finale && b.stage !== 1) setTimeout(() => { if (vsay('throne', { prio: 3, force: true })) bark('boss', null, { queue: true, force: true }); else bark('boss'); }, 2600);
+      else if (b.siege) setTimeout(() => bark('walls', null, { force: true }), 1100);
+      else {
+        const o = b.objId && S.objects.find(z => z.id === b.objId);
+        const cat = o && o.wave ? 'wave' : b.dungeonId ? 'lair' : b.boss || b.challenge === 'avoid' || b.finale ? 'danger' : 'start';
+        if (cat === 'wave' || cat === 'lair' || Math.random() < 0.8) setTimeout(() => bark(cat), 1100);
+      } }
     if (S.battle.phase !== 'deploy') setTimeout(battleTick, 400);
   }
   function exitBattle() {
@@ -2664,6 +2740,8 @@
       : `<p>${esc(VN())} limps back to the Dark Tower to recover for 3 days. ${res.left} ${esc(nm)} are left standing.</p>`;
     const infSum = Math.round(res.lines.reduce((t, l) => t + l.v, 0) * 10) / 10;
     sfx(res.result === 'surrender' || res.result === 'tpk' || res.result === 'tribute' ? 'win' : 'lose');
+    if (res.result === 'surrender' || res.result === 'tribute') msay(res.type, 'kneel', { prio: 3 });
+    else if (res.result !== 'tpk' && res.result !== 'fled' && res.result !== 'retreat') vsay('beaten', { prio: 3, force: true });
     modal(`<h1 class="dtitle">${title}</h1>${body}<p class="hint">${esc(VN())}'s health: ${Math.round(Math.max(0, res.villainHp) * 100)}%.</p>
       <div><h2 class="cap">Infamy</h2>${res.lines.filter(l => l.v).length ? ledger(res.lines.filter(l => l.v), infSum, 'From this fight') : '<p class="hint">Nothing to boast about.</p>'}</div>
       <div class="row end"><button class="btn big" data-act="close">Continue</button></div>`, () => { exitBattle(); if (S.phase === 'over') { showOver(); return; } showVillainUps(() => commit()); }, 'wide');
@@ -3096,6 +3174,7 @@
   function ensureBoot() { if (!booted) { booted = true; boot(); } }
   function resetUi() {
     clearTimeout(ui.meterT); ui.meterTok++; ui.reachCache = null; ui.night = null;
+    VO.queue = []; ui.vwatch = null;
     Object.assign(ui, { mode: null, fog: null, threat: null, broute: null, place: null, mbuild: false, hoverMin: null, miniCam: '', tool: null, sel: null, moving: false, anim: null, manim: null, est: null, estKey: '', finaleEst: null, screen: null, playing: false, view: {}, floats: [], fx: [], deploySel: null, trapMode: false, reach: null, reachKey: '', comp: {}, meter: null, fair: null, autoBattle: true });
     terrainKey = null; miniBase = null;
   }
@@ -3185,5 +3264,5 @@
     if (ui.r3d) { const M = W3._map(); const T3 = M.camera.position.constructor; const v = new T3(x + 0.5, M.hAt(x + 0.5, y + 0.5), y + 0.5); v.project(M.camera); const r = W3.canvas.getBoundingClientRect(); return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height }; }
     const r = mapCv().getBoundingClientRect(); return { x: r.left + (x + 0.5) * TILE - Math.round(ui.cam.x), y: r.top + (y + 0.5) * TILE - Math.round(ui.cam.y) };
   }
-  window.__bts = { state: () => S, ui, vo: () => VO, bark: (c, w, o) => bark(c, w, o), TILE, minionScreen, tileScreen, centerOn: (x, y) => { centerOn(x, y, true); drawMap(); }, enterBattle: () => enterBattle(), commit: () => commit(), openScreen: k => openScreen(k), renderSide: () => renderSide(), findFair: () => findFair(), showOver: () => showOver(), spellbook: () => spellbook(), select: sel => { ui.sel = sel; renderSide(); drawMap(); }, showWeek: () => showWeek(), showVillainUps: () => showVillainUps(), dawn: () => dawn() };
+  window.__bts = { state: () => S, ui, vo: () => VO, bark: (c, w, o) => bark(c, w, o), vsay: (c, o) => vsay(c, o), msay: (t, c, o) => msay(t, c, o), TILE, minionScreen, tileScreen, centerOn: (x, y) => { centerOn(x, y, true); drawMap(); }, enterBattle: () => enterBattle(), commit: () => commit(), openScreen: k => openScreen(k), renderSide: () => renderSide(), findFair: () => findFair(), showOver: () => showOver(), spellbook: () => spellbook(), select: sel => { ui.sel = sel; renderSide(); drawMap(); }, showWeek: () => showWeek(), showVillainUps: () => showVillainUps(), dawn: () => dawn() };
 })();
