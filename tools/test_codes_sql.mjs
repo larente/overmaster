@@ -71,3 +71,29 @@ const shop = fs.readFileSync(new URL('../shop.js', import.meta.url), 'utf8');
 const inShop = [...shop.matchAll(/'((?:villain|bundle|heroes|pack)-[a-z-]+)':\s*\{/g)].map(m => m[1]).sort().join();
 const inSql = (await db.query(`select array_to_string(array(select unnest(known_skus()) order by 1), ',') as k`)).rows[0].k;
 check(inShop === inSql, 'known_skus() matches shop.js: ' + inSql);
+// 0.31: admins make and manage codes from the game
+await as(4);
+err = null; try { await db.query(`select admin_make_codes(array['bundle-dark-court'], 2)`); } catch (e) { err = e.message; }
+check(/Only admins/.test(err || ''), 'a player who isn\'t an admin can\'t make codes');
+check((await db.query('select is_admin() as a')).rows[0].a === false, 'is_admin() is false for a player');
+await db.exec(`insert into admins (user_id) values ('${U(4)}')`);
+check((await db.query('select is_admin() as a')).rows[0].a === true, 'is_admin() is true for an admin');
+let m = (await db.query(`select admin_make_codes(array['bundle-dark-court'], 3, 1, 'Beta tester', '2030-01-01') as r`)).rows[0].r;
+check(m.ok && m.codes.length === 3 && m.codes.every(c => /^OVM-/.test(c)), 'an admin makes 3 codes: ' + m.codes.join(' '));
+m = (await db.query(`select admin_make_codes(array['bundle-dark-court'], 1, 25, 'Beta wave 1', null, 'beta-wave-1') as r`)).rows[0].r;
+check(m.ok && m.codes[0] === 'BETAWAVE1', 'an admin makes a shared code: ' + m.codes[0]);
+err = null; try { await db.query(`select admin_make_codes(array['bundle-dark-court'], 1, 5, null, null, 'BETAWAVE1')`); } catch (e) { err = e.message; }
+check(/already exists/.test(err || ''), 'a code that exists is refused');
+await db.exec(`insert into auth.users values ('${U(5)}', 'five@x.test')`);
+r = await redeem(5, 'beta-wave-1');
+check(r.ok && r.unlocked.length === 4, 'a new player redeems the shared code and gets all four: ' + (r.unlocked || [r.error]).join());
+await as(4);
+const list = (await db.query(`select admin_codes(10) as r`)).rows[0].r;
+const bw = list.find(x => x.code === 'BETAWAVE1');
+check(list.length >= 4 && bw && bw.uses === 1 && /five@x.test/.test(bw.redeemed_by), 'admin_codes lists codes and who redeemed them');
+await db.query(`select admin_set_code('BETA-WAVE-1', false)`);
+r = await redeem(3, 'BETAWAVE1');
+check(!r.ok && /doesn't exist/.test(r.error), 'a code the admin switched off stops working');
+await as(2);
+err = null; try { await db.query(`select admin_codes(10)`); } catch (e) { err = e.message; }
+check(/Only admins/.test(err || ''), 'a player can\'t list codes');

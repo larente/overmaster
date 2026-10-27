@@ -142,14 +142,34 @@ const Store = (() => {
     if (error) return { error: /function .*redeem_code|could not find the function/i.test(error.message || '') ? 'Codes aren\'t set up on this site yet.' : friendly(error) };
     return data && data.ok ? { ok: true, unlocked: data.unlocked || [], label: data.label || null } : { error: (data && data.error) || 'That code didn\'t work.' };
   }
+  // 0.31: admins (listed in the admins table) make and manage codes from the game
+  let admin = { uid: null, v: false };
+  async function isAdmin() {
+    if (!sb || !user) return false;
+    if (admin.uid === user.id) return admin.v;
+    const { data, error } = await sb.rpc('is_admin');
+    admin = { uid: user.id, v: !error && data === true };
+    return admin.v;
+  }
+  async function adminRpc(name, args) {
+    if (!sb || !user) return { error: 'Sign in first.' };
+    const { data, error } = await sb.rpc(name, args);
+    if (error) return { error: /could not find the function|does not exist/i.test(error.message || '') ? 'The codes panel needs the latest schema.sql. Run it in Supabase\'s SQL Editor.' : friendly(error) };
+    return { data };
+  }
+  const adminMakeCodes = o => adminRpc('admin_make_codes', { p_grants: o.grants, p_count: o.count || 1, p_uses: o.uses === undefined ? 1 : o.uses, p_label: o.label || null, p_expires: o.expires || null, p_code: o.code || null });
+  const adminCodes = () => adminRpc('admin_codes', { p_limit: 60 });
+  const adminSetCode = (code, active) => adminRpc('admin_set_code', { p_code: code, p_active: !!active });
   async function invoke(name, body) {
     if (!sb) return { error: 'Accounts aren\'t set up on this site.' };
     try {
       const { data, error } = await sb.functions.invoke(name, { body });
       if (!error) return { data };
-      let msg = friendly(error), extra = null;
+      let msg = friendly(error), extra = null; const status = error.context && error.context.status;
       try { extra = await error.context.json(); if (extra && extra.error) msg = extra.error; } catch (e) { /* no JSON body */ }
-      return { error: msg, data: extra };
+      // 0.31: a function that isn't deployed yet (the shop before Stripe is set up)
+      const missing = status === 404 || /failed to send a request|relay error/i.test(String(error.message || ''));
+      return { error: msg, data: extra, status, missing };
     } catch (e) { return { error: friendly(e) }; }
   }
 
@@ -268,7 +288,7 @@ const Store = (() => {
   return {
     VERSION, SLOTS, slotLabel, isAuto, autoSlot, cloudReady: () => cloudReady && !!sb, google: CFG.googleSignIn ? google : null, feedbackEmail: CFG.feedbackEmail || '',
     init, user: () => user, onAuth: cb => authCbs.push(cb), recovering: () => recovery,
-    signUp, signIn, magicLink, forgot, setPassword, rename, signOut, entitlements, invoke, redeem,
+    signUp, signIn, magicLink, forgot, setPassword, rename, signOut, entitlements, invoke, redeem, isAdmin, adminMakeCodes, adminCodes, adminSetCode,
     list, save, load, remove, latest, autosave, flush, status: () => status,
     exportText, importText, download, feedback, reportError, settings, setSettings, meta
   };

@@ -303,12 +303,14 @@ const Front = (() => {
     if (u && mode !== 'reset') {
       const mine = Shop.paidVillains().filter(Shop.owns).map(k => Shop.CATALOG[k].name);
       const unlocks = (Shop.enabled() ? `<p class="hint">${mine.length ? `Unlocked: ${esc(mine.join(', '))}.` : 'No paid villains unlocked yet.'} <button type="button" class="lnk" data-fx="shop">Shop</button></p>` : '')
-        + '<div class="coderow"><span>Have a code from a giveaway or the beta?</span><button type="button" class="btn sm" data-fx="redeem">Redeem a code</button></div>';
+        + '<div class="coderow"><span>Have a code from a giveaway or the beta?</span><button type="button" class="btn sm" data-fx="redeem">Redeem a code</button></div>'
+        + '<div class="coderow admin" id="adminrow" hidden><span>You\'re an admin: make codes for beta testers and giveaways.</span><button type="button" class="btn sm" data-fx="admin">Codes</button></div>';
       UI.modal(`<h1 class="dtitle">Your account</h1><form class="form" id="acc-form" data-form="rename">
         <label class="fld" for="acc-name"><span>Name shown in the game</span><input id="acc-name" maxlength="40" value="${esc(u.name)}" autocomplete="nickname"></label>
         <p class="hint">Signed in as ${esc(u.email)}. Your saves${Shop.enabled() ? ' and unlocks' : ''} follow you to any device where you sign in.</p>${unlocks}
         <p class="msg" id="acc-msg" role="status"></p>
         <div class="row end"><button type="button" class="btn danger" data-fx="signout">Sign out</button><button type="submit" class="btn">Save name</button><button type="button" class="btn" data-act="close">Close</button></div></form>`);
+      Store.isAdmin().then(v => { const r = $('adminrow'); if (r && v) r.hidden = false; });
       return;
     }
     mode = mode || 'signin';
@@ -439,6 +441,72 @@ const Front = (() => {
     toast(`Unlocked ${names}.`, 'good', 6000);
   }
 
+  /* ================= 0.31: the admin's codes panel ================= */
+  const fmtCode = c => /^OVM[A-Z0-9]{8}$/.test(c) ? `OVM-${c.slice(3, 7)}-${c.slice(7)}` : c;
+  const codeLink = c => location.origin + location.pathname + '?redeem=' + encodeURIComponent(c);
+  const grantName = g => g === 'bundle-dark-court' ? 'all four villains' : skuName(g);
+  async function showAdmin() {
+    if (!(await Store.isAdmin())) { toast('Only admins can make codes.', 'bad'); return; }
+    const opts = Object.keys(Shop.CATALOG).sort((a, b) => (Shop.CATALOG[b].bundle ? 1 : 0) - (Shop.CATALOG[a].bundle ? 1 : 0))
+      .map(k => `<option value="${k}">${esc(Shop.CATALOG[k].bundle ? 'Everything: all four paid villains' : Shop.CATALOG[k].name)}</option>`).join('');
+    UI.modal(`<h1 class="dtitle">Codes</h1>
+      <p class="hint">Make codes for beta testers and giveaways. A tester signs in, opens their account and picks <b>Redeem a code</b>, or just opens the link.</p>
+      <form class="form" id="admin-form" data-form="admin">
+        <div class="adgrid">
+          <label class="fld" for="ad-grant"><span>Unlocks</span><select id="ad-grant">${opts}</select></label>
+          <label class="fld" for="ad-label"><span>Label the tester sees</span><input id="ad-label" maxlength="120" value="Beta tester" autocomplete="off"></label>
+        </div>
+        <div class="adkind" role="radiogroup" aria-label="Kind of code">
+          <label><input type="radio" name="ad-kind" value="many" checked> <b>One code per tester</b> <small>random codes like OVM-7KQ2-XH9D, each used once</small></label>
+          <label><input type="radio" name="ad-kind" value="shared"> <b>One shared code</b> <small>a word you choose, used by up to a number of testers</small></label>
+        </div>
+        <div class="adgrid" id="ad-many"><label class="fld" for="ad-count"><span>How many codes</span><input id="ad-count" type="number" min="1" max="200" value="5"></label></div>
+        <div class="adgrid" id="ad-shared" hidden><label class="fld" for="ad-code"><span>The code (6 or more letters or digits)</span><input id="ad-code" maxlength="40" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="BETA2026"></label>
+          <label class="fld" for="ad-uses"><span>Up to how many testers (blank: no limit)</span><input id="ad-uses" type="number" min="1" max="100000" value="25"></label></div>
+        <div class="adgrid"><label class="fld" for="ad-exp"><span>Expires (optional)</span><input id="ad-exp" type="date"></label></div>
+        <p class="msg" id="ad-msg" role="status"></p>
+        <div id="ad-out"></div>
+        <div class="row end"><button type="button" class="btn" data-act="close">Close</button><button type="submit" class="btn big">Make codes</button></div>
+      </form>
+      <h2 class="cap">Recent codes</h2><div id="ad-list" class="adlist"><p class="hint">Loading…</p></div>`, null, 'wide');
+    loadAdminCodes();
+  }
+  function adMsg(t, tone) { const el = $('ad-msg'); if (el) { el.textContent = t; el.className = 'msg ' + (tone || ''); } }
+  async function submitAdmin(form) {
+    const btn = form.querySelector('[type="submit"]');
+    const shared = (form.querySelector('input[name="ad-kind"]:checked') || {}).value === 'shared';
+    const o = { grants: [$('ad-grant').value], label: $('ad-label').value.trim() };
+    const exp = $('ad-exp').value; if (exp) o.expires = new Date(exp + 'T23:59:59').toISOString();
+    if (shared) {
+      o.code = $('ad-code').value.trim(); const u = $('ad-uses').value.trim(); o.uses = u ? Math.max(1, parseInt(u, 10) || 1) : null; o.count = 1;
+      if (o.code.replace(/[^A-Za-z0-9]/g, '').length < 6) { adMsg('Make the code at least 6 letters or digits, so nobody guesses it.', 'bad'); return; }
+    } else { o.count = Math.max(1, Math.min(200, parseInt($('ad-count').value, 10) || 1)); o.uses = 1; }
+    busy(btn, true, 'Making…'); adMsg('');
+    const r = await Store.adminMakeCodes(o);
+    busy(btn, false);
+    if (r.error) { adMsg(r.error, 'bad'); return; }
+    const codes = (r.data && r.data.codes) || [];
+    adMsg(`${codes.length} code${codes.length > 1 ? 's' : ''} for ${grantName(o.grants[0])}${shared ? (o.uses ? `, for up to ${o.uses} testers` : ', with no limit') : ''}.`, 'good');
+    const text = codes.map(c => `${fmtCode(c)}  ${codeLink(fmtCode(c))}`).join('\n');
+    $('ad-out').innerHTML = `<textarea class="copybox adcodes" id="ad-codes" readonly rows="${Math.min(8, codes.length + 1)}">${esc(text)}</textarea>
+      <div class="row"><button type="button" class="btn sm" data-fx="adcopy">Copy codes and links</button></div>`;
+    loadAdminCodes();
+  }
+  async function loadAdminCodes() {
+    const el = $('ad-list'); if (!el) return;
+    const r = await Store.adminCodes(); if (!$('ad-list')) return;
+    if (r.error) { el.innerHTML = `<p class="msg bad">${esc(r.error)}</p>`; return; }
+    const L = r.data || [];
+    if (!L.length) { el.innerHTML = '<p class="hint">No codes yet.</p>'; return; }
+    const when = t => t ? new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+    el.innerHTML = `<table class="adtab"><thead><tr><th>Code</th><th>Unlocks</th><th>Used</th><th>Redeemed by</th><th></th></tr></thead><tbody>${L.map(c => `<tr class="${c.active ? '' : 'off'}">
+      <td><b class="mono">${esc(fmtCode(c.code))}</b>${c.label ? `<br><small>${esc(c.label)}</small>` : ''}${c.expires_at ? `<br><small>until ${esc(when(c.expires_at))}</small>` : ''}</td>
+      <td>${esc((c.grants || []).map(grantName).join(', '))}</td>
+      <td>${c.uses}${c.max_uses ? ' of ' + c.max_uses : ''}</td>
+      <td><small>${esc(c.redeemed_by || '')}</small></td>
+      <td><button type="button" class="lnk" data-fx="adtoggle" data-code="${esc(c.code)}" data-on="${c.active ? 0 : 1}">${c.active ? 'Switch off' : 'Switch on'}</button></td></tr>`).join('')}</tbody></table>`;
+  }
+
   /* ================= settings, rules, feedback ================= */
   function showSettings() {
     const st = Store.settings(); const on3d = UI.view3d() !== false;
@@ -529,6 +597,9 @@ const Front = (() => {
       case 'account': showAccount(); return;
       case 'shop': showShop(); return;
       case 'redeem': showRedeem(''); return;
+      case 'admin': showAdmin(); return;
+      case 'adcopy': { const t = $('ad-codes'); const fall = () => { t.focus(); t.select(); toast('Selected. Press Ctrl+C or Cmd+C to copy.', 'sys'); }; try { navigator.clipboard.writeText(t.value).then(() => toast('Copied.', 'good'), fall); } catch (er) { fall(); } return; }
+      case 'adtoggle': busy(el, true, '…'); Store.adminSetCode(d.code, d.on === '1').then(r => { if (r.error) { busy(el, false); toast(r.error, 'bad'); return; } loadAdminCodes(); }); return;
       case 'buy': buyFlow(d.sku, el); return;
       case 'notnow': Shop.clearPending(); UI.closeModal(); return;
       case 'restore': busy(el, true, 'Checking…'); Shop.refresh().then(r => { busy(el, false); if (shopOpen()) showShop(); shopMsg(r.error || 'Your unlocks are up to date.', r.error ? 'bad' : 'good'); }); return;
@@ -569,6 +640,7 @@ const Front = (() => {
   function onChange(e) {
     const t = e.target;
     if (t.id === 'ld-file' && t.files && t.files[0]) { importFile(t.files[0]); t.value = ''; return; }
+    if (t.name === 'ad-kind') { const sh = t.value === 'shared'; $('ad-many').hidden = sh; $('ad-shared').hidden = !sh; return; }
     if (t.dataset && t.dataset.set) {
       const k = t.dataset.set;
       if (k === 'view3d') { UI.view3d(t.checked); if (!UI.active() && !$('title').hidden) showTitle(); return; }
@@ -578,7 +650,7 @@ const Front = (() => {
   function onSubmit(e) {
     const f = e.target; if (!f.dataset || !f.dataset.form) return;
     e.preventDefault();
-    if (f.dataset.form === 'feedback') submitFeedback(f); else if (f.dataset.form === 'redeem') submitRedeem(f); else submitAccount(f);
+    if (f.dataset.form === 'feedback') submitFeedback(f); else if (f.dataset.form === 'redeem') submitRedeem(f); else if (f.dataset.form === 'admin') submitAdmin(f); else submitAccount(f);
   }
   function showHowTo() {
     UI.modal(`<h1 class="dtitle">How to play</h1>

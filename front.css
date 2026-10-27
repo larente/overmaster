@@ -267,3 +267,20 @@ ul.pw { display: grid; gap: 6px; }
 
 .vown { margin: -4px 0 0; text-align: center; }
 .vown b { color: #e6d3a0; font-weight: 500; }
+
+/* 0.31: the admin's codes panel */
+.coderow.admin { border-color: #6a4a9a; }
+.adgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px 14px; }
+.adgrid[hidden] { display: none; }
+.fld select { width: 100%; padding: 8px 10px; border: 1px solid #000; border-radius: 2px; background: #120d08; color: var(--ink); font: inherit; font-size: 15px; box-shadow: 0 0 0 1px #4a3820; }
+.adkind { display: grid; gap: 6px; }
+.adkind label { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; cursor: pointer; }
+.adkind small { color: var(--muted); }
+.adcodes { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; white-space: pre; overflow-x: auto; }
+.adlist { max-height: 300px; overflow: auto; }
+.adtab { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.adtab th { text-align: left; font-family: var(--font-display); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); padding: 4px 6px; border-bottom: 1px solid #4a3820; }
+.adtab td { padding: 6px; border-bottom: 1px solid rgba(74,56,32,.5); vertical-align: top; }
+.adtab tr.off td { opacity: .5; }
+.adtab .mono { font-family: ui-monospace, Menlo, Consolas, monospace; letter-spacing: .03em; }
+@media (max-width: 560px) { .adtab th:nth-child(4), .adtab td:nth-child(4) { display: none; } }

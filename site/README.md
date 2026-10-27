@@ -128,7 +128,17 @@ The shop sells the four paid villains ($2.99 CAD each, or $7.99 for all four). T
 2. Repeat B to D in live mode: a live secret key (`sk_live_…`), and a live webhook with its own signing secret. Replace both secrets in Supabase.
 3. Taxes are yours to handle, since you're the seller. To have Stripe Tax calculate and add sales tax at checkout, turn on Stripe Tax in Stripe, then add the secret `STRIPE_TAX` with the value `on`. Talk to an accountant about GST/HST, BC PST, and VAT on sales abroad.
 
-**Codes for giveaways and beta testers.** Players redeem codes in their account window (**Redeem a code**), from the Shop, or by opening a link like `https://your-game-address/?redeem=OVM-7KQ2-XH9D`. If they aren't signed in yet, the link asks them to sign in first and keeps the code. Codes only need Supabase (step 1 and part A above), not Stripe. Make them in the SQL Editor:
+**Codes for giveaways and beta testers.** Players redeem codes in their account window (**Redeem a code**), from the Shop, or by opening a link like `https://your-game-address/?redeem=OVM-7KQ2-XH9D`. If they aren't signed in yet, the link asks them to sign in first and keeps the code. Codes only need Supabase (step 1 and part A above), not Stripe. Until Stripe is set up, the paid villains show their locks and a player who tries to buy one is told the shop isn't taking payments yet and pointed to codes.
+
+**The admin's codes panel (0.31).** Make yourself an admin and you can make and manage codes inside the game, with no SQL. Sign in to the game once (so your account exists), then run this in the SQL Editor with the email you signed in with:
+
+```sql
+insert into public.admins (user_id) select id from auth.users where email = 'you@example.com';
+```
+
+Open the game, then your account window: a **Codes** button appears. It makes random single-use codes (up to 200 at a time) or one shared code you choose with a limit on how many players can use it, for all four villains or one, with a label and an optional expiry date. It gives you each code with its link to copy, and lists your recent codes, how often each was used, by whom, and a switch to turn one off.
+
+Or make them in the SQL Editor:
 
 ```sql
 -- 20 single-use codes for the Vampire Lord (one player each)

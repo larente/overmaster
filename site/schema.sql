@@ -243,6 +243,67 @@ create or replace view public.code_report with (security_invoker = true) as
   from public.codes c order by c.created_at desc;
 revoke all on public.code_report from anon, authenticated;
 
+-- Admins (0.31): accounts that can make and manage codes from inside the game (account window -> Codes).
+-- Make yourself one (use the email you sign in with, Google or not):
+--   insert into public.admins (user_id) select id from auth.users where email = 'you@example.com';
+create table if not exists public.admins (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  added_at timestamptz not null default now()
+);
+alter table public.admins enable row level security;
+-- no policies on purpose: the game asks is_admin(), and only you (in the dashboard) can change the list
+
+create or replace function public.is_admin() returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.admins where user_id = auth.uid())
+$$;
+revoke all on function public.is_admin() from public, anon;
+grant execute on function public.is_admin() to authenticated;
+
+-- make codes from the game: p_code set makes one code you chose (shared by up to p_uses players), otherwise p_count random ones
+create or replace function public.admin_make_codes(p_grants text[], p_count integer default 1, p_uses integer default 1,
+                                                   p_label text default null, p_expires timestamptz default null, p_code text default null)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare out text[];
+begin
+  if not public.is_admin() then raise exception 'Only admins can make codes.'; end if;
+  if coalesce(p_code, '') <> '' then
+    if exists (select 1 from public.codes where code = upper(regexp_replace(p_code, '[^A-Za-z0-9]', '', 'g'))) then raise exception 'That code already exists. Pick another.'; end if;
+    out := array[public.make_code(p_code, p_grants, p_uses, nullif(p_label, ''), p_expires)];
+  else
+    select array_agg(c) into out from public.make_codes(p_grants, least(greatest(coalesce(p_count, 1), 1), 200), p_uses, nullif(p_label, ''), p_expires) c;
+  end if;
+  return jsonb_build_object('ok', true, 'codes', to_jsonb(out));
+end $$;
+revoke all on function public.admin_make_codes(text[], integer, integer, text, timestamptz, text) from public, anon;
+grant execute on function public.admin_make_codes(text[], integer, integer, text, timestamptz, text) to authenticated;
+
+-- the newest codes and who redeemed them
+create or replace function public.admin_codes(p_limit integer default 60) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+begin
+  if not public.is_admin() then raise exception 'Only admins can see codes.'; end if;
+  return coalesce((select jsonb_agg(to_jsonb(r)) from (
+    select c.code, c.label, c.grants, c.uses, c.max_uses, c.expires_at, c.active, c.created_at,
+           (select string_agg(u.email, ', ' order by x.redeemed_at) from public.redemptions x join auth.users u on u.id = x.user_id where x.code = c.code) as redeemed_by
+    from public.codes c order by c.created_at desc limit least(greatest(coalesce(p_limit, 60), 1), 500)) r), '[]'::jsonb);
+end $$;
+revoke all on function public.admin_codes(integer) from public, anon;
+grant execute on function public.admin_codes(integer) to authenticated;
+
+-- switch a code off (or back on)
+create or replace function public.admin_set_code(p_code text, p_active boolean) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare k text := upper(regexp_replace(coalesce(p_code, ''), '[^A-Za-z0-9]', '', 'g'));
+begin
+  if not public.is_admin() then raise exception 'Only admins can change codes.'; end if;
+  update public.codes set active = p_active where code = k;
+  if not found then raise exception 'No such code.'; end if;
+  return jsonb_build_object('ok', true);
+end $$;
+revoke all on function public.admin_set_code(text, boolean) from public, anon;
+grant execute on function public.admin_set_code(text, boolean) to authenticated;
+
 -- Examples (run in the SQL Editor):
 --   20 single-use codes for the Vampire Lord:
 --     select * from make_codes(array['villain-vampire'], 20);

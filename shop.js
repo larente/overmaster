@@ -78,6 +78,7 @@ const Shop = (() => {
     if (!Store.user()) { ss.set(PENDING, sku); return { needSignIn: true }; }
     ss.set(PENDING, null);
     const r = await Store.invoke('checkout', { sku, returnTo: location.origin + location.pathname });
+    if (r.error && r.missing) return { error: 'The shop isn\'t taking payments yet. If you have a beta code, redeem it from your account.' };
     if (r.error) return { error: r.error, owned: !!(r.data && r.data.owned) };
     if (!r.data || !r.data.url) return { error: 'The shop didn\'t answer. Try again in a minute.' };
     location.assign(r.data.url);
