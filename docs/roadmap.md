@@ -1,5 +1,21 @@
 # Overmaster — roadmap
 
+## Delivered in alpha 0.30: the villain edition (step 1 of 3)
+You play only the villain now, in the spirit of Dungeon Keeper. The dungeon-master version, where you ran both sides, is kept on the `classic` branch and as the "Overmaster Classic" preview.
+- **Your villain rises from level 1.** Infamy levels it up: hurting, downing and killing heroes, breaking into Millbrook, plunder, burned buildings, and every lair you keep standing. Each level is a talent point and a stronger villain on the throne, and its battle powers unlock at levels 6, 11 and 16. A window marks each level-up.
+- **Lairs attack on their own.** When a lair fills up, three nights' brood marches down the road to Millbrook as a wave. You only build and upgrade lairs; you can still level a wave up, send it away, or turn it into a patrol.
+- **Sieges.** A wave at the gates fights Millbrook's archer towers, ballista, arcane tower and temple bell, then batters the walls. Once through (flyers go straight over), it damages the town hall, carries gold, lumber and ore off to your tower, and burns buildings down a level. Brutes break walls twice as fast; undead fear the bell. A report and floating numbers over Millbrook show what happened each night.
+- **The heroes defend their town.** If they're home when a wave arrives, they man the walls: a battle outside Millbrook's gate, the wall across the field with breaches where it's battered, and the towers firing every round. On the road, they go out of their way to stop a wave.
+- **Millbrook runs itself.** It spends its taxes and the heroes' loot on trade, the heroes' buildings, and whichever defence would best stop the waves that have been hurting it. It posts bounties on the lairs that hurt it most, and its tavern replaces a wiped-out party with a new, greener one. Its screens are for scouting now: the town, its walls and hall, the waves on the road and how each would fare, and what it's building.
+- **Win** by razing Millbrook (its hall falls) or wiping out its heroes once the tavern is gone. **Lose** if the heroes beat your villain on the throne; from level 12 they size up the showdown and march when they like their odds. The score rewards a fast win and Infamy, and counts how long a fallen reign lasted.
+- **Gone:** the spells that helped the heroes, posting quests, running Millbrook's builders, and the players' mood.
+- **New title text:** "The heroes are coming. Be ready."
+- **Art to make** (`pixellab_gen.py objects defences`): Millbrook's palisade, stone and great walls, archer towers I–III, ballista I–II, arcane tower I–II and the temple bell. Until then they borrow other pictures.
+- **Balance.** In 60 simulated campaigns with a scripted villain (10 per villain), the villain won 58%: Millbrook was razed in week 3 to 11 (usually 6 to 8), and the losses came in week 6 to 13, once one at 18. No villain won fewer than half. The villain reaches level 20 around week 9 to 10, about when the heroes reach 14 to 16.
+- **Saves:** version 16. Older campaigns carry on with a villain two levels above their heroes.
+
+**Next, step 2:** a much bigger map (about 80 by 56 tiles instead of 40 by 28), with several roads into Millbrook and longer quests for the heroes. **Step 3:** a Siegecraft talent path (war drums, battering rams, plunder), then each paid villain's own map rules on top (the Death Knight's Legion raiding farms, the Vampire Lord's thralls draining the town, the Dragon burning a watchtower).
+
 ## Delivered in alpha 0.24
 - **Talents instead of research.** The villain no longer buys research with gold and ore. Instead the villain earns **talent points**:
   - one to start;

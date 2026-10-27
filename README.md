@@ -1,8 +1,10 @@
 # Overmaster
 
-*Heroes need villains. You're both.*
+*The heroes are coming. Be ready.*
 
-A browser strategy game by **Alex Larente**. You run both sides at once: the villain's Dark Tower, with its minions, lairs and research, and the heroes' town of Millbrook, with its buildings and bounty board. Push four heroes until they're strong enough to tear your own tower down.
+A turn-based browser strategy game by **Alex Larente**. You are the villain: rise from level 1 in the Dark Tower, set your minions to dig and build, and raise lairs that send waves of monsters down the roads to burn the heroes' town of Millbrook. The game runs Millbrook and its four heroes, who grow stronger every day and will one day march on your tower. Raze the town or wipe out its heroes before they get to you.
+
+The earlier version, where you ran both the tower and the town, is kept on the `classic` branch.
 
 Alpha. All rights reserved.
 

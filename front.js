@@ -589,7 +589,7 @@ const Front = (() => {
         <li><b>Gather, explore and build.</b> Your minions are your eyes: the map is dark where none have been. Right-click a gold, timber or ore deposit to put one to work. Its menu has Move, Build and Dance.</li>
         <li><b>Lairs send waves.</b> When a lair is full, a wave marches on Millbrook by itself. At the gates it fights the town's towers and walls; once through, it sacks the town, plunders its gold and burns its buildings. Millbrook builds new defences against whatever hurts it.</li>
         <li><b>Grow in Infamy.</b> Hurting heroes, killing them, breaking into Millbrook and keeping your lairs standing all earn Infamy. Your villain levels up on it: stronger on the throne, new powers, and a talent point every level.</li>
-        <li><b>Win or fall.</b> Burn Millbrook's hall, or wipe out its heroes once its tavern is gone, and the realm is yours. If the heroes beat you on your throne, your reign is over. They march when they think they'd win, so stay ahead of them.</li>
+        <li><b>Win or fall.</b> Burn Millbrook's hall, or wipe out its heroes once its tavern is gone, and the realm is yours. If the heroes beat you on your throne, your reign is over. From level ${G.MARCH_LV} they size up the showdown, and they march when they think they'd win, so stay ahead of them.</li>
       </ol>
       <p class="hint">While Millbrook's tavern stands, a wiped-out party is followed by a new, greener one. The sooner you win, the higher your score.</p>
       <div class="row end"><button class="btn big" data-act="close">Got it</button></div>`, null, 'wide');
