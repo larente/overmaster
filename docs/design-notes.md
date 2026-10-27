@@ -4,7 +4,7 @@ A turn-based browser game where you are the villain, in the spirit of Dungeon Ke
 
 The game ships two ways from the same source:
 - **The website** (`dist/site/`): static files for Netlify or any host. Optional Supabase project for accounts, cloud saves and feedback.
-- **The Claude preview** (`dist/behind-the-screen.html`): same game, saves in the browser only.
+- **The Claude preview** (`dist/behind-the-screen.html`): same game, saves in the browser only. Its art is published beside the page as `art/…` files; when art changes, republish `art/manifest.json` and the new pictures with the page, or the preview keeps its old pictures.
 
 Source modules: game.js (map, core, battle), art.js (SVG portraits and icons), dice.js, three.js r128, models.js (3D models), world3d.js (3D map and battles), ui.js (in-game UI), store.js (saves, accounts, feedback), front.js (title, setup, menus). Painted character art lives in art/ (see docs/art-guide.md) and tools/art_import.py brings it in. Styles: style.css, front.css and screens.css for layout, then ui-assets.css (generated textures), skin.css (the fantasy skin) and loop.css (the sidebar, balance meter, tower screen, map panels and battle steps) on top.
 
