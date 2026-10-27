@@ -2569,18 +2569,25 @@
   const socialBonus = (s, k) => ((VSOCIAL[s.villain.type] || {})[k] || 0) + Math.floor(villainLevel(s) / 5);
   function socialDC(s, o, k) { const T = temperOf(s, o); if (T[k] === null || T[k] === undefined) return null; return clamp(DC_BASE + DC_PER * (monsterLevel(s, o) - villainLevel(s)) + T[k], 4, 30); }
   let DC_BASE = 12, DC_PER = 2;
+  // your banner: how many bands of the wilds will follow you at once (recruits count until they fall at Millbrook)
+  let CMD_PER = 5;
+  const commandCap = s => 1 + Math.floor(villainLevel(s) / CMD_PER);
+  const commanded = s => s.objects.filter(o => o.kind === 'stack' && o.yours && o.joined).length;
+  const bannerFull = s => commanded(s) >= commandCap(s);
   const skillOdds = (bonus, dc) => clamp((21 - (dc - bonus)) / 20, 0.05, 0.95);
   function payCost(s, o) { const T = temperOf(s, o); if (!T.gold) return null; return Math.round((6 + 5 * monsterLevel(s, o)) * (T.gold === 2 ? 1.5 : 1)); }
   // what you can try with a band, and why not
   function parleyOptions(s, o) {
     const L = monsterLevel(s, o), V = villainLevel(s); const T = temperOf(s, o);
     const tooHigh = L >= V + TOO_HIGH; const sulking = (o.sulk || 0) > dayIndex(s);
-    const out = { level: L, vlevel: V, tooHigh, sulking, temper: T.text, pay: null, talk: [] };
+    const n = commanded(s), cap = commandCap(s), full = n >= cap;
+    const out = { level: L, vlevel: V, tooHigh, sulking, temper: T.text, pay: null, talk: [], command: { n, cap }, full };
     if (tooHigh) return out;
-    const c = payCost(s, o); if (c !== null) out.pay = { cost: c, err: (s.res.gold || 0) < c ? `You need ${c} gold.` : null };
+    const fullErr = full ? `Your banner is full (${n}/${cap}). More will follow you as ${vName(s)} grows.` : null;
+    const c = payCost(s, o); if (c !== null) out.pay = { cost: c, err: fullErr || ((s.res.gold || 0) < c ? `You need ${c} gold.` : null) };
     for (const k of Object.keys(SKILLS)) {
       const dc = socialDC(s, o, k); const bonus = socialBonus(s, k);
-      out.talk.push({ k, name: SKILLS[k].name, text: SKILLS[k].text, dc, bonus, p: dc === null ? 0 : skillOdds(bonus, dc), err: dc === null ? 'They won\'t hear it.' : sulking ? 'They won\'t listen to you again for a few days.' : null });
+      out.talk.push({ k, name: SKILLS[k].name, text: SKILLS[k].text, dc, bonus, p: dc === null ? 0 : skillOdds(bonus, dc), err: dc === null ? 'They won\'t hear it.' : fullErr || (sulking ? 'They won\'t listen to you again for a few days.' : null) });
     }
     return out;
   }
@@ -2694,7 +2701,14 @@
     const res = { duel: true, result: b.over, type, count: start, left, level: L, loot: null, joined: false, villainHp: boss ? Math.max(0, boss.hp) / boss.maxHp : 0, lines: [] };
     V.hpFrac = boss && !boss.escaped ? clamp(boss.hp / boss.maxHp, 0.05, 1) : 0.3;
     const tline = (l, v) => { const n = addInfamy(s, v, l); if (n) res.lines.push({ label: l, v: n }); };
-    if (b.over === 'surrender' && o) {
+    if (b.over === 'surrender' && o && bannerFull(s)) {
+      // they kneel, but no more will follow you yet: they buy their lives and scatter
+      const L2 = duelLoot(s, Object.assign({}, o, { count: start })); const loot = {}; for (const k of RES_KEYS) loot[k] = Math.round((L2[k] || 0) * 0.6);
+      for (const k of RES_KEYS) s.res[k] = (s.res[k] || 0) + loot[k];
+      res.loot = loot; res.result = 'tribute'; s.objects = s.objects.filter(z => z !== o);
+      say(s, `The ${C.name.toLowerCase()} kneel, but ${vName(s)}'s banner is full. They buy their lives with ${priceText(loot)} and scatter into the hills.`, 'dm');
+      tline(`${vName(s)} broke the ${C.name.toLowerCase()}`, 1 + L / 3);
+    } else if (b.over === 'surrender' && o) {
       o.count = Math.max(1, left); o.healUntil = dayIndex(s) + HEAL_DAYS; o.healTo = Math.max(o.count, Math.round(start * 0.7));
       joinYou(s, o, 'surrender'); res.joined = true; res.lines.push({ label: `The ${C.name.toLowerCase()} joined you`, v: 0 });
       tline(`${vName(s)} broke the ${C.name.toLowerCase()}`, 1 + L / 3);
