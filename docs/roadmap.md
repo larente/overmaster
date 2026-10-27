@@ -10,7 +10,7 @@ You play only the villain now, in the spirit of Dungeon Keeper. The dungeon-mast
 - **Win** by razing Millbrook (its hall falls) or wiping out its heroes once the tavern is gone. **Lose** if the heroes beat your villain on the throne; from level 12 they size up the showdown and march when they like their odds. The score rewards a fast win and Infamy, and counts how long a fallen reign lasted.
 - **Gone:** the spells that helped the heroes, posting quests, running Millbrook's builders, and the players' mood.
 - **New title text:** "The heroes are coming. Be ready."
-- **Art to make** (`pixellab_gen.py objects defences`): Millbrook's palisade, stone and great walls, archer towers I–III, ballista I–II, arcane tower I–II and the temple bell. Until then they borrow other pictures.
+- **Millbrook's defences have their pixel art:** the palisade, stone walls and great walls at the town gate, archer towers I–III, ballista I–II, arcane tower I–II and the temple bell, in the town view and on the Defences cards. They're drawn at about two thirds of a building's size so the front of the valley isn't crowded, and the town view's hint moved to the top.
 - **Balance.** In 60 simulated campaigns with a scripted villain (10 per villain), the villain won 58%: Millbrook was razed in week 3 to 11 (usually 6 to 8), and the losses came in week 6 to 13, once one at 18. No villain won fewer than half. The villain reaches level 20 around week 9 to 10, about when the heroes reach 14 to 16.
 - **Saves:** version 16. Older campaigns carry on with a villain two levels above their heroes.
 

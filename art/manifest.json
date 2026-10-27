@@ -225,6 +225,31 @@
    "pixel": true,
    "sprite": "objects/obj-stranger.webp"
   },
+  "obj-t-arcane": {
+   "icon": "objects/obj-t-arcane.webp",
+   "pixel": true,
+   "sprite": "objects/obj-t-arcane.webp"
+  },
+  "obj-t-arcane-2": {
+   "icon": "objects/obj-t-arcane-2.webp",
+   "pixel": true,
+   "sprite": "objects/obj-t-arcane-2.webp"
+  },
+  "obj-t-ballista": {
+   "icon": "objects/obj-t-ballista.webp",
+   "pixel": true,
+   "sprite": "objects/obj-t-ballista.webp"
+  },
+  "obj-t-ballista-2": {
+   "icon": "objects/obj-t-ballista-2.webp",
+   "pixel": true,
+   "sprite": "objects/obj-t-ballista-2.webp"
+  },
+  "obj-t-bell": {
+   "icon": "objects/obj-t-bell.webp",
+   "pixel": true,
+   "sprite": "objects/obj-t-bell.webp"
+  },
   "obj-t-board": {
    "icon": "objects/obj-t-board.webp",
    "pixel": true,
@@ -394,6 +419,36 @@
    "icon": "objects/obj-t-vigor-3.webp",
    "pixel": true,
    "sprite": "objects/obj-t-vigor-3.webp"
+  },
+  "obj-t-walls": {
+   "icon": "objects/obj-t-walls.webp",
+   "pixel": true,
+   "sprite": "objects/obj-t-walls.webp"
+  },
+  "obj-t-walls-2": {
+   "icon": "objects/obj-t-walls-2.webp",
+   "pixel": true,
+   "sprite": "objects/obj-t-walls-2.webp"
+  },
+  "obj-t-walls-3": {
+   "icon": "objects/obj-t-walls-3.webp",
+   "pixel": true,
+   "sprite": "objects/obj-t-walls-3.webp"
+  },
+  "obj-t-watch": {
+   "icon": "objects/obj-t-watch.webp",
+   "pixel": true,
+   "sprite": "objects/obj-t-watch.webp"
+  },
+  "obj-t-watch-2": {
+   "icon": "objects/obj-t-watch-2.webp",
+   "pixel": true,
+   "sprite": "objects/obj-t-watch-2.webp"
+  },
+  "obj-t-watch-3": {
+   "icon": "objects/obj-t-watch-3.webp",
+   "pixel": true,
+   "sprite": "objects/obj-t-watch-3.webp"
   },
   "obj-t-yard": {
    "icon": "objects/obj-t-yard.webp",

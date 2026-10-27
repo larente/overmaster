@@ -1674,7 +1674,8 @@
   const MB_AT = { temple: [2.5, 2.8, 2.6], ironworks: [5.7, 1.6, 2.4], guild: [13.4, 2.0, 1.9], sawmill: [16.0, 4.9, 2.6], smith: [4.6, 5.6, 2.6], market: [6.4, 8.9, 3.1], tavern: [12.7, 7.9, 3.1], yard: [1.9, 8.7, 3.0] };
   const MB_HALL = [9.3, 3.3], HALL_W = [3.2, 3.7, 4.2, 4.7, 5.2], MB_BOARD = [11.0, 5.2];
   // 0.30: Millbrook's defences. The gate stands on the road at the front of the valley, the towers beside it
-  const MB_DEF = { walls: [9.0, 10.5, 2.4], watch: [11.5, 10.3, 1.25], ballista: [6.6, 10.5, 1.3], arcane: [16.6, 2.3, 1.5], bell: [4.6, 3.9, 0.9] };
+  const MB_DEF = { walls: [9.0, 10.2, 2.4], watch: [11.9, 10.1, 1.25], ballista: [4.6, 10.1, 1.3], arcane: [17.1, 1.7, 1.5], bell: [1.2, 6.1, 0.9] };
+  const DEF_SCALE = 0.68;   // their own pictures are drawn a little smaller than the town's buildings, so the front of the valley isn't crowded
   const DEF_STAND = { walls: 'camp', watch: 'peaks', ballista: 'wrecked', arcane: 't-guild', bell: 'shrine' };
   // PixelLab's buildings all share one pixel size, so a bigger level is a bigger picture: world units per pixel
   const TOWN_UPP = 0.026;
@@ -1737,7 +1738,7 @@
       for (const k of G.DEF_ORDER) {
         const [x, z, w0] = MB_DEF[k]; const l = G.townLv(S, k); const going = B && B.k === k; if (!l && !going) continue;
         const lv = going ? l + 1 : l; const stand = k === 'walls' && lv >= 2 ? 'hold' : DEF_STAND[k]; const a = levelArt('t-' + k, lv, stand);
-        const real = a.art.indexOf('t-') === 0 && artW(a.art) && a.art !== 't-guild'; const w = real ? artW(a.art) * TOWN_UPP * (a.own ? 1 : 1 + 0.1 * (lv - 1)) : w0 * (1 + 0.1 * (lv - 1));
+        const real = a.art.indexOf('t-') === 0 && artW(a.art) && a.art !== 't-guild'; const w = real ? artW(a.art) * TOWN_UPP * DEF_SCALE * (a.own ? 1 : 1 + 0.1 * (lv - 1)) : w0 * (1 + 0.1 * (lv - 1));
         if (going) add({ id: k, mode: 'site', art: a.art, x, z, w, p: 1 - B.days / B.total }); else add({ id: k, mode: 'built', art: a.art, x, z, w });
       }
       // the heroes stand in the square while they're in town; new recruits wait outside the tavern
