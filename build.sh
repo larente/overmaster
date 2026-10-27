@@ -41,9 +41,9 @@ cp dist/behind-the-screen.html behind-the-screen.html
   echo '<!doctype html>'
   echo '<html lang="en"><head><meta charset="utf-8">'
   echo '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">'
-  echo '<title>Overmaster — heroes need villains. You'"'"'re both.</title>'
-  echo '<meta name="description" content="Overmaster, by Alex Larente: run the villain'"'"'s Dark Tower and the heroes'"'"' town of Millbrook at once. Breed monsters, raise a blacksmith, and push four heroes until they are strong enough to tear your tower down.">'
-  echo '<meta property="og:title" content="Overmaster"><meta property="og:description" content="Heroes need villains. You'"'"'re both. A two-sided town-building game by Alex Larente."><meta property="og:type" content="website">'
+  echo '<title>Overmaster — be the villain</title>'
+  echo '<meta name="description" content="Overmaster, by Alex Larente: a turn-based game where you are the villain. Rise from level 1 in the Dark Tower, raise lairs that send waves of monsters to burn the heroes'"'"' town, and stay ahead of four heroes who grow stronger every day.">'
+  echo '<meta property="og:title" content="Overmaster"><meta property="og:description" content="Be the villain. The heroes are coming. A turn-based dark-lord game by Alex Larente."><meta property="og:type" content="website">'
   echo '<meta name="theme-color" content="#08111f"><link rel="icon" href="favicon.svg" type="image/svg+xml">'
   echo "$FONTS"
   echo "<style>"; cat style.css front.css screens.css ui-assets.css skin.css loop.css; echo "</style>"

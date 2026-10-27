@@ -403,6 +403,26 @@ const Art = (() => {
   }
   function obstacle(x, cx, cy, R, terrain, seed, kind) {
     const r0 = G.mulberry((seed | 0) + 5);
+    // 0.30: a stretch of Millbrook's wall: a palisade of sharpened stakes, or grey stone with merlons
+    if (kind === 'wall' || kind === 'stonewall') {
+      x.fillStyle = 'rgba(0,0,0,0.32)'; x.beginPath(); x.ellipse(cx + R * 0.18, cy + R * 0.2, R * 0.5, R * 1.0, 0, 0, 7); x.fill();
+      if (kind === 'stonewall') {
+        const w = R * 0.62, top = cy - R * 0.95, h = R * 1.75;
+        x.fillStyle = '#6f6a62'; x.fillRect(cx - w / 2, top + R * 0.25, w, h - R * 0.25);
+        x.fillStyle = '#9a948a'; x.fillRect(cx - w / 2, top, w, R * 0.3);
+        for (let i = 0; i < 4; i++) { x.fillStyle = '#b0aa9e'; x.fillRect(cx - w / 2 + 1, top - R * 0.16 + i * R * 0.44, w - 2, R * 0.2); }
+        x.strokeStyle = 'rgba(40,36,32,0.6)'; x.lineWidth = 1;
+        for (let yy = top + R * 0.45; yy < top + h; yy += R * 0.3) { x.beginPath(); x.moveTo(cx - w / 2, yy); x.lineTo(cx + w / 2, yy); x.stroke(); }
+        return;
+      }
+      for (let i = 0; i < 5; i++) {
+        const sx = cx + (r0() - 0.5) * R * 0.1, base = cy - R * 0.55 + i * R * 0.34, h = R * (0.7 + r0() * 0.15), w = R * 0.4;
+        x.fillStyle = '#5e4128'; x.fillRect(sx - w / 2, base - h, w, h);
+        x.fillStyle = '#8e6a44'; x.fillRect(sx - w / 2, base - h, w * 0.45, h);
+        x.beginPath(); x.moveTo(sx - w / 2, base - h); x.lineTo(sx, base - h - R * 0.28); x.lineTo(sx + w / 2, base - h); x.closePath(); x.fillStyle = '#a8845a'; x.fill();
+      }
+      return;
+    }
     if (kind === 'tree') { if (terrain === 'snow') pine(x, cx, cy + R * 0.5, R * 1.3, true); else if (terrain === 'waste' || terrain === 'swamp') deadTree(x, cx, cy + R * 0.55, R * 1.1); else tree(x, cx, cy + R * 0.45, R * 0.55, r0); return; }
     x.fillStyle = 'rgba(0,0,0,0.3)'; x.beginPath(); x.ellipse(cx + 3, cy + R * 0.4, R * 0.75, R * 0.28, 0, 0, 7); x.fill();
     x.fillStyle = terrain === 'waste' ? '#3a2c2a' : '#7d756a'; x.beginPath();

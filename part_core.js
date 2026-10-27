@@ -940,10 +940,10 @@
     return posts.map(([, t]) => [t, Math.max(1, Math.round(each / stackPower(t, 1)))]);
   }
   const READY = 1.08;
-  // how the showdown would go today: from level 10 the party plays it out in its head (a quick simulation,
+  // how the showdown would go today: from level 12 (0.30) the party plays it out in its head (a quick simulation,
   // remembered until something that matters changes), so healers, items and the villain's kind all count
   const ODDS_NEED = 0.55;
-  const MARCH_LV = 10;
+  const MARCH_LV = 12;
   const TRAIN_XP = 0.03;   // of a level's experience, every day   // 0.30: before this the heroes don't think about the Dark Tower at all
   function finaleOdds(s) {
     const V = s.villain;

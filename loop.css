@@ -547,3 +547,7 @@ ul.dpw li.off { opacity: .5; }
 ul.log li { font-size: 12.5px; margin: 3px 0; color: #d8ccb0; }
 ul.log small { color: #8a7a60; margin-right: 4px; }
 .qrow .est { margin-left: auto; white-space: nowrap; }
+/* 0.30: the week's name gives way before anything else wraps to a second row */
+.bar .week { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 1560px) { .bar .week { max-width: 150px; } }
+@media (max-width: 1380px) { .bar .week { display: none; } }

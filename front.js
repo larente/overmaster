@@ -43,7 +43,7 @@ const Front = (() => {
     const el = $('intro'); if (!el || seen || calm) return;
     el.innerHTML = `<canvas class="i-embers" aria-hidden="true"></canvas>
       <p class="i-pres"><span>Alex Larente</span><small>presents</small></p>
-      <div class="i-logo">${emblem('i')}${wordmark('big')}<p class="i-tag">Heroes need villains. You're both.</p></div>
+      <div class="i-logo">${emblem('i')}${wordmark('big')}<p class="i-tag">The heroes are coming. Be ready.</p></div>
       <p class="i-press">${window.matchMedia && matchMedia('(hover: none)').matches ? 'Tap to begin' : 'Press any key'}</p>`;
     el.hidden = false; el.classList.remove('out', 'go'); $('front').classList.add('introing');
     embers(el.querySelector('canvas'), () => !el.hidden);
@@ -101,8 +101,8 @@ const Front = (() => {
     const L = F.latest;
     const cont = L ? `<button class="tbtn primary" data-fx="continue"><span>Continue</span><small>${esc(L.name)} · ${esc(where(L))}</small></button>` : '';
     $('title').innerHTML = `<div class="tcol">
-        <div class="tlogo">${emblem('t')}<div>${wordmark()}<p class="eyebrow">Heroes need villains. You're both.</p></div></div>
-        <p class="tag">Run the villain's tower and the heroes' town. Breed monsters, raise a blacksmith, and push four heroes until they're strong enough to tear your tower down.</p>
+        <div class="tlogo">${emblem('t')}<div>${wordmark()}<p class="eyebrow">The heroes are coming. Be ready.</p></div></div>
+        <p class="tag">Rise from level 1 in the Dark Tower. Breed monsters, send them to burn the heroes' town, and stay ahead of four heroes who grow stronger every day.</p>
         <nav class="tmenu" aria-label="Main menu">
           ${cont}
           <button class="tbtn${L ? '' : ' primary'}" data-fx="new"><span>New campaign</span>${L ? '' : '<small>Pick a villain and a party of four</small>'}</button>

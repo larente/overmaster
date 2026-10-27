@@ -904,6 +904,9 @@
     setTimeout(() => {
       // what each site brought in, floating up as the sun rises
       for (const [id, amt] of N.yields) { const n = S.nodes.find(z => z.id === id); if (n) ui.floats.push({ x: n.x * TILE + TILE / 2, y: n.y * TILE + TILE * 0.2, text: `+${amt} ${G.NODE_KINDS[n.kind].res}`, color: RES_COL[n.kind], t0: performance.now() }); }
+      // 0.30: what the night's sieges did to Millbrook, floating up over the town
+      { const tw = G.siteOf(S, 'town'); let dy = 0;
+        for (const r of (S.lastDay && S.lastDay.sieges) || []) { ui.floats.push({ x: tw.x * TILE + TILE / 2, y: tw.y * TILE + TILE * (0.1 - dy), text: r.hallDmg ? `Sacked! Hall −${r.hallDmg}` : r.wallDmg ? `Walls −${r.wallDmg}` : 'Repelled', color: r.hallDmg ? '#ff7a4a' : r.wallDmg ? '#ffb27a' : '#c8c8c8', t0: performance.now() }); dy += 0.35; } }
       if (!N.keepCam) { if (N.cam) W3.camTo(N.cam); if (N.cam2) { ui.cam.x = N.cam2.x; ui.cam.y = N.cam2.y; clampCam(); } }
       ui.night = null; kick(); syncAudio(); if (N.yields && N.yields.length) sfx('coins', { vol: 0.7 }); done();
     }, lead * 1000 + N.dur * 1000);
@@ -2301,7 +2304,7 @@
     const draw = [];
     for (const k of Object.keys(b.tiles)) {
       const t = b.tiles[k]; if (t === 'bog') continue; const p = hexXY(+k);
-      draw.push({ y: p.y - 0.1, f: () => { if (t === 'brush') A.brush(c, p.x, p.y, R, b.terrain, +k * 7 + S.seed); else A.obstacle(c, p.x, p.y, R, b.terrain, +k * 7 + S.seed, t); } });
+      draw.push({ y: p.y - 0.1, f: () => { if (t === 'brush') A.brush(c, p.x, p.y, R, b.terrain, +k * 7 + S.seed); else A.obstacle(c, p.x, p.y, R, b.terrain, +k * 7 + S.seed, t === 'wall' && b.wallLv >= 2 ? 'stonewall' : t); } });
     }
     for (const x of b.units) {
       const v = ui.view[x.id]; if (!v || (!v.alive && v.fade <= 0)) continue;
@@ -2531,7 +2534,7 @@
     const party = b.units.filter(x => x.side === 'party');
     $('bparty').innerHTML = party.map(x => { const v = ui.view[x.id] || x; const f = Math.max(0, v.hp / x.maxHp) * 100; return `<div class="bh${!v.alive ? ' dead' : v.down ? ' down' : ''}${b.cur === x.id ? ' cur' : ''}">${img('unit-' + x.icon, 'port sm')}<span><b>${esc(shortName(x.name))}</b><i class="hpb"><i style="width:${f.toFixed(0)}%"></i></i><small>${v.alive ? (v.down ? 'Down' : Math.max(0, v.hp) + '/' + x.maxHp) : 'Dead'} · AC ${x.ac}${x.maxMana ? ' · ' + x.mana + ' mana' : ''}</small></span></div>`; }).join('');
     $('bround').textContent = b.phase === 'deploy' ? 'Deployment' : `Round ${b.round}`;
-    $('bterrain').textContent = G.TERRAIN[b.terrain] ? G.TERRAIN[b.terrain].name : '';
+    $('bterrain').textContent = b.siege ? 'Millbrook\'s gates' : G.TERRAIN[b.terrain] ? G.TERRAIN[b.terrain].name : '';
     $('bdm').innerHTML = `<span title="The tower's gold: pays for extra traps and reinforcements">Tower <b>${Math.floor(S.res.gold)}</b></span><span title="${esc(VN())}'s level">${esc(VN())} <b>Lv ${G.villainLevel(S)}</b></span>${b.siege ? '<span>The siege of Millbrook</span>' : b.attack ? '<span>Your war party</span>' : b.finale ? '<span>The final showdown</span>' : ''}`;
     if (light) return;
     const dep = $('bdeploy');

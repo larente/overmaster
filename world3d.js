@@ -1521,6 +1521,23 @@ const World3D = (() => {
       if (t === 'rock') { for (let i = 0; i < 2 + Math.floor(r() * 2); i++) { const m = new T.Mesh(M.treeVariants(terr === 'snow' ? 'snowcrag' : 'crag')[Math.floor(r() * 3)], tmat); m.scale.setScalar(0.9 + r() * 0.6); m.position.set((r() - 0.5) * 0.8, 0, (r() - 0.5) * 0.8); m.rotation.y = r() * 6; m.castShadow = m.receiveShadow = true; grp.add(m); } }
       else if (t === 'tree') { const kinds = terr === 'snow' ? ['snowpine'] : terr === 'swamp' || terr === 'waste' ? ['dead'] : ['broad', 'pine']; for (let i = 0; i < 2; i++) { const m = new T.Mesh(M.treeVariants(kinds[Math.floor(r() * kinds.length)])[Math.floor(r() * 3)], tmat); m.scale.setScalar(2.2 + r() * 0.8); m.position.set((r() - 0.5) * 0.9, 0, (r() - 0.5) * 0.9); m.rotation.y = r() * 6; m.castShadow = m.receiveShadow = true; grp.add(m); } }
       else if (t === 'brush') { for (let i = 0; i < 6; i++) { const m = new T.Mesh(M.treeVariants('bush')[Math.floor(r() * 3)], tmat); m.scale.setScalar(2.1 + r() * 0.9); const a = r() * 6.3, rr = r() * 0.6; m.position.set(Math.cos(a) * rr, 0, Math.sin(a) * rr); m.castShadow = m.receiveShadow = true; grp.add(m); } }
+      else if (t === 'wall') {
+        // 0.30: Millbrook's wall: sharpened logs for a palisade, grey blocks with merlons for stone
+        if ((b.wallLv || 1) <= 1) {
+          const wood = new T.MeshStandardMaterial({ color: lin('#7a5636'), roughness: 0.92 }), tip = new T.MeshStandardMaterial({ color: lin('#a07a50'), roughness: 0.9 });
+          for (let i = 0; i < 6; i++) {
+            const h = 1.35 + r() * 0.3; const zz = -0.95 + i * 0.38 + (r() - 0.5) * 0.06;
+            const log = new T.Mesh(new T.CylinderGeometry(0.17, 0.19, h, 7), wood); log.position.set((r() - 0.5) * 0.1, h / 2, zz); log.castShadow = log.receiveShadow = true; grp.add(log);
+            const c = new T.Mesh(new T.ConeGeometry(0.17, 0.32, 7), tip); c.position.set(log.position.x, h + 0.16, zz); c.castShadow = true; grp.add(c);
+          }
+          const beam = new T.Mesh(new T.BoxGeometry(0.1, 0.14, 2.1), wood); beam.position.set(-0.2, 0.75, 0); beam.castShadow = true; grp.add(beam);
+        } else {
+          const stone = new T.MeshStandardMaterial({ color: lin(b.wallLv >= 3 ? '#9a9488' : '#8a8478'), roughness: 0.95 });
+          const h = b.wallLv >= 3 ? 1.9 : 1.55;
+          const wall = new T.Mesh(new T.BoxGeometry(0.75, h, 2.05), stone); wall.position.y = h / 2; wall.castShadow = wall.receiveShadow = true; grp.add(wall);
+          for (let i = 0; i < 4; i++) { const m = new T.Mesh(new T.BoxGeometry(0.8, 0.3, 0.3), stone); m.position.set(0, h + 0.15, -0.8 + i * 0.53); m.castShadow = true; grp.add(m); }
+        }
+      }
       else if (t === 'bog') {
         const pool = new T.Mesh(new T.CircleGeometry(0.85, 18), new T.MeshStandardMaterial({ color: lin('#2a3a2c'), roughness: 0.15, metalness: 0.1, transparent: true, opacity: 0.88 }));
         pool.rotation.x = -Math.PI / 2; pool.position.y = 0.02; pool.scale.set(1, 0.8 + r() * 0.3, 1); grp.add(pool);

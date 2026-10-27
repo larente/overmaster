@@ -31,7 +31,9 @@
     rock: { name: 'Boulder', block: true, sight: true, text: 'Blocks movement and line of sight.' },
     tree: { name: 'Tree', block: true, sight: true, text: 'Blocks movement and line of sight.' },
     brush: { name: 'Brush', block: false, sight: true, cover: true, text: 'Half cover: +2 AC against ranged attacks. Blocks line of sight through it.' },
-    bog: { name: 'Bog', block: false, sight: false, slow: true, text: 'Difficult ground: costs 2 movement to enter.' }
+    bog: { name: 'Bog', block: false, sight: false, slow: true, text: 'Difficult ground: costs 2 movement to enter.' },
+    // 0.30: Millbrook's walls, when the heroes defend the town
+    wall: { name: 'Wall', block: true, sight: true, text: 'Millbrook\'s wall. Blocks movement and line of sight: your monsters have to come through the gate or a breach.' }
   };
   function los(b, a, z) {
     const L = hexLine(a, z);
@@ -63,7 +65,7 @@
   // 0.30: the villain starts at level 1 and levels up on Infamy. In the throne room it fights at the level it has
   // reached: the level 20 form scaled down (q = 0 at level 1, 1 at level 20). Its signature powers come one at a time.
   const POWER_LV = [1, 6, 11, 16];
-  const throneScale = L => { const q = clamp((L - 1) / 19, 0, 1); return { q, hp: 0.12 + 0.88 * Math.pow(q, 1.45) }; };
+  const throneScale = L => { const q = clamp((L - 1) / 19, 0, 1); return { q, hp: 0.12 + 0.88 * Math.pow(q, 1.15) }; };   // 0.30: a little stronger in the middle levels, so a villain a level or two ahead can hold
   function bossUnit(L, up, final, type, name) {
     up = up || {};
     const T = BOSS_TYPES[type] || BOSS_TYPES.lich; const F = T.F; const tk = BOSS_TYPES[type] ? type : 'lich';
@@ -74,7 +76,7 @@
     const P = {}; T.powers.forEach((k, i) => { if (L >= (POWER_LV[i] || 1)) P[k] = true; });
     const fDice = [F.dice[0], F.dice[1], Math.round(F.dice[2] * (0.3 + 0.7 * Q.q))];
     const u = { id: 'boss', side: 'dm', type: 'king', btype: tk, icon: T.icon, name: name || T.names[0], one: name || T.names[0], boss: true, count: 1, hp, maxHp: hp, level: L,
-      hit: (final ? F.hit - Math.round((1 - Q.q) * 9) : 5 + Math.floor(L / 2) + (F.hit - 17)) + (up.ritual ? 1 : 0) + (up.hitBonus || 0), ac: final ? F.ac - Math.round((1 - Q.q) * 7) : 14 + Math.floor(L / 3) + (F.ac - 21),
+      hit: (final ? F.hit - Math.round((1 - Q.q) * 7) : 5 + Math.floor(L / 2) + (F.hit - 17)) + (up.ritual ? 1 : 0) + (up.hitBonus || 0), ac: final ? F.ac - Math.round((1 - Q.q) * 6) : 14 + Math.floor(L / 3) + (F.ac - 21),
       dice: final ? fDice : [2, 8, Math.round((2 + L) * F.dice[2] / 18)], extra: [], sv: final ? F.sv - Math.round((1 - Q.q) * 4) : 4 + (F.sv - 8), spd: final ? F.spd : Math.max(5, F.spd - 1),
       attacks: final ? (L < 6 ? 1 : L < 13 ? Math.min(2, F.attacks) : F.attacks) : Math.min(2, F.attacks), ranged: !!F.ranged, shots: F.ranged ? 99 : 0, flyer: !!F.flyer, undead: tk === 'lich' || tk === 'vampire' || tk === 'deathknight', drain: !!F.drain,
       alive: true, down: false, retal: true, defending: false, pos: 0, startCount: 1, turns: 0, final: !!final,
@@ -119,6 +121,23 @@
       put('rock', P[0] + Math.floor(r() * 2)); put('tree', P[1] + Math.floor(r() * 2));
       cluster('brush', P[2] + Math.floor(r() * 3), 2, 12); cluster('bog', P[3] + Math.floor(r() * 2), 3, 11);
       // the two sides must be able to reach each other
+      const seen = new Set([hk(1, 5)]); const q = [hk(1, 5)];
+      while (q.length) { const k = q.pop(); for (const n of hexNeighbors(k)) { if (seen.has(n) || (tiles[n] && TILE_INFO[tiles[n]].block)) continue; seen.add(n); q.push(n); } }
+      if (seen.has(hk(13, 5)) && seen.has(hk(13, 2)) && seen.has(hk(13, 8))) return tiles;
+    }
+    return {};
+  }
+  // 0.30: the field outside Millbrook's gates. Its wall runs down the heroes' side with the gate in the middle;
+  // a battered wall has breaches, more the worse it is. Out front, a little brush and a rock or two.
+  const WALL_COL = 3;
+  function makeSiegeField(r, intact) {
+    for (let attempt = 0; attempt < 25; attempt++) {
+      const tiles = {};
+      for (let row = 0; row < BH; row++) if (row < 4 || row > 6) tiles[hk(WALL_COL, row)] = 'wall';
+      const holes = intact >= 0.99 ? 0 : intact > 0.6 ? 1 : intact > 0.25 ? 2 : 3;
+      for (let i = 0; i < holes; i++) { const row = [1, 8, 2, 9, 0, 10][Math.floor(r() * 6)]; delete tiles[hk(WALL_COL, row)]; }
+      const put = (type, n, cmin, cmax) => { let g = 0; while (n > 0 && g++ < 300) { const k = hk(cmin + Math.floor(r() * (cmax - cmin + 1)), Math.floor(r() * BH)); if (tiles[k]) continue; tiles[k] = type; n--; } };
+      put('brush', 3 + Math.floor(r() * 3), 5, 12); put('rock', 1 + Math.floor(r() * 2), 6, 11);
       const seen = new Set([hk(1, 5)]); const q = [hk(1, 5)];
       while (q.length) { const k = q.pop(); for (const n of hexNeighbors(k)) { if (seen.has(n) || (tiles[n] && TILE_INFO[tiles[n]].block)) continue; seen.add(n); q.push(n); } }
       if (seen.has(hk(13, 5)) && seen.has(hk(13, 2)) && seen.has(hk(13, 8))) return tiles;
@@ -177,14 +196,14 @@
     for (const [t, n, src] of splitStacks(stacks, MAX_GROUPS - k)) { if (k >= DM_POS.length) break; const u = talentMod(s, stackUnit(t, n, 'm' + k)); u.src = src; if (command && u.type === 'knight') { u.hit += 2; u.commanded = true; } if (lvl > 1) veteran(u, lvl); u.pos = DM_POS[k++]; units.push(u); }
     const terrain = opts.finale ? 'waste' : opts.siege ? 'grass' : terrainAt(s, s.party.x, s.party.y);
     const fr = mulberry((s.seed + s.week * 97 + s.day * 13 + s.party.x * 7 + s.party.y + (s.uid || 0) * 31) | 0);
-    const tiles = makeField(fr, terrain);
+    const tiles = opts.siege ? makeSiegeField(fr, s.town ? (s.town.wallHp || 0) / Math.max(1, WALL_HP[townLv(s, 'walls')] || 1) : 1) : makeField(fr, terrain);
     for (const u of units) if (tiles[u.pos] && TILE_INFO[tiles[u.pos]].block) delete tiles[u.pos];
     const party = units.filter(u => u.side === 'party');
     // a party without a cleric stocks up on healing potions in Millbrook instead
     if (!party.some(u => u.cls === 'cleric')) for (const u of party) u.potions = 2;
     const b = {
       tstate: { talents: { r: Object.assign({}, (s.talents && s.talents.r) || {}) } },   // the DM's talents, for monsters that join mid-fight
-      siege: !!opts.siege, towers: opts.siege && s.town ? { arrows: ARROWS[townLv(s, 'watch')] || 0, bolts: BOLTS[townLv(s, 'ballista')] || 0, splash: SPLASH[townLv(s, 'arcane')] || 0, bell: townLv(s, 'bell') > 0 } : null,
+      siege: !!opts.siege, wallLv: opts.siege ? townLv(s, 'walls') : 0, towers: opts.siege && s.town ? { arrows: ARROWS[townLv(s, 'watch')] || 0, bolts: BOLTS[townLv(s, 'ballista')] || 0, splash: SPLASH[townLv(s, 'arcane')] || 0, bell: townLv(s, 'bell') > 0 } : null,
       objId: stackObj ? stackObj.id : null, dungeonId: opts.dungeonId || null, guardLair: opts.guardLair || null, raidNode: opts.raidNode || null, attack: !!opts.attack, sent: opts.attack ? stacks.map(x => [x[0], x[1]]) : null, villain: !!opts.boss, finale: !!opts.finale, stage: opts.stage || 0, terrain, boss: !!opts.boss,
       round: 1, units, tiles, traps: [], freeTraps: opts.dungeonId ? 2 : opts.stage === 1 ? 1 + (hasTech(s, 'forge') ? 2 : 0) : opts.finale ? 1 + (s.villain.up.traps || 0) : 0, boughtTraps: 0,
       hallowed: party.some(u => conscious(u) && u.ab.indexOf('hallowed') >= 0), intervention: party.some(u => u.ab.indexOf('intervention') >= 0), intervened: false,
