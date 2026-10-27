@@ -139,7 +139,7 @@
     route: () => partyShown() ? routeSpec() : null,
     floats: () => S.phase === 'battle' ? ui.floats : ui.floats.filter(f => !f.battle).map(f => { if (!f.id) f.id = Math.random().toString(36).slice(2); return { id: f.id, t0: f.t0, text: f.text, color: f.color, x: f.x / TILE - 0.5, y: f.y / TILE - 0.75 }; }),
     view: () => ui.view, fx: () => ui.fx, bspec: () => ui.bspec,
-    minionPos: m => { const p = minionTile(m); const d = (ui.mspots && ui.mspots.get(m.id)) || { dx: 0, dy: 0 }; return { x: p.x + d.dx, y: p.y + d.dy, moving: minionWalking(m), dance: !!(m.job && m.job.kind === 'dance' && !minionWalking(m)), work: !minionWalking(m) && G.myLairs(S).some(o => o.x === m.x && o.y === m.y && lairShownBuilding(o) > 0) }; },
+    minionPos: m => { const p = minionTile(m); const d = (ui.mspots && ui.mspots.get(m.id)) || { dx: 0, dy: 0 }; return { x: p.x + d.dx, y: p.y + d.dy, moving: minionWalking(m), dance: !!(m.job && m.job.kind === 'dance' && !minionWalking(m)), work: minionWorking(m) }; },
     nodeLook: n => (nodeShownDev(n) ? 'node-' : 'dep-') + n.kind,
     fog: () => fogNow(),
     seeObj: o => o.kind === 'stack' ? canSeeObj(o) : hasSeen(o.x, o.y),
@@ -350,7 +350,7 @@
     // where the selected minions are walking: bright for tonight's leg, dim for later
     const msl = selMinions();
     if (msl.length && !ui.night) {
-      const mp = G.minionType(S).perk === 'fast' ? G.MINION_MP * 2 : G.MINION_MP;
+      const mp = G.minionMpOf(S);
       for (const m of msl) {
         if (!m.path.length) continue; let px = m.x, py = m.y, left = mp;
         c.lineWidth = 3; c.setLineDash([5, 4]);
@@ -374,9 +374,14 @@
       const cx = (p.x + 0.5 + d.dx) * TILE + ox, by = (p.y + 0.5 + d.dy) * TILE + oy;
       if (msel.has(m.id) || ui.hoverMin === m.id) { c.strokeStyle = msel.has(m.id) ? '#ffe39a' : 'rgba(255,227,154,0.55)'; c.lineWidth = 2; c.beginPath(); c.ellipse(cx, by + 1, 13, 6, 0, 0, 7); c.stroke(); }
       if (m.job && m.job.kind === 'dance' && !minionWalking(m)) { const t = now / 1000 + m.x; c.save(); c.translate(cx, by - 9 - Math.abs(Math.sin(t * 9)) * 6); c.rotate(Math.sin(t * 4.5) * 0.35); c.drawImage(A.IMG['unit-m-' + look], -13, -13, 26, 26); c.restore(); kick(); }
-      else if (!minionWalking(m) && G.myLairs(S).some(o => o.x === m.x && o.y === m.y && lairShownBuilding(o) > 0)) {
-        // hammering away at a half-built lair
-        const k = Math.pow(Math.max(0, Math.sin(now / 1000 * 7 + m.x * 1.7)), 6); c.save(); c.translate(cx, by - 9); c.rotate(-0.35 * k); c.drawImage(A.IMG['unit-m-' + look], -13, -13, 26, 26); c.restore(); kick();
+      else if (minionWorking(m)) {
+        // hammering away at a half-built lair or a new mine (0.31: a tool on a swing, a hop, and dust on every blow)
+        const ph = (now / 1000 * 1.6 + m.x * 0.37 + m.y * 0.21) % 1; const up = ph < 0.6 ? ph / 0.6 : 1 - (ph - 0.6) / 0.4; const e = up * up * (3 - 2 * up);
+        const hop = ph > 0.6 && ph < 0.75 ? 3 * Math.sin((ph - 0.6) / 0.15 * Math.PI) : 0;
+        c.save(); c.translate(cx, by - 9 - hop); c.rotate(0.22 * e - 0.28 * (1 - e)); c.drawImage(A.IMG['unit-m-' + look], -13, -13, 26, 26); c.restore();
+        c.save(); c.translate(cx + 6, by - 12); c.rotate(-0.9 + 2.0 * e); c.strokeStyle = '#8a5a30'; c.lineWidth = 2; c.beginPath(); c.moveTo(0, 0); c.lineTo(11, -8); c.stroke(); c.fillStyle = '#9a9aa8'; c.fillRect(8, -12, 7, 4); c.restore();
+        if (ph > 0.92 || ph < 0.08) { c.fillStyle = 'rgba(230,214,184,0.7)'; for (let i = 0; i < 3; i++) { c.beginPath(); c.arc(cx + 10 + i * 4 - 4, by - 2 - i, 2 + i * 0.6, 0, 7); c.fill(); } }
+        kick();
       } else c.drawImage(A.IMG['unit-m-' + look], cx - 13, by - 22, 26, 26); } }); }
     if (G.villainOnMap(S) && canSee(S.villain.x, S.villain.y)) items.push({ y: S.villain.y + 0.01, f: () => drawVillain(c, ox, oy, now) });
     if (partyShown()) items.push({ y: pp.y / TILE - 0.5 + 0.02, f: () => { c.drawImage(A.IMG['obj-party'], pp.x + ox - 28, pp.y + oy - 46, 56, 56); } });
@@ -906,14 +911,14 @@
   // the selected minions' routes as ground arrows: bright for tonight's walk, dim for later
   function minionRoutes(ms) {
     const arrows = [], colors = []; if (ui.night) return { arrows, colors };
-    const mp = G.minionType(S).perk === 'fast' ? G.MINION_MP * 2 : G.MINION_MP;
+    const mp = G.minionMpOf(S);
     for (const m of ms) {
       let px = m.x, py = m.y, left = mp;
       for (const [x, y] of m.path) { left -= G.stepCost(S, px, py, x, y); arrows.push([px, py, Math.atan2(y - py, x - px)]); colors.push(left >= 0 ? '#ecdcff' : '#9a72cc'); px = x; py = y; }
     }
     return { arrows, colors };
   }
-  function minionDays(m) { let c = 0, px = m.x, py = m.y; for (const [a, b] of m.path) { c += G.stepCost(S, px, py, a, b); px = a; py = b; } const mp = G.minionType(S).perk === 'fast' ? G.MINION_MP * 2 : G.MINION_MP; return Math.max(1, Math.ceil(c / mp - 0.001)); }
+  function minionDays(m) { let c = 0, px = m.x, py = m.y; for (const [a, b] of m.path) { c += G.stepCost(S, px, py, a, b); px = a; py = b; } const mp = G.minionMpOf(S); return Math.max(1, Math.ceil(c / mp - 0.001)); }
   function minionJob(m) {
     const away = m.path.length ? `, ${minionDays(m)} day${minionDays(m) > 1 ? 's' : ''} away` : '';
     if (!m.job) return m.path.length ? `Heading back to the tower${away}.` : 'Idle, waiting for orders.';
@@ -1448,9 +1453,12 @@
   // a screen's header: the purse that screen spends from
   const purseHtml = w => `<span class="scpurse ${w}">${img(w === 'town' ? 'obj-town' : siteIcon({ id: 'tower' }), 'pic')}<span class="pn">${w === 'town' ? 'Millbrook' : 'Tower'}</span>${G.RES_KEYS.map(k => `<b class="pc ${k}" title="${w === 'town' ? 'Millbrook' : 'Tower'} ${RES_LABEL[k]}">${img(RES_ICON[k], 'ric')}${Math.floor(purseRes(w)[k] || 0)}</b>`).join('')}</span>`;
   const RES_ICON = { gold: 'obj-res-gold', lumber: 'obj-res-lumber', ore: 'obj-res-ore', lore: 'obj-lore' };
-  const daysAway = (m, x, y) => { const path = G.minionPath(S, m, x, y); if (!path) return null; let c = 0, px = m.x, py = m.y; for (const [a, b] of path) { c += G.stepCost(S, px, py, a, b); px = a; py = b; } const mp = G.minionType(S).perk === 'fast' ? G.MINION_MP * 2 : G.MINION_MP; return Math.max(0, Math.ceil(c / mp - 0.001)); };
+  const daysAway = (m, x, y) => { const path = G.minionPath(S, m, x, y); if (!path) return null; let c = 0, px = m.x, py = m.y; for (const [a, b] of path) { c += G.stepCost(S, px, py, a, b); px = a; py = b; } const mp = G.minionMpOf(S); return Math.max(0, Math.ceil(c / mp - 0.001)); };
   const MT = () => G.minionType(S);
   const minionIcon = () => 'unit-m-' + MT().look;
+  // 0.31: hammering at a lair going up, or sinking a mine at the deposit it stands on
+  const minionWorking = m => !minionWalking(m) && (G.myLairs(S).some(o => o.x === m.x && o.y === m.y && lairShownBuilding(o) > 0)
+    || !!(m.job && m.job.kind === 'work' && (S.nodes || []).some(n => n.id === m.job.node && n.x === m.x && n.y === m.y && !n.dev)));
   // the sidebar card for whatever you clicked on the map
   function selPanel() {
     const sel = ui.sel; if (!sel || !S || S.phase !== 'map') return '';
@@ -1549,7 +1557,7 @@
     if (sel.type === 'site') {
       const site = G.siteOf(S, sel.id);
       const qable = (site.kind === 'landmark' && !S.visited[site.id]) || site.kind === 'tower';
-      return `<section class="panel sel">${img(siteIcon(site), 'selimg')}<div>${close}<h2 class="cap">${esc(site.name)}</h2><p class="hint">${esc(site.text)}</p>${site.kind === 'town' ? '<div class="row"><button class="btn sm" data-act="town">Spy on Millbrook</button></div>' : site.kind === 'tower' ? '<div class="row"><button class="btn sm" data-act="tower">Open the tower</button></div>' : ''}${qable ? bountyRow({ kind: 'site', id: site.id }) : ''}</div></section>`;
+      return `<section class="panel sel">${img(siteIcon(site), 'selimg')}<div>${close}<h2 class="cap">${esc(site.name)}</h2><p class="hint">${esc(site.text)}</p>${site.kind === 'town' && S.town ? `<p class="hint">${esc(G.wallName(S))} ${Math.round(S.town.wallHp)}/${G.WALL_HP[G.townLv(S, 'walls')] || 0} · hall ${Math.round(S.town.hall)}/${G.hallMax(S)}. Burn the hall to the ground and the realm is yours.</p>` : site.kind === 'tower' ? '<div class="row"><button class="btn sm" data-act="tower">Open the tower</button></div>' : ''}${qable ? bountyRow({ kind: 'site', id: site.id }) : ''}</div></section>`;
     }
     return '';
   }
@@ -1592,7 +1600,7 @@
     const T = S.town; const wm = G.WALL_HP[G.townLv(S, 'walls')] || 0; const hm = G.hallMax(S); const nq = S.quests.filter(q => q.status === 'open').length;
     const gates = S.objects.filter(o => o.wave && o.atGates).length;
     const doing = T.build ? `building ${T.build.k === 'walls' ? G.TOWN_B.walls.names[G.townLv(S, 'walls')].toLowerCase() : G.TOWN_B[T.build.k].name.toLowerCase()}` : 'saving up';
-    return `<button class="towerbtn townbtn" data-act="town" title="Spy on Millbrook: its defences, its buildings and the bounties on your lairs">${img('obj-town', 'cicon')}<span><b>Millbrook</b><small>${esc(G.wallName(S))} ${Math.round(T.wallHp)}/${wm} · hall ${Math.round(T.hall)}/${hm} · ${esc(doing)}${nq ? ` · ${nq} bount${nq > 1 ? 'ies' : 'y'} on you` : ''}</small>${hpBar(T.hall, hm, 'hall')}</span>${gates ? `<i class="badge" title="${gates} wave${gates > 1 ? 's' : ''} at the gates">${gates}</i>` : ''}</button>`;
+    return `<div class="towerbtn townbtn static" title="Millbrook: its walls, and the hall your waves have to burn down to win">${img('obj-town', 'cicon')}<span><b>Millbrook</b><small>${esc(G.wallName(S))} ${Math.round(T.wallHp)}/${wm} · hall ${Math.round(T.hall)}/${hm} · ${esc(doing)}${nq ? ` · ${nq} bount${nq > 1 ? 'ies' : 'y'} on you` : ''}</small>${hpBar(T.hall, hm, 'hall')}</span>${gates ? `<i class="badge" title="${gates} wave${gates > 1 ? 's' : ''} at the gates">${gates}</i>` : ''}</div>`;
   }
   // the villain's level and the Infamy to the next one
   function villainXpHtml() {
@@ -1714,24 +1722,68 @@
     return `<button class="tnode ${I.st}${T.lair ? ' lair' : ''}" data-act="talent" data-k="${k}"${I.st === 'avail' ? '' : ' aria-disabled="true"'} title="${esc(tTip(k))}">
       ${img(talentIcon(k), 'tni')}<span class="tnt"><b>${esc(G.talentName(k))}</b><small>${T.lair ? 'New lair' : T.power ? 'Dark power' : esc(I.max > 1 ? `${I.have} / ${I.max}` : I.have ? 'Learned' : '1 rank')}</small></span>${pips}</button>`;
   }
-  function tTree(id) {
-    const TR = G.TREES[id]; const spent = G.spentIn(S, id); const ks = G.talentsIn(id); const own = !!TR.villain;
-    const rows = G.TIER_NEED.map((need, t) => {
-      const here = ks.filter(k => G.TALENTS[k].tier === t); if (!here.length) return '';
-      const open = spent >= need;
-      return `<div class="trow${open ? '' : ' shut'}"><span class="tneed" title="${open ? 'Open' : `Spend ${need - spent} more point${need - spent > 1 ? 's' : ''} in this tree to open this row`}">${need ? (open ? need : `${G.roman(t + 1)} · ${need}`) : '·'}</span><div class="tnodes">${here.map(tNode).join('')}</div></div>`;
+  /* --- the talent web (0.31): every talent a node around your villain's sigil; take one next to one you have --- */
+  const REG_NAME = r => r === 4 ? (G.TREES['v-' + S.villain.type] || {}).name || 'Your own path' : G.TREES[G.T_REGIONS[r].id].name;
+  const REG_BLURB = r => r === 4 ? (G.TREES['v-' + S.villain.type] || {}).blurb || '' : G.TREES[G.T_REGIONS[r].id].blurb;
+  const octa = (r, k) => { const pts = []; for (let i = 0; i < 8; i++) { const a = (i * 45 + 22.5) * Math.PI / 180; pts.push((r * Math.cos(a)).toFixed(1) + ',' + (r * Math.sin(a)).toFixed(1)); } return `<polygon class="${k}" points="${pts.join(' ')}"/>`; };
+  function webState() {
+    const W = G.webOf(S); const own = new Set(G.ownedNodes(S)); const free = G.talentFree(S);
+    const st = id => own.has(id) ? 'own' : G.nodeOpen(S, id) ? (free > 0 ? 'open' : 'near') : 'lock';
+    const sel = ui.tsel && W.nodes[ui.tsel] ? ui.tsel : null;
+    const path = sel && !own.has(sel) ? (G.talentPath(S, sel) || []) : [];
+    return { W, own, free, st, sel, path: new Set(path), pathList: path };
+  }
+  function webSvg(X) {
+    const { W, own, st, sel, path } = X; const R = 540;
+    const wedge = i => { const a0 = (-120 + i * 60) * Math.PI / 180, a1 = (-60 + i * 60) * Math.PI / 180; return `M0 0 L${(R * Math.cos(a0)).toFixed(1)} ${(R * Math.sin(a0)).toFixed(1)} A${R} ${R} 0 0 1 ${(R * Math.cos(a1)).toFixed(1)} ${(R * Math.sin(a1)).toFixed(1)}Z`; };
+    const defs = G.T_REGIONS.map((g, i) => `<radialGradient id="twg${i}" cx="0" cy="0" r="${R}" gradientUnits="userSpaceOnUse"><stop offset="0.1" stop-color="${g.color}" stop-opacity="0"/><stop offset="0.75" stop-color="${g.color}" stop-opacity=".16"/><stop offset="1" stop-color="${g.color}" stop-opacity=".02"/></radialGradient>`).join('');
+    const seps = G.T_REGIONS.map((g, i) => { const a = (-120 + i * 60) * Math.PI / 180; return `<line class="tsep" x1="${(62 * Math.cos(a)).toFixed(1)}" y1="${(62 * Math.sin(a)).toFixed(1)}" x2="${(R * Math.cos(a)).toFixed(1)}" y2="${(R * Math.sin(a)).toFixed(1)}"/>`; }).join('');
+    const labels = G.T_REGIONS.map((g, i) => { const a = (-90 + i * 60) * Math.PI / 180, r = 538; return `<text class="treg" x="${(r * Math.cos(a)).toFixed(1)}" y="${(r * Math.sin(a) + 8).toFixed(1)}" fill="${g.color}">${esc(REG_NAME(i))}</text>`; }).join('');
+    const links = W.links.map(([a, b]) => {
+      const A = W.nodes[a], B = W.nodes[b]; const oa = own.has(a), ob = own.has(b);
+      const cls = oa && ob ? 'on' : (path.has(a) || oa) && (path.has(b) || ob) && (path.has(a) || path.has(b)) ? 'path' : oa || ob ? 'near' : 'off';
+      return `<line class="tl ${cls}" x1="${A.x}" y1="${A.y}" x2="${B.x}" y2="${B.y}"/>`;
     }).join('');
-    return `<section class="ttree${own ? ' own' : ''}"><header><h3>${esc(TR.name)}</h3><b class="tspent" title="Points spent in this tree">${spent}</b></header><p class="hint">${esc(TR.blurb)}${own ? ` Only ${esc(VT().label === 'Lich' ? 'the Lich' : 'the ' + VT().label)} has it.` : ''}</p>${rows}</section>`;
+    const hubLinks = W.list.filter(n => n.start).map(n => `<line class="tl ${own.has(n.id) ? 'on' : path.has(n.id) ? 'path' : 'hub'}" x1="0" y1="0" x2="${n.x}" y2="${n.y}"/>`).join('');
+    const nodes = W.list.map(n => {
+      const c = G.T_REGIONS[n.reg].color; const s0 = st(n.id); const T = G.TALENTS[n.t];
+      const r = n.kind === 'k' ? 27 : n.kind === 'n' ? 19 : 12;
+      const shape = n.kind === 'm' ? `<circle class="tsh" r="${r}"/><circle class="tdot" r="4.5"/>` : (n.kind === 'k' ? octa(r + 6, 'tring') : '') + octa(r, 'tsh') + `<image href="${A.URI[talentIcon(n.t)] || ''}" x="${-r * 0.72}" y="${-r * 0.72}" width="${r * 1.44}" height="${r * 1.44}" class="tico"/>`;
+      const rk = n.of > 1 ? ' ' + G.roman(n.rank) : '';
+      return `<g class="tn k-${n.kind} s-${s0}${n.id === sel ? ' sel' : ''}${path.has(n.id) ? ' path' : ''}" style="--c:${c}" transform="translate(${n.x} ${n.y})" data-act="tnode" data-id="${n.id}" role="button" tabindex="0" aria-label="${esc(G.talentName(n.t) + rk)}"><title>${esc(G.talentName(n.t) + rk)}${T.lair ? ' (new lair)' : T.power ? ' (dark power)' : T.keystone ? ' (keystone)' : ''}</title>${shape}</g>`;
+    }).join('');
+    const hub = `<g class="thub"><circle r="54" class="thring"/><clipPath id="thclip"><circle r="46"/></clipPath><image href="${A.URI[vIcon()] || ''}" x="-46" y="-46" width="92" height="92" clip-path="url(#thclip)"/></g>`;
+    return `<svg class="twsvg" viewBox="-560 -560 1120 1120" role="img" aria-label="Talent web"><defs>${defs}<filter id="twglow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+      ${G.T_REGIONS.map((g, i) => `<path class="twedge" d="${wedge(i)}" fill="url(#twg${i})"/>`).join('')}${seps}${labels}<g class="tls">${hubLinks}${links}</g>${hub}<g class="tns">${nodes}</g></svg>`;
+  }
+  function webSide(X) {
+    const { W, own, free, sel, pathList } = X;
+    if (!sel) return `<h3>The talent web</h3><p class="hint">Start at any of the six talents around ${esc(VN())}'s sigil. Each new talent has to join one you already have, so the way you go decides what you can reach. A campaign earns about two dozen points; the web holds ${W.list.length} talents.</p>
+      <ul class="tlegend"><li><i class="lg m"></i>Small talents, often a rank of a bigger one</li><li><i class="lg n"></i>Notable: a new lair, a dark power or a big effect</li><li><i class="lg k"></i>Keystone: build-defining, sometimes with a cost</li><li><i class="lg own"></i>Learned</li><li><i class="lg open"></i>Can be learned now</li></ul>
+      <p class="hint">Pick a talent to see what it does and the way to it.</p>${G.T_REGIONS.map((g, i) => `<p class="treglist"><b style="color:${g.color}">${esc(REG_NAME(i))}.</b> <span class="hint">${esc(REG_BLURB(i))}</span></p>`).join('')}`;
+    const n = W.nodes[sel]; const T = G.TALENTS[n.t]; const c = G.T_REGIONS[n.reg].color;
+    const kindL = T.lair ? 'New lair' : T.power ? 'Dark power' : n.kind === 'k' ? 'Keystone' : n.kind === 'n' ? 'Notable' : 'Talent';
+    let extra = '';
+    if (T.lair) { const D = G.DUNGEONS[n.t]; extra = `<p class="hint">About ${D.rate} ${esc(G.CREATURES[D.unit].name.toLowerCase())} a night. To build: ${esc(G.priceText(G.buildPrice(n.t)))}, ${G.lairDays(S, n.t)} days of work.</p>`; }
+    const rank = n.of > 1 ? `<p class="hint">Rank ${n.rank} of ${n.of}: each ${esc(G.talentName(n.t))} node adds one. You have ${G.tRank(S, n.t)}.</p>` : '';
+    let act;
+    if (own.has(sel)) act = '<p class="good">Learned.</p>';
+    else if (!pathList.length) act = '<p class="hint warn">Out of reach.</p>';
+    else if (pathList.length === 1) act = free ? `<button class="btn big" data-act="tlearn" data-id="${sel}">Learn · 1 point</button>` : '<p class="hint">Next to a talent you have. You need a talent point: your villain earns one every level.</p>';
+    else act = `<p class="hint">${pathList.length - 1} talent${pathList.length > 2 ? 's' : ''} on the way: ${pathList.slice(0, -1).map(id => esc(G.talentName(W.nodes[id].t))).join(', ')}.</p>` + (free >= pathList.length ? `<button class="btn big" data-act="tpath" data-id="${sel}">Learn the way · ${pathList.length} points</button>` : `<p class="hint">That takes ${pathList.length} points; you have ${free}.</p>`);
+    return `<p class="tkind" style="color:${c}">${esc(REG_NAME(n.reg))} · ${kindL}</p><h3>${esc(G.talentName(n.t))}${n.of > 1 ? ' ' + G.roman(n.rank) : ''}</h3>
+      <div class="tsel-row">${img(talentIcon(n.t), 'tsel-ico')}<p>${esc(G.talentText(n.t))}</p></div>${extra}${rank}<div class="tact">${act}</div><button class="lnk" data-act="tnode" data-id="">Back to the legend</button>`;
   }
   function towerTalents() {
-    const tf = G.talentFree(S), earned = G.talentEarned(S), spent = G.talentSpent(S); const T = S.talents || {};
+    const tf = G.talentFree(S), earned = G.talentEarned(S); const T = S.talents || {};
     const lv = Math.max(0, G.villainLevel(S) - 1); const lib = G.libraryLevel(S);
     const rerr = G.resetCheck(S); const L = G.villainLevel(S), lo = G.VXP[L] || 0, hi = G.villainNext(S), xp = S.villain.xp || 0;
-    const head = `<section class="tcard thead"><div class="tpts${tf ? ' has' : ''}"><b>${tf}</b><span>talent point${tf === 1 ? '' : 's'}<br>to spend</span></div>
-      <div class="tsrc"><p class="hint">${earned} earned: 1 to start, ${lv} from ${esc(VN())}'s levels${lib ? `, ${lib} from the Library` : ''}${G.talentFx(S).points ? `, ${G.talentFx(S).points} from your own talents` : ''}. A row opens once enough points are spent in its tree.</p>
-        <div class="tinf" title="Hurting and killing heroes, breaking into Millbrook, plunder and every lair you keep standing earn Infamy. Every level is another talent point."><span>Infamy</span>${pbar(hi ? (xp - lo) / (hi - lo) : 1, 'summon')}<small>${hi ? `${Math.floor(xp)} / ${hi} to level ${L + 1}` : `level ${L}, the highest`}</small></div></div>
-      <div class="treset"><button class="btn sm" data-act="treset"${rerr ? ' disabled' : ''} title="${esc(rerr || 'Get every point back to spend again. Lairs already built keep working.')}">Unlearn all</button><small>free once a week</small></div></section>`;
-    return head + `<div class="ttrees">${G.talentTrees(S).map(tTree).join('')}</div>`;
+    const head = `<div class="twhead"><div class="tpts${tf ? ' has' : ''}"><b>${tf}</b><span>talent point${tf === 1 ? '' : 's'}<br>to spend</span></div>
+        <div class="treset"><button class="btn sm" data-act="treset"${rerr ? ' disabled' : ''} title="${esc(rerr || 'Get every point back to spend again. Lairs already built keep working.')}">Unlearn all</button><small>free once a week</small></div></div>
+      <p class="hint tearn">${earned} earned: 1 to start, ${lv} from ${esc(VN())}'s levels${lib ? `, ${lib} from the Library` : ''}${G.talentFx(S).points ? `, ${G.talentFx(S).points} from your own talents` : ''}.${T.redrawn ? ' <b>The talents are a web now: every point you had is back to spend.</b>' : ''}</p>
+      <div class="tinf" title="Hurting and killing heroes, breaking into Millbrook, beating the monsters of the wilds and every lair you keep standing earn Infamy. Every level is another talent point."><span>Infamy</span>${pbar(hi ? (xp - lo) / (hi - lo) : 1, 'summon')}<small>${hi ? `${Math.floor(xp)} / ${hi} to level ${L + 1}` : `level ${L}, the highest`}</small></div><hr class="tsplit">`;
+    const X = webState();
+    return `<div class="tweb"><div class="twmap">${webSvg(X)}</div><aside class="tside">${head}${webSide(X)}</aside></div>`;
   }
   function towerLairs() {
     const rows = G.myLairs(S).map(o => {
@@ -2267,10 +2319,10 @@
       <p>You are ${esc(VF())}, a ${esc(VT().label.toLowerCase())} newly risen in the Dark Tower, and still weak: level 1. Your minions dig, build lairs and breed monsters, and your lairs send them down the roads to burn Millbrook, the heroes' town. The game runs Millbrook and its four heroes. They will grow stronger, and one day they will march on your tower.</p>
       <ol class="rules">
         <li><b>Your eyes are your minions.</b> You start with two ${esc(mt.name.toLowerCase())} at the tower. The map stays dark where none of them have been; you see what your tower, your lairs, your bands, your minions and your villain see. <b>The heroes walk in the fog:</b> you only see them where one of yours can. You know roughly where Millbrook lies (the gold ring) until one of yours sees it.</li>
-        <li><b>Gather.</b> Click a minion to select it (Shift-click for more, <b>I</b> for the next idle one) and pick <b>Move</b>, <b>Build</b> or <b>Dance</b>. Right-click a gold deposit, timber stand or ore deposit to put it to work: it spends a night opening a mine or camp, then digs <b class="gold">gold</b>, cuts <b>lumber</b> or hauls <b>ore</b> every night. One minion per site.</li>
+        <li><b>Gather.</b> Click a minion to select it (Shift-click for more, <b>I</b> for the next idle one) and pick <b>Move</b>, <b>Build</b> or <b>Dance</b>. Right-click a gold deposit, timber stand or ore deposit: your minion walks there and spends a day sinking a mine or clearing a camp. From then on it's yours and digs <b class="gold">gold</b>, cuts <b>lumber</b> or hauls <b>ore</b> every night on its own, and the minion is free for the next job. You start with two minions; the talent A Third Servant (in Dominion) lets you keep a third. The heroes wreck mines they reach: they yield nothing for three days.</li>
         <li><b>Build lairs.</b> Pick <b>Build</b>, choose a lair and click explored ground the heroes can't see. Each lair breeds one kind of monster every night. <b>When it's full, a wave marches down the road to Millbrook on its own.</b> A lair near the town strikes often; one far away is harder for the heroes to find.</li>
         <li><b>The siege.</b> A wave at the gates fights Millbrook's archers, ballista, arcane tower and temple bell, and batters its walls. Once it's through, or if it flies over, it sacks the town: it damages the hall, plunders gold and burns buildings. If the heroes are home, they man the walls and fight it themselves, with the towers firing. Millbrook builds its own defences against whatever keeps hurting it, so mix up what you send.</li>
-        <li><b>Infamy.</b> Hurting and killing heroes, breaking into Millbrook, plunder and every lair you keep standing earn Infamy. Infamy levels up your villain: stronger on the throne, a new power at levels 6, 11 and 16, and a talent point every level. Spend talents at the Dark Tower in four trees: The Brood (new lairs and fiercer monsters), Dominion (servants, mines and gold), Dread (your villain and the showdown), and ${esc(VN())}'s own path, with a monster only ${esc(VP().he)} can raise.</li>
+        <li><b>Infamy.</b> Hurting and killing heroes, breaking into Millbrook, plunder and every lair you keep standing earn Infamy. Infamy levels up your villain: stronger on the throne, a new power at levels 6, 11 and 16, and a talent point every level. Spend talents at the Dark Tower on the talent web: six regions around your sigil (The Brood, Dominion, Siegecraft, Dread, ${esc(VN())}'s own path with a monster only ${esc(VP().he)} can raise, and the Wilds for recruiting). Each talent you take has to join one you already have, so every campaign walks its own path.</li>
         <li><b>Your villain walks the map.</b> Click ${esc(VN())} in the sidebar, then right-click a band of the wilds to go and win it over: <b>pay</b> it, <b>talk</b> (Intimidate, Persuade or Deceive, a d20 each), or <b>fight</b> it alone. Every wild band shows its level next to ${esc(VP().his)}: a band four levels above ${esc(VP().him)} only fights. Bands that join you march on Millbrook; your banner holds 1 band plus 1 for every ${G.CMD_PER} levels at a time. Beaten, a band may kneel (or buy its life, if your banner is full) and march once it has healed; one that fights to the last leaves its hoard. Lose, and ${esc(VN())} limps home to recover.</li>
         <li><b>The heroes.</b> You never control them. They hunt the monsters they think they can beat, intercept your waves, storm your lairs and raid your mines. Millbrook puts bounties on the lairs that hurt it most. Click any band you can see to <b>Patrol</b>, <b>Level up</b> or send it <b>Away</b>; the card tells you how it would fare against the heroes, and a wave's card how it would fare against the town.</li>
         <li><b>Watch, or take command.</b> Battles play out on their own. Press <b>Take command</b> to play your monsters: every unit gets a <b>Move</b>, an <b>Attack</b> and a <b>Bonus</b> action each turn. <b>Skip</b> jumps to the end of a fight.</li>
@@ -3031,13 +3083,20 @@
         case 'tower': ui.towerTab = d.k || 'view'; openScreen('tower'); return;
         case 'vtalents': closeModal(); ui.towerTab = 'talents'; openScreen('tower'); return;
         case 'ttab': sfx('tab'); ui.towerTab = d.k; renderScreen(true); return;
-        case 'town': if (!S.town) return; ui.townTab = d.k || 'view'; openScreen('town'); return;
+        case 'town': return;   // 0.31: no more spying on Millbrook's streets; its walls and hall are on the sidebar
         case 'tvclose': ui.tvSel = null; updateViewCard(); return;
         case 'ztab': sfx('tab'); ui.townTab = d.k; renderScreen(true); return;
         case 'townbuild': { const err = G.townBuild(S, d.k); if (err) { sfx('deny'); toast(err, 'bad'); return; } sfx('build'); const B = S.town.build; toast(`Millbrook starts on the ${G.TOWN_B[B.k].name}: ${B.days} days.`, 'good'); commit(); return; }
         case 'towncancel': { const err = G.townCancel(S); if (err) { toast(err, 'bad'); return; } sfx('coins'); toast('Building stopped. The materials are back in the town\'s purse.', 'sys'); commit(); return; }
         case 'quest': { const ref = refFrom(d); if (!ref) return; const err = G.postQuest(S, ref, +d.r); if (err) { sfx('deny'); toast(err, 'bad'); return; } sfx('coins'); toast(S.log[S.log.length - 1].t, 'good'); ui.est = null; commit(); return; }
         case 'qshow': showRef(refFrom(d)); return;
+        case 'tnode': { ui.tsel = d.id || null; if (S.talents && S.talents.redrawn && d.id) S.talents.redrawn = false; sfx('tab'); renderScreen(); return; }
+        case 'tlearn': case 'tpath': {
+          const n = G.webOf(S).nodes[d.id]; if (!n) return;
+          const err = act === 'tpath' ? G.learnPath(S, d.id) : G.learnTalent(S, d.id); if (err) { sfx('deny'); toast(err, 'bad'); return; }
+          sfx('researched'); toast(`Talent: ${tLabel(n.t, G.tRank(S, n.t))}.`, 'good');
+          ui.finaleEst = null; ui.est = null; ui.tFree = G.talentFree(S); commit(); return;
+        }
         case 'talent': {
           const err = G.learnTalent(S, d.k); if (err) { sfx('deny'); toast(err, 'bad'); return; }
           sfx('researched'); const T = G.TALENTS[d.k]; const r = G.tRank(S, d.k);

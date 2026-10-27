@@ -972,6 +972,13 @@ const World3D = (() => {
   function sparkTex() {
     return FXT.spark || (FXT.spark = pxCanvas(8, 8, px => { px(1, 1, '#ffffff66', 5, 5); px(3, 0, '#fff', 1, 7); px(0, 3, '#fff', 7, 1); }));
   }
+  // 0.31: a minion's tool, a little pickaxe-hammer swung while it works
+  function toolTex() {
+    return FXT.tool || (FXT.tool = pxCanvas(16, 16, px => {
+      for (let i = 0; i < 11; i++) { px(2 + i, 13 - i, '#8a5a30', 2, 2); px(3 + i, 13 - i, '#b07a40', 1, 1); }   // the handle, corner to corner
+      px(9, 1, '#5a5a66', 7, 3); px(10, 1, '#9a9aa8', 5, 1); px(12, 4, '#5a5a66', 3, 3); px(15, 0, '#c8c8d4', 1, 2);   // the head
+    }));
+  }
   const fxHash = (a, b) => { const v = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return v - Math.floor(v); };
   // a handful of sprites that live and die on their own clock: no bookkeeping, nothing to clean up
   function workFx(nPuff, nSpark, sparkCol) {
@@ -1188,16 +1195,34 @@ const World3D = (() => {
     const look = G3.MINION_TYPES[S.villain && S.villain.type] ? G3.MINION_TYPES[S.villain.type].look : 'thrall'; const seenM = new Set();
     for (const m of S.minions || []) {
       seenM.add(m.id); let E = MAP.mins.get(m.id);
-      if (!E || E.look !== look) { if (E) MAP.scene.remove(E.grp); const grp = new T.Group(); const f = figure('unit-m-' + look, { lightScale: 0.6 }); grp.add(f); grp.userData.fig = f; MAP.scene.add(grp); E = { grp, look, rot: 0, last: null }; MAP.mins.set(m.id, E); }
+      if (!E || E.look !== look) {
+        if (E) { MAP.scene.remove(E.grp); MAP.scene.remove(E.kit); }
+        const grp = new T.Group(); const f = figure('unit-m-' + look, { lightScale: 0.6 }); grp.add(f); grp.userData.fig = f; MAP.scene.add(grp);
+        // 0.31: what it works with: a tool to swing, and the dust and sparks it raises (kept upright, outside the turning figure)
+        const kit = new T.Group(); const tool = new T.Sprite(new T.SpriteMaterial({ map: toolTex().tex, transparent: true, depthWrite: false, toneMapped: false }));
+        tool.center.set(0.18, 0.12); tool.scale.set(0.2, 0.2, 1); tool.renderOrder = 0.6; kit.add(tool); const fx = workFx(3, 4); kit.add(fx); kit.userData = { tool, fx }; MAP.scene.add(kit);
+        E = { grp, look, rot: 0, last: null, kit }; MAP.mins.set(m.id, E);
+      }
       const p = hooks.minionPos ? hooks.minionPos(m) : { x: m.x, y: m.y }; const wx = p.x + 0.5, wz = p.y + 0.5;
       if (E.last && (Math.abs(E.last.x - wx) + Math.abs(E.last.z - wz)) > 0.001) E.rot = Math.atan2(wx - E.last.x, wz - E.last.z);
       E.last = { x: wx, z: wz }; E.grp.position.set(wx, hAt(wx, wz), wz); E.grp.rotation.y = E.rot;
       E.grp.userData.fig.position.y = p.moving ? Math.abs(Math.sin(t * 12 + m.x)) * 0.04 : p.dance ? Math.abs(Math.sin(t * 9 + m.x)) * 0.09 : 0;
       if (p.dance) { E.grp.rotation.y = t * 5 + m.x; E.grp.userData.fig.rotation.z = Math.sin(t * 4.5) * 0.25; }
-      else if (p.work) { const k = Math.pow(Math.max(0, Math.sin(t * 7 + m.x * 1.7)), 6); E.grp.userData.fig.rotation.z = -0.3 * k; E.grp.userData.fig.position.y = 0.035 * (1 - k) * Math.max(0, Math.sin(t * 7 + m.x * 1.7 - 1.2)); }
-      else E.grp.userData.fig.rotation.z = 0;
+      else if (p.work) {
+        // 0.31: a proper swing: lean back with the tool raised, then bring it down hard, a hop, dust and sparks on every blow
+        const ph = (t * 1.6 + m.x * 0.37 + m.y * 0.21) % 1; const up = ph < 0.6 ? ph / 0.6 : 1 - (ph - 0.6) / 0.4;   // 0: struck, 1: raised
+        const ease = up * up * (3 - 2 * up);
+        E.grp.userData.fig.rotation.z = 0.22 * ease - 0.28 * (1 - ease);
+        E.grp.userData.fig.position.y = ph > 0.6 && ph < 0.75 ? 0.05 * Math.sin((ph - 0.6) / 0.15 * Math.PI) : 0;
+        E.grp.userData.fig.scale.y = 1 - 0.08 * Math.max(0, 1 - Math.abs(ph - 0.98) / 0.06);
+      }
+      else { E.grp.userData.fig.rotation.z = 0; E.grp.userData.fig.scale.y = 1; }
+      { const K = E.kit.userData; const work = !!p.work && E.grp.visible !== false; K.tool.visible = work; E.kit.position.set(wx, hAt(wx, wz), wz);
+        if (work) { const ph = (t * 1.6 + m.x * 0.37 + m.y * 0.21) % 1; const up = ph < 0.6 ? ph / 0.6 : 1 - (ph - 0.6) / 0.4; const ease = up * up * (3 - 2 * up);
+          K.tool.position.set(0.1, 0.2 + 0.06 * ease, 0.05); K.tool.material.rotation = -0.9 + 2.0 * ease; }
+        runFx(K.fx, t * 1.6 + m.x, work ? 1 : 0, 0.03, 0.5, 0.8); }
     }
-    for (const [id, E] of MAP.mins) if (!seenM.has(id)) { MAP.scene.remove(E.grp); MAP.mins.delete(id); }
+    for (const [id, E] of MAP.mins) if (!seenM.has(id)) { MAP.scene.remove(E.grp); if (E.kit) MAP.scene.remove(E.kit); MAP.mins.delete(id); }
     // rings under the minions you've selected (and a faint one under the one you point at)
     if (!MAP.mrings) MAP.mrings = [];
     const want = (spec.minSel || []).filter(id => MAP.mins.has(id)).map(id => [id, false]);

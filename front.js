@@ -658,11 +658,11 @@ const Front = (() => {
       <ol class="rules">
         <li><b>Pick a villain.</b> A lich, a dragon, a demon prince, an archmage, a vampire lord or a death knight, each with its own minions, its own monster and its own talents.</li>
         <li><b>Pick the four heroes</b> who will stand against you. They choose where to go; you never control them.</li>
-        <li><b>Gather, explore and build.</b> Your minions are your eyes: the map is dark where none have been. Right-click a gold, timber or ore deposit to put one to work. Its menu has Move, Build and Dance.</li>
+        <li><b>Gather, explore and build.</b> Your minions are your eyes: the map is dark where none have been. Send them to a gold, timber or ore deposit and they sink a mine that works on its own, then go on to build your lairs. You start with two; a talent lets you keep a third.</li>
         <li><b>Lairs send waves.</b> When a lair is full, a wave marches on Millbrook by itself. At the gates it fights the town's towers and walls; once through, it sacks the town, plunders its gold and burns its buildings. Millbrook builds new defences against whatever hurts it.</li>
         <li><b>Recruit the wilds.</b> Send your villain out to the monster bands of the wilds. Pay them, talk them round (Intimidate, Persuade, Deceive) or beat them in a fight, and they march on Millbrook for you. Each band shows its level: four levels above your villain, it only fights. Your banner holds one band at first, and one more every five levels.</li>
         <li><b>Hunt in the fog.</b> The heroes are only seen where something of yours can see them, and Millbrook's place is only rumoured until you find it.</li>
-        <li><b>Grow in Infamy.</b> Hurting heroes, killing them, breaking into Millbrook and keeping your lairs standing all earn Infamy. Your villain levels up on it: stronger on the throne, new powers, and a talent point every level.</li>
+        <li><b>Grow in Infamy.</b> Hurting heroes, killing them, breaking into Millbrook and keeping your lairs standing all earn Infamy. Your villain levels up on it: stronger on the throne, new powers, and a talent point every level, spent on a web of talents where every campaign takes its own path.</li>
         <li><b>Win or fall.</b> Burn Millbrook's hall, or wipe out its heroes once its tavern is gone, and the realm is yours. If the heroes beat you on your throne, your reign is over. From level ${G.MARCH_LV} they size up the showdown, and they march when they think they'd win, so stay ahead of them.</li>
       </ol>
       <p class="hint">While Millbrook's tavern stands, a wiped-out party is followed by a new, greener one. The sooner you win, the higher your score.</p>

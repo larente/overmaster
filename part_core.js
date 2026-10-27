@@ -342,14 +342,14 @@
   const STARTING_MINIONS = 2;
   // each villain sends out its own kind of servant to gather and build
   const MINION_TYPES = {
-    lich: { name: 'Bone Thralls', one: 'Bone Thrall', look: 'thrall', perk: 'ore', text: 'Skeletons that never tire. Each digs 1 extra ore a day at an ore vein.' },
-    dragon: { name: 'Kobolds', one: 'Kobold', look: 'kobold', perk: 'gold', text: 'Scaly little hoarders. Each digs 1 extra gold a day at a gold mine.' },
+    lich: { name: 'Bone Thralls', one: 'Bone Thrall', look: 'thrall', perk: 'ore', text: 'Skeletons that never tire. Every ore mine they sink digs 1 more a day.' },
+    dragon: { name: 'Kobolds', one: 'Kobold', look: 'kobold', perk: 'gold', text: 'Scaly little hoarders. Every gold mine they sink digs 1 more a day.' },
     demon: { name: 'Imps', one: 'Imp', look: 'imp', perk: 'fast', text: 'Winged pests. They travel twice as far in a day.' },
     archmage: { name: 'Clay Servants', one: 'Clay Servant', look: 'golem', perk: 'build', text: 'Animated clay that never sleeps. They build lairs twice as fast.' },
-    vampire: { name: 'Thralls', one: 'Thrall', look: 'ghoul', perk: 'cheap', text: 'Pale servants in the Count\'s livery. They cost 8 gold instead of 12.' },
-    deathknight: { name: 'Grave Diggers', one: 'Grave Digger', look: 'digger', perk: 'lumber', text: 'Hooded diggers with spades. Each cuts 1 extra lumber a day at a lumber camp.' }
+    vampire: { name: 'Thralls', one: 'Thrall', look: 'ghoul', perk: 'cheap', text: 'Pale servants in the Count\'s livery. They cost 8 gold instead of 12 to replace.' },
+    deathknight: { name: 'Grave Diggers', one: 'Grave Digger', look: 'digger', perk: 'lumber', text: 'Hooded diggers with spades. Every lumber camp they clear cuts 1 more a day.' }
   };
-  const MINION_MP = 90, MAX_MINIONS = 16, LIBRARY = [null, { gold: 20, lumber: 10 }, { gold: 35, lumber: 15, ore: 10 }];   // 0.24: each level is a talent point
+  const MINION_MP = 90, MAX_MINIONS = 2, LIBRARY = [null, { gold: 20, lumber: 10 }, { gold: 35, lumber: 15, ore: 10 }];   // 0.24: each level is a talent point
   const BUILD_DAYS = [0, 1, 1, 2, 3, 3]; // (before 0.15; kept for old saves)
   // RTS pacing (0.15): lairs take days to raise, minions days to summon, the Library days to build
   const LAIR_DAYS = { warren: 2, kennel: 3, hideout: 3, bonecrypt: 3, camp: 3, den: 4, barrow: 4, fens: 5, hold: 5, keep: 5, mire: 6, roost: 6, abyss: 7, boneforge: 4, eyrie: 4, brimstone: 3, foundry: 4, lodge: 4, stables: 4 };
@@ -374,8 +374,52 @@
     'v-demon': { name: 'The Burning Legion', villain: 'demon', blurb: 'The Demon Prince\'s own path: hellhounds and the fires of the Pit.' },
     'v-archmage': { name: 'Spellcraft', villain: 'archmage', blurb: 'The Archmage\'s own path: iron golems and talents that pay for themselves.' },
     'v-vampire': { name: 'The Night Court', villain: 'vampire', blurb: 'The Vampire Lord\'s own path: werewolves, and blood from Millbrook\'s purse.' },
-    'v-deathknight': { name: 'The Black Legion', villain: 'deathknight', blurb: 'The Death Knight\'s own path: black riders and veteran bands.' }
+    'v-deathknight': { name: 'The Black Legion', villain: 'deathknight', blurb: 'The Death Knight\'s own path: black riders and veteran bands.' },
+    siege: { name: 'Siegecraft', blurb: 'Your waves at Millbrook\'s walls: farther, bigger, deadlier.' },
+    wilds: { name: 'The Wilds', blurb: 'Your villain among the monsters of the wilds: words, gold, and a bigger banner.' }
   };
+  /* the talent web (0.31): every talent is a node on one map around your villain's sigil, in six regions. You can take
+     a node next to one you have (the six nearest the sigil are open from the start), so each campaign walks its own path.
+     A talent with ranks is several nodes, each worth a rank. The villain's own region is filled from its own path.
+     [id, talent, region, distance from the sigil, angle within the region (degrees), m(inor) | n(otable) | k(eystone)] */
+  const T_REGIONS = [
+    { id: 'brood', color: '#7dff8a' }, { id: 'dominion', color: '#e6c46c' }, { id: 'siege', color: '#ff8a4a' },
+    { id: 'dread', color: '#b48aff' }, { id: 'own', color: '#ff5a7a' }, { id: 'wilds', color: '#5ad8c8' }];
+  const T_NODES = [
+    ['b0', 'fecund', 0, 95, 0, 'm'], ['b1', 'den', 0, 160, -12, 'n'], ['b6', 'barrow', 0, 160, 12, 'n'],
+    ['b2', 'fens', 0, 225, -18, 'n'], ['b4', 'hold', 0, 225, -6, 'n'], ['b7', 'bonearmor', 0, 225, 8, 'm'], ['b9', 'skirmish', 0, 225, 20, 'm'],
+    ['b3', 'mire', 0, 290, -20, 'n'], ['b5', 'roost', 0, 290, -7, 'n'], ['b8', 'keep', 0, 290, 8, 'n'], ['b10', 'packs', 0, 290, 21, 'm'],
+    ['b11', 'fecund', 0, 355, -14, 'm'], ['b12', 'brutes', 0, 355, 2, 'm'], ['b13', 'skirmish', 0, 355, 18, 'm'],
+    ['b14', 'abyss', 0, 418, -10, 'n'], ['b15', 'bloodthirst', 0, 418, 10, 'n'], ['b16', 'apex', 0, 478, 0, 'k'],
+    ['d0', 'veins', 1, 95, 0, 'm'], ['d1', 'swift', 1, 160, -12, 'm'], ['d2', 'masons', 1, 160, 12, 'm'],
+    ['d3', 'servant', 1, 225, -18, 'n'], ['d4', 'veins', 1, 225, 0, 'm'], ['d5', 'hands', 1, 225, 18, 'n'],
+    ['d6', 'spies', 1, 290, -20, 'm'], ['d7', 'tithe', 1, 290, -4, 'n'], ['d8', 'overseers', 1, 290, 14, 'm'],
+    ['d9', 'vaults', 1, 355, -10, 'n'], ['d10', 'deep', 1, 355, 12, 'm'], ['d12', 'coffers', 1, 400, -26, 'm'], ['d11', 'empire', 1, 430, 0, 'k'],
+    ['s0', 'drums', 2, 95, 0, 'm'], ['s1', 'rams', 2, 160, -12, 'm'], ['s2', 'march', 2, 160, 12, 'n'],
+    ['s3', 'rams', 2, 225, -18, 'm'], ['s4', 'warchest', 2, 225, 0, 'm'], ['s5', 'warbands', 2, 225, 18, 'n'],
+    ['s6', 'plunder', 2, 290, -18, 'n'], ['s7', 'torches', 2, 290, 0, 'm'], ['s8', 'warhost', 2, 290, 18, 'n'],
+    ['s9', 'sappers', 2, 355, -10, 'n'], ['s10', 'herald', 2, 355, 12, 'm'], ['s11', 'totalwar', 2, 430, 0, 'k'],
+    ['r0', 'vigor', 3, 95, 0, 'n'], ['r1', 'raise', 3, 160, -12, 'n'], ['r2', 'menace', 3, 160, 12, 'n'],
+    ['r3', 'vigor', 3, 225, -18, 'm'], ['r4', 'dread', 3, 225, 0, 'n'], ['r5', 'guard', 3, 225, 18, 'n'],
+    ['r6', 'traps', 3, 290, -18, 'n'], ['r7', 'vigor', 3, 290, 0, 'm'], ['r8', 'traps', 3, 290, 18, 'm'],
+    ['r9', 'ritual', 3, 355, -10, 'n'], ['r10', 'traps', 3, 355, 12, 'm'], ['r11', 'ascend', 3, 430, 0, 'k'],
+    // the villain's own region: @L is its lair, @0 to @7 its own path's ranks in order
+    ['v0', '@0', 4, 95, 0, 'm'], ['v1', '@L', 4, 160, -13, 'n'], ['v2', '@1', 4, 160, 13, 'm'],
+    ['v3', '@2', 4, 225, -18, 'm'], ['v4', '@3', 4, 225, 2, 'm'], ['v5', '@4', 4, 225, 20, 'm'],
+    ['v6', '@5', 4, 295, -10, 'm'], ['v7', '@6', 4, 295, 14, 'm'], ['v8', '@7', 4, 370, 0, 'k'],
+    ['w0', 'silver', 5, 95, 0, 'm'], ['w1', 'purse', 5, 160, -12, 'm'], ['w2', 'stride', 5, 160, 12, 'm'],
+    ['w3', 'banner', 5, 225, -18, 'n'], ['w4', 'silver', 5, 225, 0, 'm'], ['w5', 'feared', 5, 225, 18, 'n'],
+    ['w6', 'surgeons', 5, 290, -18, 'n'], ['w7', 'champion', 5, 290, 0, 'n'], ['w8', 'scavenger', 5, 290, 18, 'm'],
+    ['w9', 'banner', 5, 355, -10, 'm'], ['w10', 'renown', 5, 355, 12, 'n'], ['w11', 'horde', 5, 430, 0, 'k']
+  ];
+  const T_LINKS = ('b0-b1 b0-b6 b1-b2 b1-b4 b6-b7 b6-b9 b4-b7 b2-b3 b4-b5 b7-b8 b9-b10 b3-b11 b5-b11 b5-b12 b8-b12 b8-b13 b10-b13 b11-b14 b12-b14 b12-b15 b13-b15 b14-b16 b15-b16 '
+    + 'd0-d1 d0-d2 d1-d3 d1-d4 d2-d4 d2-d5 d3-d6 d3-d7 d4-d7 d4-d8 d5-d8 d6-d9 d7-d9 d6-d12 d8-d10 d9-d11 d10-d11 '
+    + 's0-s1 s0-s2 s1-s3 s1-s4 s2-s4 s2-s5 s3-s6 s3-s7 s4-s7 s4-s8 s5-s8 s6-s9 s7-s9 s7-s10 s8-s10 s9-s11 s10-s11 '
+    + 'r0-r1 r0-r2 r1-r3 r1-r4 r2-r4 r2-r5 r3-r6 r3-r7 r4-r7 r4-r8 r5-r8 r6-r9 r7-r9 r7-r10 r8-r10 r9-r11 r10-r11 '
+    + 'v0-v1 v0-v2 v1-v3 v1-v4 v2-v4 v2-v5 v3-v6 v4-v6 v4-v7 v5-v7 v6-v8 v7-v8 '
+    + 'w0-w1 w0-w2 w1-w3 w1-w4 w2-w4 w2-w5 w3-w6 w3-w7 w4-w7 w4-w8 w5-w8 w6-w9 w7-w9 w7-w10 w8-w10 w9-w11 w10-w11 '
+    // paths across the borders, so a build can wander from one region into the next
+    + 'b9-d3 b10-d6 d5-s3 d8-s6 s5-r3 s8-r6 r5-v3 r8-v6 v5-w3 v7-w6 w5-b2 w8-b3').split(' ').map(x => x.split('-'));
   const SMALL = ['goblin', 'bandit', 'orc'], BRUTES = ['ogre', 'troll', 'giant'], UNDEAD = ['skeleton', 'wraith', 'vampire', 'colossus'];
   const TALENTS = {
     // --- the Brood
@@ -394,20 +438,22 @@
     mire: { tree: 'brood', tier: 3, lair: true, needs: ['fens'] },
     roost: { tree: 'brood', tier: 3, lair: true, needs: ['hold', 'barrow'] },
     abyss: { tree: 'brood', tier: 4, lair: true, needs: ['roost', 'keep'] },
-    apex: { tree: 'brood', tier: 4, name: 'Apex Predators', text: 'Every monster: +10% hit points and +1 to hit.', fx: { mod: { units: 'all', hp: 0.1, hit: 1 } } },
+    apex: { tree: 'brood', tier: 4, keystone: true, name: 'Apex Predators', text: 'Every monster: +10% hit points and +1 to hit.', fx: { mod: { units: 'all', hp: 0.1, hit: 1 } } },
     // --- Dominion
     swift: { tree: 'dominion', tier: 0, name: 'Swift Summoning', text: 'Summoning a new minion takes 1 night instead of 2.', fx: { summonDays: 1 } },
     masons: { tree: 'dominion', tier: 0, name: 'Master Masons', text: 'Every lair needs a day less work to build (never less than one).', fx: { buildDays: 1 } },
-    veins: { tree: 'dominion', tier: 0, ranks: 2, name: 'Rich Veins', text: 'Gold mines dig 1 more gold a night.', fx: { yield: { gold: 1 } } },
-    hands: { tree: 'dominion', tier: 1, needs: ['masons'], name: 'Tireless Hands', text: '+1 gold, lumber or ore every night from each mine and camp your minions work.', fx: { yield: { gold: 1, lumber: 1, ore: 1 } } },
-    overseers: { tree: 'dominion', tier: 1, name: 'Overseers', text: 'Minions cost a third less gold to summon, and the tower can feed 4 more.', fx: { summonCost: 1 / 3, minions: 4 } },
+    veins: { tree: 'dominion', tier: 0, ranks: 2, name: 'Rich Veins', text: 'Your gold mines dig 1 more gold a night.', fx: { yield: { gold: 1 } } },
+    hands: { tree: 'dominion', tier: 1, needs: ['masons'], name: 'Tireless Hands', text: '+1 gold, lumber or ore every night from each mine and camp you hold.', fx: { yield: { gold: 1, lumber: 1, ore: 1 } } },
+    overseers: { tree: 'dominion', tier: 1, name: 'Overseers', text: 'Minions cost a third less gold to summon and walk a third farther a day.', fx: { summonCost: 1 / 3, minionMp: 1 / 3 } },
+    servant: { tree: 'dominion', tier: 0, name: 'A Third Servant', text: 'The tower can keep a third minion. (You start with two.)', fx: { minions: 1 } },
+    coffers: { tree: 'dominion', tier: 3, name: 'Coffers', text: '+2 gold to the tower every night.', fx: { nightly: { gold: 2 } } },
     tithe: { tree: 'dominion', tier: 1, name: 'Tithe of Fear', text: 'Every lair you\'ve built sends 1 gold to the tower each night.', fx: { perLair: { gold: 1 } } },
     warchest: { tree: 'dominion', tier: 2, name: 'War Chest', text: 'Levelling up a band costs a third less.', fx: { bandCost: 1 / 3 } },
     march: { tree: 'dominion', tier: 2, name: 'Forced March', text: 'Your waves march half again as far each night.', fx: { reach: 2 } },
     spies: { tree: 'dominion', tier: 2, name: 'Spies', text: 'Your minions see 2 tiles farther, so the map clears faster.', fx: { sight: 2 } },
     vaults: { tree: 'dominion', tier: 3, name: 'Treasure Vaults', text: '+4 gold to the tower every night.', fx: { nightly: { gold: 4 } } },
     deep: { tree: 'dominion', tier: 3, name: 'Deep Mines', text: 'Lumber camps and ore mines yield 1 more a night.', fx: { yield: { lumber: 1, ore: 1 } } },
-    empire: { tree: 'dominion', tier: 4, name: 'Dark Empire', text: 'Every lair goes up in a single night.', fx: { empire: true } },
+    empire: { tree: 'dominion', tier: 4, keystone: true, name: 'Dark Empire', text: 'Every lair goes up in a single night.', fx: { empire: true } },
     // --- Dread
     vigor: { tree: 'dread', tier: 0, ranks: 3, power: 'vigor' },
     menace: { tree: 'dread', tier: 0, name: 'Menace', text: 'Every bit of Infamy counts half again, so your villain levels up faster.', fx: { infamy: 0.5 } },
@@ -416,7 +462,27 @@
     traps: { tree: 'dread', tier: 2, ranks: 3, power: 'traps' },
     guard: { tree: 'dread', tier: 2, name: 'Honor Guard', text: 'Half as many monsters again guard the gate to the throne room in the finale.', fx: { guards: 0.5 } },
     ritual: { tree: 'dread', tier: 3, power: 'ritual' },
-    ascend: { tree: 'dread', tier: 4, name: 'Ascension', text: 'In the finale your villain has +15% hit points and +1 to hit.', fx: { villain: { hp: 0.15, hit: 1 } } },
+    ascend: { tree: 'dread', tier: 4, keystone: true, name: 'Ascension', text: 'In the finale your villain has +15% hit points and +1 to hit.', fx: { villain: { hp: 0.15, hit: 1 } } },
+    // --- Siegecraft (0.31): your waves at Millbrook's walls
+    drums: { tree: 'siege', tier: 0, name: 'War Drums', text: 'Your waves march a quarter farther each night.', fx: { reach: 1 } },
+    rams: { tree: 'siege', tier: 1, name: 'Battering Rams', text: 'Your waves do a quarter more damage to Millbrook\'s walls.', fx: { wallDmg: 0.25 } },
+    torches: { tree: 'siege', tier: 2, name: 'Torches and Pitch', text: 'Once inside Millbrook, your waves do a quarter more damage to the town hall.', fx: { hallDmg: 0.25 } },
+    plunder: { tree: 'siege', tier: 2, name: 'Plunderers', text: 'Waves that break into Millbrook carry off half again as much gold, lumber and ore.', fx: { plunder: 0.5 } },
+    warhost: { tree: 'siege', tier: 2, name: 'War Host', text: 'Waves march out of your lairs with a fifth more monsters.', fx: { waveSize: 0.2 } },
+    sappers: { tree: 'siege', tier: 3, name: 'Sappers', text: 'Millbrook\'s towers do a quarter less damage to your waves.', fx: { towers: 0.25 } },
+    herald: { tree: 'siege', tier: 3, name: 'Herald of Doom', text: 'Every bit of Infamy counts a fifth more.', fx: { infamy: 0.2 } },
+    totalwar: { tree: 'siege', tier: 4, keystone: true, name: 'Total War', text: 'Waves march out a level higher and half again as big. But every lair breeds a quarter slower.', fx: { vets: 1, waveSize: 0.5, rate: { all: true, pct: -0.25 } } },
+    // --- the Wilds (0.31): your villain among the monsters of the wilds
+    silver: { tree: 'wilds', tier: 0, name: 'Silver Tongue', text: '+2 to Intimidate, Persuade and Deceive.', fx: { social: 2 } },
+    purse: { tree: 'wilds', tier: 1, name: 'Open Purse', text: 'Bands of the wilds take a quarter less gold to join you.', fx: { payCost: 0.25 } },
+    stride: { tree: 'wilds', tier: 1, name: 'Long Stride', text: 'Your villain walks two fifths farther each night.', fx: { stride: 0.4 } },
+    banner: { tree: 'wilds', tier: 2, name: 'Wide Banner', text: 'One more band of the wilds can follow you at once.', fx: { banner: 1 } },
+    feared: { tree: 'wilds', tier: 2, name: 'Feared Name', text: 'Bands your villain beats are half again as likely to kneel.', fx: { kneel: 0.5 } },
+    surgeons: { tree: 'wilds', tier: 3, name: 'Field Surgeons', text: 'Bands that kneel heal in a day instead of two, and march at full strength.', fx: { surgeons: true } },
+    champion: { tree: 'wilds', tier: 3, name: 'Champion of the Wilds', text: 'Fighting the wilds, your villain has a quarter more hit points and +2 to hit.', fx: { duel: { hp: 0.25, hit: 2 } } },
+    scavenger: { tree: 'wilds', tier: 3, name: 'Scavenger', text: 'Bands that fight to the last leave half again as much behind.', fx: { loot: 0.5 } },
+    renown: { tree: 'wilds', tier: 3, name: 'Renown', text: 'Every band that joins you, kneels or dies earns twice the Infamy.', fx: { renown: true } },
+    horde: { tree: 'wilds', tier: 4, keystone: true, name: 'The Horde', text: 'Two more bands follow you, and bands that join you march a level higher. But every lair holds a third fewer monsters.', fx: { banner: 2, recruitLv: 1, cap: -1 / 3 } },
     // --- the Lich
     boneforge: { tree: 'v-lich', tier: 0, lair: true },
     gravetithe: { tree: 'v-lich', tier: 0, ranks: 2, name: 'Grave Tithe', text: 'Bone Crypts and Bone Forges breed 25% more.', fx: { rate: { units: ['skeleton', 'colossus'], pct: 0.25 } } },
@@ -428,7 +494,7 @@
     eyrie: { tree: 'v-dragon', tier: 0, lair: true },
     hoard: { tree: 'v-dragon', tier: 0, ranks: 2, name: 'Hoard Lust', text: '+2 gold to the tower every night.', fx: { nightly: { gold: 2 } } },
     scales: { tree: 'v-dragon', tier: 1, ranks: 2, name: 'Iron Scales', text: 'Drakes and dragons: +1 AC and +10% hit points.', fx: { mod: { units: ['drake', 'dragon'], ac: 1, hp: 0.1 } } },
-    kobolds: { tree: 'v-dragon', tier: 2, name: 'Kobold Warrens', text: 'Minions cost a third less gold to summon, and the tower can feed 4 more.', fx: { summonCost: 1 / 3, minions: 4 } },
+    kobolds: { tree: 'v-dragon', tier: 2, name: 'Kobold Warrens', text: 'Kobolds dig deep: every mine and camp you hold yields 1 more a night.', fx: { yield: { gold: 1, lumber: 1, ore: 1 } } },
     wyrmfire: { tree: 'v-dragon', tier: 3, ranks: 2, name: 'Wyrmfire', text: 'Drakes and dragons: +3 damage.', fx: { mod: { units: ['drake', 'dragon'], dmg: 3 } } },
     ancient: { tree: 'v-dragon', tier: 4, name: 'Ancient Wrath', text: 'In the finale the Dragon has +10% hit points and +1 to hit.', fx: { villain: { hp: 0.1, hit: 1 } } },
     // --- the Demon Prince
@@ -637,10 +703,11 @@
     const o = { id: 'o' + (s.uid++), kind: 'dungeon', dtype: 'warren', mine: true, pool: { goblin: 14 }, level: 1, mode: 'hold', x: best[0], y: best[1], known: false, rumored: false, paid: 0, placed: dayKey(s), movedDay: 0, building: 0 };
     s.objects.push(o); s.unlocked.warren = true;
   }
-  const newTalents = () => ({ r: {}, earned: 1, lv: 1, inf: 0, resetWeek: 0 });
+  const newTalents = () => ({ r: {}, n: [], earned: 1, lv: 1, inf: 0, resetWeek: 0 });
   // bring an older save up to date (v5 had a fixed party and Malgrith the lich)
   // v11 (0.14): every campaign has its own map layout. Older saves keep the classic one they were played on.
-  function migrate(s) {
+  function migrate(s) { const out = migrate0(s); return out ? webTalents(out) : out; }   // 0.31: and the talent web
+  function migrate0(s) {
     if (!s || typeof s !== 'object' || !Array.isArray(s.heroes)) return null;
     useSize(s.mw, s.mh);   // 0.31: everything after this works on this campaign's map
     if (s.v === 16) return s;
@@ -1055,7 +1122,7 @@
     const zone = (x, y) => !!knownStack(x, y) || vZone(x, y);
     const blocked = (x, y) => s.objects.some(o => o.kind === 'stack' && o.known && o.x === x && o.y === y) || (villainOnMap(s) && V.known && V.x === x && V.y === y);
     const enter = (x, y) => blocked(x, y) ? Infinity : tileCost(s, x, y);
-    const terminal = (x, y) => zone(x, y) || s.objects.some(o => o.kind !== 'stack' && !isTrap(o) && o.known && o.x === x && o.y === y) || !!siteAt(s, x, y) || (s.nodes || []).some(n => n.x === x && n.y === y && n.known && workersAt(s, n).length > 0);
+    const terminal = (x, y) => zone(x, y) || s.objects.some(o => o.kind !== 'stack' && !isTrap(o) && o.known && o.x === x && o.y === y) || !!siteAt(s, x, y) || (s.nodes || []).some(n => n.x === x && n.y === y && n.known && n.dev);
     const D = dijkstra(P.x, P.y, enter, terminal);
     const mp = mpPerDay(s);
     const frac = partyHpFrac(s);
@@ -1130,11 +1197,11 @@
       const why = q ? `The quest board offers a reward: "${q.name}."` : o.rumored ? `A tavern rumor about a ${it.name} has everyone curious.` : h ? `${h.name} spotted a ${it.name} and wants to see it.` : `The party heads for the ${it.name}.`;
       add(o.id, o.x, o.y, v * rum + rb + qb, why, o, it.name);
     }
-    // sites the villain's minions are working: the heroes want them gone, if the guards aren't too much
+    // the villain's mines and camps (0.31: they work on their own once sunk): the heroes want them wrecked, if the guards aren't too much
     for (const n of s.nodes || []) {
-      if (!n.known || nodeRaided(s, n) || !workersAt(s, n).length) continue;
+      if (!n.known || nodeRaided(s, n) || !n.dev) continue;
       const K = NODE_KINDS[n.kind]; const gl = guardOf(s, n);
-      let v = 0.5 + (byDrive('duty') ? 1 : 0) + (n.kind === 'gold' && byDrive('greed') ? 1.5 : 0); let why = `The villain's ${minionType(s).name.toLowerCase()} are working the ${nodeName(n)}. The heroes want them gone.`;
+      let v = 0.5 + (byDrive('duty') ? 1 : 0) + (n.kind === 'gold' && byDrive('greed') ? 1.5 : 0); let why = `The villain's ${nodeName(n)} feeds the Dark Tower. The heroes want it wrecked.`;
       if (gl) { const fv = fightValue(pp / garrisonPower(gl), 0, DUNGEONS[gl.dtype].name.toLowerCase() + '\'s guards'); v = fv.v > 0 ? v + fv.v * 0.5 : fv.v; if (fv.v <= 0) why = fv.why; }
       if (weak) v -= 4; if (finale) v *= 0.3;
       add('node:' + n.id, n.x, n.y, v, why, n, nodeName(n));
@@ -1220,6 +1287,7 @@
   function upPrice(k) { const P = DUNGEONS[k].price; const out = {}; for (const r of RES_KEYS) if (P[r]) out[r] = Math.ceil(P[r] / 2); out.gold = (out.gold || 0) + 2 * (Math.ceil((P.lore || 0) / 2) + 2 * DUNGEONS[k].tier); return out; }
   const minionCost = s => Math.round((minionType(s).perk === 'cheap' ? 8 : 12) * (1 - talentFx(s).summonCost));
   const maxMinions = s => MAX_MINIONS + talentFx(s).minions;
+  const minionMpOf = s => (minionType(s).perk === 'fast' ? MINION_MP * 2 : MINION_MP) * (1 + talentFx(s).minionMp);   // a day's walk
   const libraryLevel = s => (s.base && s.base.library) || 0;
   // the old research keys still decide the finale's gate guards and the dark powers; now each means "you've built that lair"
   const TECH_LAIR = { barracks: 'camp', ossuary: 'bonecrypt', ogre: 'den', altar: 'barrow', troll: 'fens', giant: 'hold', blood: 'keep', mire: 'mire', roost: 'roost', gate: 'abyss', knights: 'keep' };
@@ -1307,7 +1375,7 @@
   function trainCheck(s) {
     if (s.phase !== 'map') return 'Not now.';
     const q = (s.summons || []).length;
-    if ((s.minions || []).length + q >= maxMinions(s)) return `You already command ${maxMinions(s)}. That's all the tower can feed.`;
+    if ((s.minions || []).length + q >= maxMinions(s)) return `You already command ${maxMinions(s)}. That's all the tower can feed${talentFx(s).minions ? '' : ': the talent A Third Servant, in Dominion, makes room for one more'}.`;
     if (q >= MAX_SUMMONS) return `${MAX_SUMMONS} are already waiting to be summoned.`;
     if (resOf(s, 'gold') < minionCost(s)) return `Needs ${minionCost(s)} gold.`;
     return null;
@@ -1335,7 +1403,8 @@
   function orderWork(s, nodeId, minionId) {
     const n = (s.nodes || []).find(z => z.id === nodeId); if (!n) return 'No such site.';
     if (nodeRaided(s, n)) return `The heroes drove your minions off. It's safe to go back in ${n.raidedUntil - dayIndex(s)} day${n.raidedUntil - dayIndex(s) > 1 ? 's' : ''}.`;
-    if (assignedTo(s, n).filter(z => z.id !== minionId).length >= NODE_KINDS[n.kind].cap) return `Another ${minionType(s).one.toLowerCase()} already works that ${nodeName(n)}.`;
+    if (n.dev) return `The ${nodeName(n)} is already yours: it works on its own.`;
+    if (assignedTo(s, n).filter(z => z.id !== minionId).length >= NODE_KINDS[n.kind].cap) return `Another ${minionType(s).one.toLowerCase()} is already on its way to that ${nodeName(n)}.`;
     const m = minionId ? s.minions.find(z => z.id === minionId) : nearestIdle(s, n.x, n.y);
     if (!m) return `No idle ${minionType(s).name.toLowerCase()}. Summon more at the tower, or call one off another job.`;
     const path = minionPath(s, m, n.x, n.y); if (!path) return 'Your minions can\'t get there.';
@@ -1598,7 +1667,7 @@
     const U = waveUnit(s, w); const units = []; for (let i = 0; i < Math.max(0, Math.round(w.count)); i++) units.push(U.hp);
     const wallMax = WALL_HP[lv('walls')] || 0; let wall = Math.min(wallMax, opts.wall !== undefined ? opts.wall : wallMax);
     const alive = () => { let n = 0; for (const h of units) if (h > 0) n++; return n; };
-    const holy = U.undead && lv('bell') ? 1.5 : 1;
+    const tfx = talentFx(s); const holy = (U.undead && lv('bell') ? 1.5 : 1) * (1 - tfx.towers);   // 0.31: Sappers blunt every tower
     // the archers and militia finish off the weakest first, so damage kills rather than spreads
     const pool = d => { if (d <= 0) return; const idx = []; units.forEach((h, i) => { if (h > 0) idx.push(i); }); idx.sort((a, b) => units[a] - units[b]); for (const i of idx) { if (d <= 0) break; const t = Math.min(d, units[i]); units[i] -= t; d -= t; } };
     const volley = inside => {
@@ -1614,8 +1683,8 @@
     };
     let wallDmg = 0, hallDmg = 0, breached = U.fly || wall <= 0, rounds = 0;
     for (let r = 0; r < 2 && alive(); r++) { volley(false); rounds++; }
-    for (let r = 0; r < 6 && !breached && alive(); r++) { volley(true); rounds++; const d = alive() * U.dmg * U.smash; const t = Math.min(d, wall); wall -= t; wallDmg += t; if (wall <= 0) breached = true; }
-    if (breached) for (let r = 0; r < SACK_ROUNDS && alive(); r++) { volley(true); rounds++; hallDmg += alive() * U.dmg * SACK_DMG; }
+    for (let r = 0; r < 6 && !breached && alive(); r++) { volley(true); rounds++; const d = alive() * U.dmg * U.smash * (1 + tfx.wallDmg); const t = Math.min(d, wall); wall -= t; wallDmg += t; if (wall <= 0) breached = true; }
+    if (breached) for (let r = 0; r < SACK_ROUNDS && alive(); r++) { volley(true); rounds++; hallDmg += alive() * U.dmg * SACK_DMG * (1 + tfx.hallDmg); }
     const left = alive();
     return { left, killed: Math.round(w.count) - left, wallDmg: Math.round(wallDmg), hallDmg: Math.round(hallDmg), breached: breached && left > 0 || hallDmg > 0, wallLeft: Math.max(0, Math.round(wall)), fly: U.fly, rounds };
   }
@@ -1649,7 +1718,8 @@
     T.wallHp = r.wallLeft;
     if (r.hallDmg > 0) {
       T.hall = Math.max(0, (T.hall === undefined ? hallMax(s) : T.hall) - r.hallDmg);
-      for (const k of RES_KEYS) { const g = Math.min(Math.floor(T.res[k] || 0), Math.round(r.hallDmg * PLUNDER[k])); if (g > 0) { T.res[k] -= g; s.res[k] += g; rep.plunder[k] = g; } }
+      const pf = 1 + talentFx(s).plunder;
+      for (const k of RES_KEYS) { const g = Math.min(Math.floor(T.res[k] || 0), Math.round(r.hallDmg * PLUNDER[k] * pf)); if (g > 0) { T.res[k] -= g; s.res[k] += g; rep.plunder[k] = g; } }
       const n = r.hallDmg >= 300 ? 3 : r.hallDmg >= 170 ? 2 : r.hallDmg >= 70 ? 1 : 0;
       for (let i = 0; i < n; i++) { const k = burnBuilding(s); if (k) rep.burned.push(k); }
       T.hall = Math.min(T.hall, hallMax(s));
@@ -1742,6 +1812,7 @@
     const b = releaseBand(s, o, count || Math.max(1, Math.floor(lairCount(o) * 0.8)), true);
     if (!b) return null;
     b.wave = true; b.home = null;
+    { const ws = talentFx(s).waveSize; if (ws) b.count = Math.max(1, Math.round(b.count * (1 + ws))); }
     return b;
   }
   // a wave's road to Millbrook's gates: around the heroes (they never march into them at night) and anything else in the way
@@ -1808,13 +1879,43 @@
   // kept under its old name: lairs, powers and servant talents all answer "how many ranks?"
   const researched = (s, k) => START_LAIRS.indexOf(k) >= 0 ? 1 : tRank(s, k);
   const lairKnown = (s, k) => START_LAIRS.indexOf(k) >= 0 || tRank(s, k) > 0;
-  const talentRanks = k => (TALENTS[k] && TALENTS[k].ranks) || (TALENTS[k] && TALENTS[k].power ? LAIR[TALENTS[k].power].max : 1);
+  // the web, resolved for one villain: each node with its talent and its place (x, y on a 1080-wide map around the sigil)
+  const OWN_PATH = {};
+  function ownPath(type) {
+    if (OWN_PATH[type]) return OWN_PATH[type];
+    const ks = TALENT_ORDER.filter(k => TALENTS[k].tree === 'v-' + type);
+    const lair = ks.find(k => TALENTS[k].lair); const ranks = [];
+    for (const k of ks) if (!TALENTS[k].lair) for (let i = 0; i < (TALENTS[k].ranks || 1); i++) ranks.push(k);
+    return (OWN_PATH[type] = { lair, ranks });
+  }
+  const WEB = {};
+  function talentWeb(type) {
+    type = type || 'lich'; if (WEB[type]) return WEB[type];
+    const own = ownPath(type); const nodes = {}; const list = [];
+    for (const [id, t0, reg, r, a, kind] of T_NODES) {
+      const t = t0 === '@L' ? own.lair : t0[0] === '@' ? own.ranks[+t0.slice(1)] : t0;
+      if (!t || !TALENTS[t]) continue;
+      const ang = (-90 + reg * 60 + a) * Math.PI / 180;
+      const T = TALENTS[t]; const k = kind === 'm' && (T.lair || T.keystone) ? (T.keystone ? 'k' : 'n') : kind;
+      const n = { id, t, reg, r, a, kind: k, x: Math.round(r * Math.cos(ang)), y: Math.round(r * Math.sin(ang)), links: [], start: r <= 100 };
+      nodes[id] = n; list.push(n);
+    }
+    for (const [a, b] of T_LINKS) if (nodes[a] && nodes[b]) { nodes[a].links.push(b); nodes[b].links.push(a); }
+    // which rank of its talent each node is: the nearer the sigil, the earlier
+    const byT = {};
+    for (const n of list.slice().sort((p, q) => p.r - q.r)) { byT[n.t] = (byT[n.t] || 0) + 1; n.rank = byT[n.t]; }
+    for (const n of list) n.of = byT[n.t];
+    return (WEB[type] = { nodes, list, links: T_LINKS.filter(([a, b]) => nodes[a] && nodes[b]), byT });
+  }
+  const webOf = s => talentWeb((s && s.villain && s.villain.type) || 'lich');
+  // how many ranks a talent has: how many nodes carry it (the villain's own: its ranks)
+  const talentRanks = k => { const T = TALENTS[k]; if (!T) return 1; const v = T.tree.indexOf('v-') === 0 ? T.tree.slice(2) : 'lich'; return talentWeb(v).byT[k] || (T.ranks || 1); };
   const talentName = k => { const T = TALENTS[k]; return T.name || (T.lair ? DUNGEONS[k].name : LAIR[T.power].name); };
   const talentText = k => { const T = TALENTS[k]; if (T.text) return T.text; if (T.power) return LAIR[T.power].text;
     const D = DUNGEONS[k], C = CREATURES[D.unit]; return `Your minions can build the ${D.name}, which raises ${C.name.toLowerCase()}. ${C.text || D.text}`; };
   const talentNeeds = k => TALENTS[k].needs || [];
-  // this villain's trees: the three everyone shares, then its own path
-  const talentTrees = s => ['brood', 'dominion', 'dread', 'v-' + ((s.villain && s.villain.type) || 'lich')];
+  // this villain's regions: five everyone shares, and its own path
+  const talentTrees = s => ['brood', 'dominion', 'siege', 'dread', 'v-' + ((s.villain && s.villain.type) || 'lich'), 'wilds'];
   const talentsIn = tree => TALENT_ORDER.filter(k => TALENTS[k].tree === tree);
   const spentIn = (s, tree) => talentsIn(tree).reduce((t, k) => t + tRank(s, k), 0);
   const talentSpent = s => TALENT_ORDER.reduce((t, k) => t + tRank(s, k), 0);
@@ -1824,7 +1925,8 @@
     const r = (s.talents && s.talents.r) || {}; const key = JSON.stringify(r);
     if (FX_MEMO.key === key) return FX_MEMO.fx;
     const fx = { mod: {}, modAll: { hp: 0, ac: 0, hit: 0, dmg: 0 }, rate: {}, rateAll: 0, yield: { gold: 0, lumber: 0, ore: 0 }, nightly: 0, perLair: 0, townTithe: 0, bandCost: 0, summonCost: 0, minions: 0,
-      reach: 0, sight: 0, buildDays: 0, summonDays: 0, empire: false, warded: false, cap: 0, bands: 0, vets: 0, guards: 0, infamy: 0, villain: { hp: 0, hit: 0 }, points: 0 };
+      reach: 0, sight: 0, buildDays: 0, summonDays: 0, empire: false, warded: false, cap: 0, bands: 0, vets: 0, guards: 0, infamy: 0, villain: { hp: 0, hit: 0 }, points: 0,
+      minionMp: 0, wallDmg: 0, hallDmg: 0, plunder: 0, waveSize: 0, towers: 0, social: 0, payCost: 0, stride: 0, banner: 0, kneel: 0, surgeons: false, duel: { hp: 0, hit: 0 }, loot: 0, renown: false, recruitLv: 0 };
     const addMod = (u, m, n) => { const t = u === 'all' ? fx.modAll : (fx.mod[u] = fx.mod[u] || { hp: 0, ac: 0, hit: 0, dmg: 0 }); for (const f of ['hp', 'ac', 'hit', 'dmg']) if (m[f]) t[f] += m[f] * n; if (m.regen) t.regen = true; if (m.drain) t.drain = true; };
     for (const k of Object.keys(r)) {
       const n = r[k] || 0; const F = TALENTS[k] && TALENTS[k].fx; if (!n || !F) continue;
@@ -1834,32 +1936,75 @@
       if (F.nightly) fx.nightly += F.nightly.gold * n;
       if (F.perLair) fx.perLair += F.perLair.gold * n;
       if (F.villain) { fx.villain.hp += (F.villain.hp || 0) * n; fx.villain.hit += (F.villain.hit || 0) * n; }
-      for (const f of ['townTithe', 'bandCost', 'summonCost', 'minions', 'reach', 'sight', 'buildDays', 'summonDays', 'cap', 'bands', 'vets', 'guards', 'infamy', 'points']) if (F[f]) fx[f] += F[f] * n;
-      if (F.empire) fx.empire = true; if (F.warded) fx.warded = true;
+      for (const f of ['townTithe', 'bandCost', 'summonCost', 'minions', 'reach', 'sight', 'buildDays', 'summonDays', 'cap', 'bands', 'vets', 'guards', 'infamy', 'points',
+        'minionMp', 'wallDmg', 'hallDmg', 'plunder', 'waveSize', 'towers', 'social', 'payCost', 'stride', 'banner', 'kneel', 'loot', 'recruitLv']) if (F[f]) fx[f] += F[f] * n;
+      if (F.duel) { fx.duel.hp += (F.duel.hp || 0) * n; fx.duel.hit += (F.duel.hit || 0) * n; }
+      if (F.empire) fx.empire = true; if (F.warded) fx.warded = true; if (F.surgeons) fx.surgeons = true; if (F.renown) fx.renown = true;
     }
-    fx.bandCost = Math.min(0.7, fx.bandCost); fx.summonCost = Math.min(0.7, fx.summonCost);
+    fx.bandCost = Math.min(0.7, fx.bandCost); fx.summonCost = Math.min(0.7, fx.summonCost); fx.towers = Math.min(0.6, fx.towers); fx.payCost = Math.min(0.6, fx.payCost);
     FX_MEMO.key = key; FX_MEMO.fx = fx; return fx;
   }
   // points: one to start, one for every level the villain gains, the Forbidden Library and some talents
   const talentEarned = s => ((s.talents && s.talents.earned) || 0) + libraryLevel(s) + talentFx(s).points;
   const talentFree = s => Math.max(0, talentEarned(s) - talentSpent(s));
+  // 0.31: the web. s.talents.n lists the nodes taken; s.talents.r still counts ranks per talent, which everything else reads
+  const ownedNodes = s => (s.talents && s.talents.n) || [];
+  const nodeOwned = (s, id) => ownedNodes(s).indexOf(id) >= 0;
+  function nodeOpen(s, id) {
+    const n = webOf(s).nodes[id]; if (!n) return false;
+    return n.start || n.links.some(l => nodeOwned(s, l));
+  }
+  // a node id, or a talent: its next node that can be taken (or the nearest one)
+  function resolveNode(s, k) {
+    const W = webOf(s); if (W.nodes[k]) return W.nodes[k];
+    const cand = W.list.filter(n => n.t === k && !nodeOwned(s, n.id)); if (!cand.length) return null;
+    return cand.find(n => nodeOpen(s, n.id)) || cand.sort((a, b) => (talentPath(s, a.id) || []).length - (talentPath(s, b.id) || []).length)[0];
+  }
   function talentCheck(s, k) {
-    const T = TALENTS[k]; if (!T) return 'Unknown talent.';
-    if (talentTrees(s).indexOf(T.tree) < 0) return 'Another villain\'s talent.';
-    if (tRank(s, k) >= talentRanks(k)) return 'Already mastered.';
-    const need = TIER_NEED[T.tier] || 0; const got = spentIn(s, T.tree);
-    if (got < need) return `Spend ${need - got} more point${need - got > 1 ? 's' : ''} in ${TREES[T.tree].name} first.`;
-    const miss = talentNeeds(k).filter(r => !researched(s, r));
-    if (miss.length) return `Needs ${miss.map(r => TALENTS[r] ? talentName(r) : DUNGEONS[r].name).join(' and ')} first.`;
+    const T = TALENTS[k]; const W = webOf(s);
+    if (!W.nodes[k] && !T) return 'Unknown talent.';
+    if (T && talentTrees(s).indexOf(T.tree) < 0) return 'Another villain\'s talent.';
+    const n = resolveNode(s, k); if (!n) return 'Already mastered.';
+    if (nodeOwned(s, n.id)) return 'Already learned.';
+    if (!nodeOpen(s, n.id)) { const p = talentPath(s, n.id); return p ? `Take ${p.length - 1} talent${p.length > 2 ? 's' : ''} on the way first: it has to join a talent you have.` : 'Out of reach.'; }
     if (talentFree(s) < 1) return 'No talent points to spend.';
     return null;
   }
+  // the shortest way from what you have to a node: the nodes to take, in order (null if none)
+  function talentPath(s, id) {
+    const W = webOf(s); if (!W.nodes[id]) return null; if (nodeOwned(s, id)) return [];
+    const prev = {}; const q = []; const seen = {};
+    for (const n of W.list) if (nodeOwned(s, n.id)) { seen[n.id] = true; q.push(n.id); }
+    for (const n of W.list) if (n.start && !seen[n.id]) { seen[n.id] = true; prev[n.id] = null; q.push(n.id); }
+    while (q.length) {
+      const c = q.shift(); if (c === id) break;
+      for (const l of W.nodes[c].links) if (!seen[l]) { seen[l] = true; prev[l] = c; q.push(l); }
+    }
+    if (!seen[id]) return null;
+    const out = []; let c = id;
+    while (c && !nodeOwned(s, c)) { out.unshift(c); c = prev[c]; }
+    return out;
+  }
   function learnTalent(s, k) {
     const err = talentCheck(s, k); if (err) return err;
-    s.talents.r[k] = tRank(s, k) + 1; syncTalents(s);
-    const T = TALENTS[k]; const rk = talentRanks(k) > 1 ? ' ' + roman(s.talents.r[k]) : '';
-    say(s, T.lair ? `Talent: the ${talentName(k)}. Your minions can build it now.` : T.power ? `Talent: ${vName(s)} gains ${talentName(k)}${rk}.` : `Talent: ${talentName(k)}${rk}. ${talentText(k)}`, 'dm');
+    const n = resolveNode(s, k); const t = n.t;
+    s.talents.n = ownedNodes(s).concat([n.id]); s.talents.r[t] = tRank(s, t) + 1; syncTalents(s);
+    const T = TALENTS[t]; const rk = talentRanks(t) > 1 ? ' ' + roman(s.talents.r[t]) : '';
+    say(s, T.lair ? `Talent: the ${talentName(t)}. Your minions can build it now.` : T.power ? `Talent: ${vName(s)} gains ${talentName(t)}${rk}.` : `Talent: ${talentName(t)}${rk}. ${talentText(t)}`, 'dm');
     return null;
+  }
+  // every node on the way to a far one, if the points last
+  function learnPath(s, id) {
+    const p = talentPath(s, id); if (!p) return 'Out of reach.'; if (!p.length) return 'Already learned.';
+    if (talentFree(s) < p.length) return `That takes ${p.length} points; you have ${talentFree(s)}.`;
+    for (const x of p) { const e = learnTalent(s, x); if (e) return e; }
+    return null;
+  }
+  // saves from before the web: their points come back to spend on it
+  function webTalents(s) {
+    const T = s.talents; if (!T) return s;
+    if (!Array.isArray(T.n)) { const had = TALENT_ORDER.reduce((t, k) => t + ((T.r && T.r[k]) || 0), 0); T.r = {}; T.n = []; if (had) T.redrawn = true; syncTalents(s); }
+    return s;
   }
   // one free reset a week: every point comes back. Lairs already built keep working; you just can't build new ones of that kind
   function resetCheck(s) {
@@ -1869,7 +2014,7 @@
   }
   function resetTalents(s) {
     const err = resetCheck(s); if (err) return err;
-    const n = talentSpent(s); s.talents.r = {}; s.talents.resetWeek = s.week; syncTalents(s);
+    const n = talentSpent(s); s.talents.r = {}; s.talents.n = []; s.talents.resetWeek = s.week; syncTalents(s);
     say(s, `${vName(s)} unlearns every talent. ${n} point${n > 1 ? 's' : ''} to spend again.`, 'dm');
     return null;
   }
@@ -1914,9 +2059,9 @@
     const D = DUNGEONS[o.dtype]; const wk = WEEKS_FX[s.weekFx] || {};
     // a fixed brood per night, like a dwelling: the stronger the heroes, the deadlier the lairs you need
     const fx = talentFx(s);
-    return D.rate * ((o.level || 1) >= 2 ? 1.75 : 1) * (D.home.indexOf(terrainAt(s, o.x, o.y)) >= 0 ? 1.25 : 1) * (wk.creature === D.unit ? 1.5 : 1) * (wk.allBoost || 1) * (1 + fx.rateAll + (fx.rate[D.unit] || 0));
+    return D.rate * ((o.level || 1) >= 2 ? 1.75 : 1) * (D.home.indexOf(terrainAt(s, o.x, o.y)) >= 0 ? 1.25 : 1) * (wk.creature === D.unit ? 1.5 : 1) * (wk.allBoost || 1) * Math.max(0.25, 1 + fx.rateAll + (fx.rate[D.unit] || 0));
   }
-  const lairCap = (s, o) => Math.max(lairRate(s, o) * GARRISON_DAYS, CREATURES[DUNGEONS[o.dtype].unit].base * 2) * (1 + talentFx(s).cap);
+  const lairCap = (s, o) => Math.max(lairRate(s, o) * GARRISON_DAYS, CREATURES[DUNGEONS[o.dtype].unit].base * 2) * Math.max(0.3, 1 + talentFx(s).cap);
   const bandsPerLair = s => BANDS_PER_LAIR + talentFx(s).bands;
   const lairWrecked = (s, o) => !!o.wrecked && o.wrecked > dayIndex(s);
   function wreckLair(s, o) { const d = talentFx(s).warded ? 1 : 3; o.wrecked = dayIndex(s) + d; for (const k of Object.keys(o.pool)) o.pool[k] = 0; o.known = false; say(s, `The heroes wreck the ${DUNGEONS[o.dtype].name}. It will take your minions ${d > 1 ? 'three days' : 'a day'} to dig it out.`, 'big'); }
@@ -2123,7 +2268,7 @@
   }
   // the minions' day: walk, then dig, chop, haul and build
   function minionDay(s) {
-    const T = minionType(s); const mp = T.perk === 'fast' ? MINION_MP * 2 : MINION_MP; const out = { res: { gold: 0, lumber: 0, ore: 0 }, built: [], opened: [], yields: [], plot: 0, summoned: [], library: false, researched: null };
+    const T = minionType(s); const mp = minionMpOf(s); const out = { res: { gold: 0, lumber: 0, ore: 0 }, built: [], opened: [], yields: [], plot: 0, summoned: [], library: false, researched: null };
     const sm = summonDay(s); if (sm) out.summoned.push(sm);
     out.library = libraryDay(s); out.researched = null;
     // talents that pay every night: vaults and hoards, a tithe per lair, and the Count's cut of Millbrook's purse
@@ -2137,11 +2282,19 @@
       if (m.job && m.job.kind === 'move' && !m.path.length) m.job = null;
     }
     // minions plotting in the dark: a Lore each
+    // minions still "working" a site that's already a mine (saves from before 0.32) are free again
+    for (const m of s.minions || []) if (m.job && m.job.kind === 'work') { const nd = (s.nodes || []).find(z => z.id === m.job.node); if (!nd || nd.dev) m.job = null; }
+    // 0.31: a minion spends a night sinking a mine or clearing a camp, then it's yours and works on its own, and the minion is free
     for (const n of s.nodes || []) {
       if (nodeRaided(s, n)) continue;
-      const K = NODE_KINDS[n.kind]; const w = workersAt(s, n).slice(0, K.cap); if (!w.length) continue;
-      if (!n.dev) { n.dev = true; out.opened.push(n.id); say(s, `Your ${T.one.toLowerCase()} turns the ${K.raw} near ${regionName(s, n.x, n.y)} into a ${K.name}.`, 'dm'); continue; }
-      const got = siteYield(s, n) * w.length; s.res[K.res] += got; out.res[K.res] += got; out.yields.push([n.id, got]);
+      const K = NODE_KINDS[n.kind];
+      if (!n.dev) {
+        // it takes a day's work at the deposit: the minion has to have been there when the night began
+        const w = workersAt(s, n).slice(0, K.cap).filter(m => m.from && m.from[0] === n.x && m.from[1] === n.y); if (!w.length) continue;
+        n.dev = true; out.opened.push(n.id); for (const m of w) m.job = null;
+        say(s, `Your ${T.one.toLowerCase()} turns the ${K.raw} near ${regionName(s, n.x, n.y)} into a ${K.name}. It works on its own from now on.`, 'dm'); continue;
+      }
+      const got = siteYield(s, n); s.res[K.res] += got; out.res[K.res] += got; out.yields.push([n.id, got]);
     }
     for (const o of myLairs(s).filter(z => z.building > 0)) {
       const bs = s.minions.filter(m => m.job && m.job.kind === 'build' && m.job.lair === o.id && !m.path.length && m.x === o.x && m.y === o.y);
@@ -2174,7 +2327,7 @@
     n.raidedUntil = dayIndex(s) + 3;
     const K = NODE_KINDS[n.kind]; const h = byDriveLive(s, n.kind === 'gold' ? 'greed' : 'duty');
     const one = minionType(s).one.toLowerCase();
-    const m = w.length ? `The heroes storm the ${nodeName(n)} and drive off your ${one}${lost ? `. It doesn't make it home` : `, which flees back to the tower`}. Nobody can work it for three days.` : `The heroes storm the ${nodeName(n)}. Nobody can work it for three days.`;
+    const m = w.length ? `The heroes storm the ${nodeName(n)} and drive off your ${one}${lost ? `. It doesn't make it home` : `, which flees back to the tower`}. It yields nothing for three days.` : `The heroes wreck the ${nodeName(n)}. It yields nothing for three days.`;
     say(s, m, 'big'); thrill(s, `Drove the villain's minions from the ${nodeName(n)}`, 2 + db(s, h, 1), h && h.id);
     giveXp(s, lvXp(s, 0.06));
     return m;
@@ -2569,16 +2722,16 @@
     if (o.type === 'dragon' && vt === 'dragon') { T.persuade = -2; T.text += ' Dragon speaks to dragon.'; }
     return T;
   }
-  const socialBonus = (s, k) => ((VSOCIAL[s.villain.type] || {})[k] || 0) + Math.floor(villainLevel(s) / 5);
+  const socialBonus = (s, k) => ((VSOCIAL[s.villain.type] || {})[k] || 0) + Math.floor(villainLevel(s) / 5) + talentFx(s).social;
   function socialDC(s, o, k) { const T = temperOf(s, o); if (T[k] === null || T[k] === undefined) return null; return clamp(DC_BASE + DC_PER * (monsterLevel(s, o) - villainLevel(s)) + T[k], 4, 30); }
   let DC_BASE = 12, DC_PER = 2;
   // your banner: how many bands of the wilds will follow you at once (recruits count until they fall at Millbrook)
   let CMD_PER = 5;
-  const commandCap = s => 1 + Math.floor(villainLevel(s) / CMD_PER);
+  const commandCap = s => 1 + Math.floor(villainLevel(s) / CMD_PER) + talentFx(s).banner;
   const commanded = s => s.objects.filter(o => o.kind === 'stack' && o.yours && o.joined).length;
   const bannerFull = s => commanded(s) >= commandCap(s);
   const skillOdds = (bonus, dc) => clamp((21 - (dc - bonus)) / 20, 0.05, 0.95);
-  function payCost(s, o) { const T = temperOf(s, o); if (!T.gold) return null; return Math.round((6 + 5 * monsterLevel(s, o)) * (T.gold === 2 ? 1.5 : 1)); }
+  function payCost(s, o) { const T = temperOf(s, o); if (!T.gold) return null; return Math.round((6 + 5 * monsterLevel(s, o)) * (T.gold === 2 ? 1.5 : 1) * (1 - talentFx(s).payCost)); }
   // what you can try with a band, and why not
   function parleyOptions(s, o) {
     const L = monsterLevel(s, o), V = villainLevel(s); const T = temperOf(s, o);
@@ -2600,7 +2753,8 @@
     o.wave = !(o.healUntil > dayIndex(s));
     const C = CREATURES[o.type]; const nm = (o.count > 1 ? C.name : C.one).toLowerCase();
     say(s, how === 'surrender' ? `The ${nm} kneel to ${vName(s)}. Once their wounds have closed, they will march on Millbrook.` : how === 'gold' ? `${vName(s)} pays the ${nm}. They march on Millbrook.` : `The ${nm} swear themselves to ${vName(s)} and march on Millbrook.`, 'dm');
-    addInfamy(s, 1 + monsterLevel(s, o) / 4, `The ${nm} joined you`);
+    { const fx = talentFx(s); if (fx.recruitLv) o.lvl = Math.min(BAND_MAX_LEVEL, (o.lvl || 1) + fx.recruitLv);
+      addInfamy(s, (1 + monsterLevel(s, o) / 4) * (fx.renown ? 2 : 1), `The ${nm} joined you`); }
     return o;
   }
   const villainAt = s => villainOnMap(s) ? { x: s.villain.x, y: s.villain.y } : siteOf(s, 'tower');
@@ -2645,7 +2799,7 @@
     V.hpFrac = Math.min(1, (V.hpFrac === undefined ? 1 : V.hpFrac) + 0.25);
     if (!V.path || !V.path.length) return;
     const P = s.party; const near = (x, y) => living(s).length && Math.abs(x - P.x) <= 1 && Math.abs(y - P.y) <= 1;
-    let left = VILLAIN_DAY_MP, px = V.x, py = V.y; const trail = [[px, py]]; let n = 0;
+    let left = VILLAIN_DAY_MP * (1 + talentFx(s).stride), px = V.x, py = V.y; const trail = [[px, py]]; let n = 0;
     for (const [nx, ny] of V.path) {
       const c = stepCost(s, px, py, nx, ny); if (c > left || near(nx, ny)) break;
       if (s.objects.some(z => z.x === nx && z.y === ny && (z.kind === 'stack' || z.kind === 'dungeon'))) break;
@@ -2694,7 +2848,7 @@
     return null;
   }
   // what a band that fought to the last leaves behind
-  function duelLoot(s, o) { const L = monsterLevel(s, o); return { gold: 6 + 4 * L, lumber: 2 + Math.round(L * 1.2), ore: 2 + Math.round(L * 1.2) }; }
+  function duelLoot(s, o) { const L = monsterLevel(s, o); const f = 1 + talentFx(s).loot; return { gold: Math.round((6 + 4 * L) * f), lumber: Math.round((2 + L * 1.2) * f), ore: Math.round((2 + L * 1.2) * f) }; }
   function finishDuel(s) {
     const b = s.battle; const V = s.villain; const o = s.objects.find(z => z.id === b.objId);
     const boss = b.units.find(u => u.boss); const W = b.units.filter(u => u.side === 'party');
@@ -2703,24 +2857,25 @@
     const L = o ? monsterLevel(s, Object.assign({}, o, { count: start })) : 1;
     const res = { duel: true, result: b.over, type, count: start, left, level: L, loot: null, joined: false, villainHp: boss ? Math.max(0, boss.hp) / boss.maxHp : 0, lines: [] };
     V.hpFrac = boss && !boss.escaped ? clamp(boss.hp / boss.maxHp, 0.05, 1) : 0.3;
-    const tline = (l, v) => { const n = addInfamy(s, v, l); if (n) res.lines.push({ label: l, v: n }); };
+    const tline = (l, v) => { const n = addInfamy(s, v * (talentFx(s).renown ? 2 : 1), l); if (n) res.lines.push({ label: l, v: n }); };
+    const DUEL_INF = 2 + L * 0.8;   // 0.31: beating the wilds is a real way to grow (it was 1 + level / 3)
     if (b.over === 'surrender' && o && bannerFull(s)) {
       // they kneel, but no more will follow you yet: they buy their lives and scatter
       const L2 = duelLoot(s, Object.assign({}, o, { count: start })); const loot = {}; for (const k of RES_KEYS) loot[k] = Math.round((L2[k] || 0) * 0.6);
       for (const k of RES_KEYS) s.res[k] = (s.res[k] || 0) + loot[k];
       res.loot = loot; res.result = 'tribute'; s.objects = s.objects.filter(z => z !== o);
       say(s, `The ${C.name.toLowerCase()} kneel, but ${vName(s)}'s banner is full. They buy their lives with ${priceText(loot)} and scatter into the hills.`, 'dm');
-      tline(`${vName(s)} broke the ${C.name.toLowerCase()}`, 1 + L / 3);
+      tline(`${vName(s)} broke the ${C.name.toLowerCase()}`, DUEL_INF);
     } else if (b.over === 'surrender' && o) {
-      o.count = Math.max(1, left); o.healUntil = dayIndex(s) + HEAL_DAYS; o.healTo = Math.max(o.count, Math.round(start * 0.7));
+      const sg = talentFx(s).surgeons; o.count = Math.max(1, left); o.healUntil = dayIndex(s) + (sg ? 1 : HEAL_DAYS); o.healTo = Math.max(o.count, Math.round(start * (sg ? 1 : 0.7)));
       joinYou(s, o, 'surrender'); res.joined = true; res.lines.push({ label: `The ${C.name.toLowerCase()} joined you`, v: 0 });
-      tline(`${vName(s)} broke the ${C.name.toLowerCase()}`, 1 + L / 3);
+      tline(`${vName(s)} broke the ${C.name.toLowerCase()}`, DUEL_INF);
     } else if (b.over === 'tpk') {
       const loot = o ? duelLoot(s, Object.assign({}, o, { count: start })) : { gold: 5, lumber: 2, ore: 2 };
       for (const k of RES_KEYS) s.res[k] = (s.res[k] || 0) + loot[k];
       res.loot = loot; if (o) s.objects = s.objects.filter(z => z !== o);
       say(s, `${vName(s)} cuts down the last of the ${C.name.toLowerCase()} and takes their hoard: ${priceText(loot)}.`, 'dm');
-      tline(`${vName(s)} slew the ${C.name.toLowerCase()}`, 1 + L / 3);
+      tline(`${vName(s)} slew the ${C.name.toLowerCase()}`, DUEL_INF);
     } else if (b.over === 'fled' || b.over === 'retreat') {
       if (o) { o.count = Math.max(1, left); o.sulk = dayIndex(s) + SULK_DAYS; }
       say(s, `${vName(s)} breaks off the fight with the ${C.name.toLowerCase()}.`, 'dm');
@@ -2873,7 +3028,7 @@
       return { t: 'event', from, x, y, msgs: r ? r.msgs : [] };
     }
     const node = nodeAt(s, x, y);
-    if (node && workersAt(s, node).length && !nodeRaided(s, node)) {
+    if (node && node.dev && !nodeRaided(s, node)) {
       P.path = []; const gl = guardOf(s, node);
       if (gl) { say(s, `The ${DUNGEONS[gl.dtype].name} nearby sends its brood to defend the ${nodeName(node)}!`, 'big'); startBattle(s, null, { stacks: garrisonOf(gl), guardLair: gl.id, raidNode: node.id }); return { t: 'battle', from, x, y }; }
       return { t: 'event', from, x, y, msgs: [raidNode(s, node)] };

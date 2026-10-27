@@ -1,5 +1,19 @@
 # Overmaster — roadmap
 
+## Delivered in alpha 0.32: the talent web, three minions, mines that work on their own
+- **The talent web.** The four talent trees are gone. Every talent is now a node on one web around your villain's sigil, like Path of Exile's passive tree, in six regions: **The Brood** (lairs and monsters), **Dominion** (minions, mines and gold), **Siegecraft** (new: your waves at Millbrook's walls), **Dread** (your villain's powers and the showdown), **your villain's own path**, and **the Wilds** (new: recruiting). You can start at any of the six talents next to the sigil; every talent after that has to join one you already have. Paths cross the borders between regions, so a build can wander from one into the next. The web holds 75 talents and a campaign earns about two dozen points, so each campaign takes its own route.
+  - Small round talents are single ranks; octagons are notable (a new lair, a dark power, a big effect); the big octagon at the end of each region is a **keystone** that defines a build, sometimes at a cost (Total War: bigger waves a level higher, but slower breeding; The Horde: two more recruits a level higher, but smaller lairs).
+  - Pick any talent to see what it does and the way to it from what you have. **Learn the way** takes every talent on that path at once, if you have the points.
+  - **Siegecraft:** War Drums, Battering Rams (walls), Forced March, War Chest, War Bands, Plunderers, Torches and Pitch (the hall), War Host (bigger waves), Sappers (weaker towers), Herald of Doom (Infamy), Total War.
+  - **The Wilds:** Silver Tongue (+2 to talk), Open Purse (cheaper bands), Long Stride (your villain walks farther), Wide Banner (more recruits), Feared Name (bands kneel more), Field Surgeons, Champion of the Wilds (stronger in duels), Scavenger (more loot), Renown (double Infamy from the wilds), The Horde.
+  - Campaigns saved before 0.32 get all their talent points back to spend on the web, with a note on the talents tab. Lairs already built keep working.
+- **Three minions.** You start with two minions and keep at most two; the Dominion talent **A Third Servant** makes room for a third. Overseers now make minions cheaper and faster walkers, and the Dragon's Kobold Warrens add 1 to every mine and camp.
+- **Mines and camps work on their own.** A minion walks to a deposit and spends a day sinking a mine or clearing a camp. From then on it's yours and yields every night with nobody there, and the minion is free for the next job, usually a lair. The heroes now go after your mines themselves: one they reach is wrecked and yields nothing for three days.
+- **Minions look busy.** A working minion swings a pickaxe, hops on every blow and kicks up dust and sparks, at a lair going up or a mine being sunk (in 3D and 2D).
+- **Fighting the wilds levels your villain.** Beating a band (it kneels, buys its life or dies) earns 2 + 0.8 Infamy per band level, up from 1 + a third.
+- **No more Millbrook view.** You can't open Millbrook's streets and buildings any more. Its walls and hall (the hall is what you have to burn to win) stay on the sidebar card and on the town's map panel.
+- **Balance.** In 48 simulated campaigns with a scripted villain that recruits and follows one of five talent plans (brood, siege, dread, mixed, wilds), the villain won 54%: Millbrook fell in week 5 to 10, and the losses came in week 6 to 11.
+
 ## Delivered in alpha 0.31: the big map, the fog, the monsters of the wilds, and more voices (step 2 of 3)
 - **A map four times the size.** New campaigns are 80 by 56 tiles (they were 40 by 28), with Millbrook and the Dark Tower about 36 tiles apart, more lakes, wider regions, and about two and a half times the resource sites, wild bands and finds. Campaigns started before 0.31 keep their 40 by 28 map.
 - **Smaller resource sites.** Mines, quarries and the rest are drawn at about 70% of their old size on the 3D map, so they no longer crowd the tiles around them.

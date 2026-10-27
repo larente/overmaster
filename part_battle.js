@@ -195,7 +195,7 @@
     // 0.31: a duel is your villain alone against a band of the wilds: no heroes on the field
     if (!opts.duel) for (const h of s.heroes) { if (h.status !== 'ok') continue; const u = heroUnit(h, f, s); u.pos = hp0[h.id]; units.push(u); }
     let k = 0;
-    if (opts.boss) { const B = bossUnit(opts.bossL || avgLevel(s), s.villain.up, !!opts.finale, s.villain.type, vName(s)); B.escapes = !opts.finale; B.pos = DM_POS[k++]; if (!opts.finale) B.hp = Math.max(1, Math.round(B.maxHp * clamp(s.villain.hpFrac === undefined ? 1 : s.villain.hpFrac, 0.1, 1))); units.push(B); }
+    if (opts.boss) { const B = bossUnit(opts.bossL || avgLevel(s), s.villain.up, !!opts.finale, s.villain.type, vName(s)); B.escapes = !opts.finale; B.pos = DM_POS[k++]; if (!opts.finale) B.hp = Math.max(1, Math.round(B.maxHp * clamp(s.villain.hpFrac === undefined ? 1 : s.villain.hpFrac, 0.1, 1))); if (opts.duel) { const D = talentFx(s).duel; if (D.hp) { B.maxHp = Math.round(B.maxHp * (1 + D.hp)); B.hp = Math.round(B.hp * (1 + D.hp)); } B.hit += D.hit; } units.push(B); }
     const stacks = opts.stacks || [[stackObj.type, stackObj.count]];
     const command = opts.boss && vType(s).powers.indexOf('command') >= 0;
     const lvl = opts.lvl || (stackObj && stackObj.lvl) || 1;
@@ -214,7 +214,7 @@
     if (!opts.duel && !party.some(u => u.cls === 'cleric')) for (const u of party) u.potions = 2;
     const b = {
       tstate: { talents: { r: Object.assign({}, (s.talents && s.talents.r) || {}) } },   // the DM's talents, for monsters that join mid-fight
-      duel: !!opts.duel, vtype: s.villain.type, siege: !!opts.siege, wallLv: opts.siege ? townLv(s, 'walls') : 0, towers: opts.siege && s.town ? { arrows: ARROWS[townLv(s, 'watch')] || 0, bolts: BOLTS[townLv(s, 'ballista')] || 0, splash: SPLASH[townLv(s, 'arcane')] || 0, bell: townLv(s, 'bell') > 0 } : null,
+      duel: !!opts.duel, kneel: opts.duel ? talentFx(s).kneel : 0, vtype: s.villain.type, siege: !!opts.siege, wallLv: opts.siege ? townLv(s, 'walls') : 0, towers: opts.siege && s.town ? { arrows: ARROWS[townLv(s, 'watch')] || 0, bolts: BOLTS[townLv(s, 'ballista')] || 0, splash: SPLASH[townLv(s, 'arcane')] || 0, bell: townLv(s, 'bell') > 0 } : null,
       objId: stackObj ? stackObj.id : null, dungeonId: opts.dungeonId || null, guardLair: opts.guardLair || null, raidNode: opts.raidNode || null, attack: !!opts.attack, sent: opts.attack ? stacks.map(x => [x[0], x[1]]) : null, villain: !!opts.boss, finale: !!opts.finale, stage: opts.stage || 0, terrain, boss: !!opts.boss,
       round: 1, units, tiles, traps: [], freeTraps: opts.dungeonId ? 2 : opts.stage === 1 ? 1 + (hasTech(s, 'forge') ? 2 : 0) : opts.finale ? 1 + (s.villain.up.traps || 0) : 0, boughtTraps: 0,
       hallowed: party.some(u => conscious(u) && u.ab.indexOf('hallowed') >= 0), intervention: party.some(u => u.ab.indexOf('intervention') >= 0), intervened: false,
@@ -382,6 +382,7 @@
     b.asked = true;
     const t = (W[0] || {}).type; let p = SURRENDER[t] !== undefined ? SURRENDER[t] : 0.4;
     if ((t === 'skeleton' || t === 'wraith') && (b.vtype === 'lich' || b.vtype === 'deathknight')) p = 0.85;   // the dead bow to their masters
+    p = Math.min(0.95, p * (1 + (b.kneel || 0)));   // 0.31: a Feared Name
     if (chance(p)) { b.over = 'surrender'; blog(b, `The ${(W[0] || {}).name || 'monsters'} throw down their arms and kneel before ${b.vname}.`, 'big'); }
     else blog(b, `The ${(W[0] || {}).name || 'monsters'} won't yield. They fight on to the last.`, 'foe');
   }
