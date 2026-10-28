@@ -13,12 +13,13 @@ Run it in Terminal:
     python3 ~/Documents/bts-art/elevenlabs_gen.py --redo heroes pip  # speak Pip's lines again (his voice stays)
     python3 ~/Documents/bts-art/elevenlabs_gen.py villains          # 0.31: a voice for each villain, then its lines
     python3 ~/Documents/bts-art/elevenlabs_gen.py monsters          # 0.31: the monsters of the wilds you parley with
-    python3 ~/Documents/bts-art/elevenlabs_gen.py voices            # all three: heroes, villains, monsters
+    python3 ~/Documents/bts-art/elevenlabs_gen.py minions           # 0.33: each villain's minions
+    python3 ~/Documents/bts-art/elevenlabs_gen.py voices            # all of them: heroes, villains, minions, monsters
 
 Lines and voice descriptions are in hero_lines.json next to this script. Each speaker's voice is designed once
 and saved in your ElevenLabs voices (one of your custom voice slots each); its id is kept in out-voice/voices.json.
-Lines already spoken are skipped, so running it again only speaks the new ones. Villains get their voices before
-the monsters: if your plan runs out of voice slots, the monsters that didn't get one are listed in log.txt.
+Lines already spoken are skipped, so running it again only speaks the new ones. Villains get their voices first, then
+minions, then monsters: if your plan runs out of voice slots, the ones that didn't get one are listed in log.txt.
 
 It reads your ElevenLabs API key from elevenlabs-key.txt (or the .rtf TextEdit makes) in this folder and
 never prints it. Everything is saved in out-audio/ as MP3. Progress goes to log.txt.
@@ -329,6 +330,8 @@ def speakers(data, group):
         for k, h in data['heroes'].items(): out[k] = {'voice': h['voice'], 'lines': h['lines'], 'name': k.capitalize()}
     if group in ('villains', 'voices'):
         for t, v in data.get('villains', {}).items(): out[v.get('key', 'villain-' + t)] = {'voice': v['voice'], 'lines': v['lines'], 'name': 'Villain ' + t.capitalize()}
+    if group in ('minions', 'voices'):
+        for t, m in data.get('minions', {}).items(): out[m.get('key', 'minion-' + t)] = {'voice': m['voice'], 'lines': m['lines'], 'name': 'Minion ' + t.capitalize()}
     if group in ('monsters', 'voices'):
         for t, m in data.get('monsters', {}).items(): out[t] = {'voice': m['voice'], 'lines': m['lines'], 'name': 'Monster ' + t.capitalize()}
     return out
@@ -425,7 +428,7 @@ def main():
     args = sys.argv[1:] or ['test']
     if '--redo' in args:
         REDO[0] = True; args = [a for a in args if a != '--redo']
-    if args and args[0] in ('heroes', 'villains', 'monsters', 'voices'):
+    if args and args[0] in ('heroes', 'villains', 'minions', 'monsters', 'voices'):
         KEY[0] = read_key()
         if not KEY[0]:
             sys.exit('No key found. Save it in %s/elevenlabs-key.txt' % HERE)

@@ -1221,6 +1221,8 @@ const World3D = (() => {
         if (work) { const ph = (t * 1.6 + m.x * 0.37 + m.y * 0.21) % 1; const up = ph < 0.6 ? ph / 0.6 : 1 - (ph - 0.6) / 0.4; const ease = up * up * (3 - 2 * up);
           K.tool.position.set(0.1, 0.2 + 0.06 * ease, 0.05); K.tool.material.rotation = -0.9 + 2.0 * ease; }
         runFx(K.fx, t * 1.6 + m.x, work ? 1 : 0, 0.03, 0.5, 0.8); }
+      // 0.33: what it says when you click it or give it an order, in a bubble over its head
+      { const say = hooks.minionBubble ? hooks.minionBubble(m) : null; if (say && E.grp.visible !== false) { const L = label(MAP.labels, 'msay-' + m.id, 'l-say', esc(say)); L.pos.set(wx, hAt(wx, wz) + 0.95, wz); } }
     }
     for (const [id, E] of MAP.mins) if (!seenM.has(id)) { MAP.scene.remove(E.grp); if (E.kit) MAP.scene.remove(E.kit); MAP.mins.delete(id); }
     // rings under the minions you've selected (and a faint one under the one you point at)

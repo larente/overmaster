@@ -139,6 +139,7 @@
     route: () => partyShown() ? routeSpec() : null,
     floats: () => S.phase === 'battle' ? ui.floats : ui.floats.filter(f => !f.battle).map(f => { if (!f.id) f.id = Math.random().toString(36).slice(2); return { id: f.id, t0: f.t0, text: f.text, color: f.color, x: f.x / TILE - 0.5, y: f.y / TILE - 0.75 }; }),
     view: () => ui.view, fx: () => ui.fx, bspec: () => ui.bspec,
+    minionBubble: m => minionBubble(m),
     minionPos: m => { const p = minionTile(m); const d = (ui.mspots && ui.mspots.get(m.id)) || { dx: 0, dy: 0 }; return { x: p.x + d.dx, y: p.y + d.dy, moving: minionWalking(m), dance: !!(m.job && m.job.kind === 'dance' && !minionWalking(m)), work: minionWorking(m) }; },
     nodeLook: n => (nodeShownDev(n) ? 'node-' : 'dep-') + n.kind,
     fog: () => fogNow(),
@@ -150,7 +151,7 @@
     lairCrew: o => lairShownBuilding(o) > 0 ? (S.minions || []).filter(m => m.x === o.x && m.y === o.y && !minionWalking(m)).length : 0,
     summoning: () => (S.summons || []).length ? { p: 1 - S.summons[0].days / S.summons[0].total, look: MT().look, n: S.summons.length } : null,
     libraryWork: () => ({ building: !!(S.base && S.base.libBuild), level: G.libraryLevel(S), crew: true }),
-    nodeLabel: n => { const nm = `<span class="nm">${esc(shownNodeName(n))}</span>`; if (G.nodeRaided(S, n)) return `${nm} raided`; const f = nodeBar(n); if (f !== null) return `${nm} ${pbar(f)}`; return nodeShownDev(n) ? `${nm} ${G.workersAt(S, n).length ? `<b class="yl ${n.kind}">+${nodeYield(n)}</b>` : '<i class="idle">idle</i>'}` : nm; },
+    nodeLabel: n => { const nm = `<span class="nm">${esc(shownNodeName(n))}</span>`; if (G.nodeRaided(S, n)) return `${nm} wrecked`; const f = nodeBar(n); if (f !== null) return `${nm} ${pbar(f)}`; return nodeShownDev(n) ? `${nm} <b class="yl ${n.kind}">+${nodeYield(n)}</b>` : nm; },
     lairLabel: o => { const f = lairBar(o); if (f !== null) return `${pbar(f, 'build')} ${Math.max(0, Math.ceil(lairShownBuilding(o) || 0)) || ''}${lairShownBuilding(o) ? 'd' : ''}`; return G.lairWrecked(S, o) ? `wrecked · ${o.wrecked - G.dayIndex(S)}d` : `<b>${G.lairCount(o)}</b>`; },
     townItems: () => viewItems(),
     curId: () => { const b = S.battle; if (!b) return null; if (b.phase === 'deploy') return ui.deploySel; return ui.playing ? null : b.cur; },
@@ -382,7 +383,11 @@
         c.save(); c.translate(cx + 6, by - 12); c.rotate(-0.9 + 2.0 * e); c.strokeStyle = '#8a5a30'; c.lineWidth = 2; c.beginPath(); c.moveTo(0, 0); c.lineTo(11, -8); c.stroke(); c.fillStyle = '#9a9aa8'; c.fillRect(8, -12, 7, 4); c.restore();
         if (ph > 0.92 || ph < 0.08) { c.fillStyle = 'rgba(230,214,184,0.7)'; for (let i = 0; i < 3; i++) { c.beginPath(); c.arc(cx + 10 + i * 4 - 4, by - 2 - i, 2 + i * 0.6, 0, 7); c.fill(); } }
         kick();
-      } else c.drawImage(A.IMG['unit-m-' + look], cx - 13, by - 22, 26, 26); } }); }
+      } else c.drawImage(A.IMG['unit-m-' + look], cx - 13, by - 22, 26, 26);
+      // 0.33: its words in a bubble
+      { const say = minionBubble(m); if (say) { c.save(); c.font = 'italic 12px Alegreya, Georgia, serif'; const w = c.measureText(say).width + 14; const bx = cx - w / 2, byy = by - 48;
+        c.fillStyle = 'rgba(20,14,8,0.92)'; c.strokeStyle = '#c8a050'; c.lineWidth = 1; c.beginPath(); c.roundRect(bx, byy, w, 20, 6); c.fill(); c.stroke();
+        c.beginPath(); c.moveTo(cx - 4, byy + 20); c.lineTo(cx, byy + 26); c.lineTo(cx + 4, byy + 20); c.fill(); c.fillStyle = '#f2e6c8'; c.textAlign = 'center'; c.fillText(say, cx, byy + 14); c.restore(); kick(); } } } }); }
     if (G.villainOnMap(S) && canSee(S.villain.x, S.villain.y)) items.push({ y: S.villain.y + 0.01, f: () => drawVillain(c, ox, oy, now) });
     if (partyShown()) items.push({ y: pp.y / TILE - 0.5 + 0.02, f: () => { c.drawImage(A.IMG['obj-party'], pp.x + ox - 28, pp.y + oy - 46, 56, 56); } });
     items.sort((a, b) => a.y - b.y); for (const it of items) it.f();
@@ -514,8 +519,8 @@
     c.drawImage(A.IMG['obj-' + (nodeShownDev(n) ? 'node-' : 'dep-') + n.kind], cx - 20, by - 40, 40, 40); c.globalAlpha = 1;
     const f = nodeBar(n);
     if (f !== null && !G.nodeRaided(S, n)) { bar2d(c, cx, by + 2, 34, f); return; }
-    const w = G.workersAt(S, n).length;
-    const t = G.nodeRaided(S, n) ? 'raided' : !nodeShownDev(n) ? '' : w ? `+${nodeYield(n)}` : 'idle';
+    const w = nodeShownDev(n) ? 1 : 0;   // 0.32: a mine you hold yields on its own
+    const t = G.nodeRaided(S, n) ? 'wrecked' : !nodeShownDev(n) ? '' : `+${nodeYield(n)}`;
     if (!t) return;
     c.font = '700 10px Alegreya, Georgia, serif'; c.textAlign = 'center'; c.lineWidth = 3; c.strokeStyle = 'rgba(0,0,0,0.85)'; c.strokeText(t, cx, by + 8); c.fillStyle = w ? RES_COL[n.kind] : '#c8b898'; c.fillText(t, cx, by + 8);
   }
@@ -657,6 +662,7 @@
     if (th.type === 'spot') { if (ui.sel) { ui.sel = null; renderSide(); drawMap(); } return; }
     const same = ui.sel && ui.sel.type === th.type && ui.sel.x === th.x && ui.sel.y === th.y;
     ui.sel = same ? null : th;
+    if (!same && th.type === 'villain') vsay('select');
     ui.scrollTo = 'sel'; ui.reachKey = ''; renderSide(); drawMap();
   }
   /* ============ the dungeon master's fog of war ============ */
@@ -741,7 +747,7 @@
     if (!S || S.phase !== 'map' || ui.moving) return;
     let ids = selMinions().map(m => m.id);
     if (add) ids = ids.includes(id) ? ids.filter(z => z !== id) : ids.concat(id); else ids = [id];
-    setMinionSel(ids); ui.place = null; ui.mbuild = false; ui.mode = null; ui.scrollTo = 'sel'; renderSide(); drawMap();
+    setMinionSel(ids); if (ids.includes(id)) minionSay(S.minions.find(m => m.id === id), 'select'); ui.place = null; ui.mbuild = false; ui.mode = null; ui.scrollTo = 'sel'; renderSide(); drawMap();
   }
   // the minion figure under the pointer (they stand off-centre on busy tiles, so pick by pixel)
   function minionAtPx(ev) {
@@ -770,9 +776,10 @@
     const n = G.nodeAt(S, t.x, t.y);
     if (n) {
       const K = G.NODE_KINDS[n.kind];
-      if (G.nodeRaided(S, n)) { const d = n.raidedUntil - G.dayIndex(S); return { kind: 'no', target: true, why: `The heroes drove your minions off this ${G.nodeName(n)}. It's safe again in ${d} day${d > 1 ? 's' : ''}.` }; }
+      if (G.nodeRaided(S, n)) { const d = n.raidedUntil - G.dayIndex(S); return { kind: 'no', target: true, why: `The heroes wrecked this ${G.nodeName(n)}. It yields again in ${d} day${d > 1 ? 's' : ''}.` }; }
+      if (n.dev) return { kind: 'no', target: true, why: `The ${G.nodeName(n)} is already yours. It ${K.verb} ${nodeYield(n)} ${K.res} every night on its own.` };
       const others = G.assignedTo(S, n).filter(m => !ms.includes(m)).length;
-      if (others >= K.cap) return { kind: 'no', target: true, why: `Another ${MT().one.toLowerCase()} already works that ${G.nodeName(n)}. One minion per site.` };
+      if (others >= K.cap) return { kind: 'no', target: true, why: `Another ${MT().one.toLowerCase()} is already on its way to sink it.` };
       return { kind: 'work', n, room: K.cap - others };
     }
     const o = G.objAt(S, t.x, t.y);
@@ -866,6 +873,7 @@
     }
     if (!ok) { toast(err === 'full' ? 'That site is full.' : err || 'They can\'t do that.', 'bad'); return; }
     const label = { work: o.n ? G.nodeName(o.n) : 'Work', help: 'Build', home: 'Home', move: 'Go' }[o.kind];
+    minionSay(sorted[0], o.kind === 'work' ? 'mine' : o.kind === 'help' ? 'build' : 'move');
     sfx('minion-go', { vol: 0.8 }); sfx('minion', { vol: 0.6 });
     ui.floats.push({ x: tx * TILE + TILE / 2, y: ty * TILE + TILE * 0.3, text: label, color: ORDER_COL[o.kind], t0: performance.now() });
     if (o.kind === 'work' && ok < ms.length) toast(`Only one minion can work the ${G.nodeName(o.n)}. The rest stay where they are.`, 'sys');
@@ -879,10 +887,10 @@
     for (const m of ms) {
       if (m.job && m.job.kind === 'work' && (S.nodes.find(n => n.id === m.job.node) || {}).kind === kind) { sent++; continue; }
       // nearest first, but an open mine beats a raw deposit a few tiles closer
-      const opts = S.nodes.filter(n => n.kind === kind && !G.nodeRaided(S, n) && G.assignedTo(S, n).length < G.NODE_KINDS[kind].cap).sort((a, b) => Math.hypot(a.x - m.x, a.y - m.y) + (a.dev ? 0 : 3) - Math.hypot(b.x - m.x, b.y - m.y) - (b.dev ? 0 : 3));
+      const opts = S.nodes.filter(n => n.kind === kind && !n.dev && !G.nodeRaided(S, n) && G.assignedTo(S, n).length < G.NODE_KINDS[kind].cap).sort((a, b) => Math.hypot(a.x - m.x, a.y - m.y) + (a.dev ? 0 : 3) - Math.hypot(b.x - m.x, b.y - m.y) - (b.dev ? 0 : 3));
       for (const n of opts) { if (!G.orderWork(S, n.id, m.id)) { sent++; last = n; break; } }
     }
-    if (!sent) { toast(`Every ${kind} site already has a minion, or was raided.`, 'bad'); return; }
+    if (!sent) { toast(`No free ${kind} deposit left that you can reach: every one is yours already, has a minion on the way, or was wrecked.`, 'bad'); return; }
     if (last) ui.floats.push({ x: last.x * TILE + TILE / 2, y: last.y * TILE + TILE * 0.3, text: G.nodeName(last), color: ORDER_COL.work, t0: performance.now() });
     if (sent < ms.length) toast(`Only ${sent} found a free ${kind} site.`, 'sys');
     kick(); commit();
@@ -895,6 +903,7 @@
     const err = G.buildCheck(S, P.k, t.x, t.y, sorted[0].id); if (err) { toast(err, 'bad'); return; }
     const e2 = G.orderBuild(S, P.k, t.x, t.y, sorted[0].id); if (e2) { toast(e2, 'bad'); return; } sfx('minion-go'); sfx('coins', { vol: 0.6 });
     const lair = S.objects[S.objects.length - 1]; for (const m of sorted.slice(1)) G.orderHelp(S, lair.id, m.id);
+    minionSay(sorted[0], 'build');
     ui.place = null; ui.mbuild = false; ui.finaleEst = null;
     ui.floats.push({ x: t.x * TILE + TILE / 2, y: t.y * TILE + TILE * 0.3, text: 'Build', color: ORDER_COL.help, t0: performance.now() });
     toast(`${ms.length > 1 ? `${ms.length} ${MT().name.toLowerCase()} set` : `Your ${MT().one.toLowerCase()} sets`} off to build the ${G.DUNGEONS[P.k].name}: ${G.lairDays(S, P.k)} days of work${ms.length > 1 ? ', less with helpers' : ''}.`, 'good');
@@ -906,7 +915,7 @@
     if (!idle.length) { toast(`No idle ${MT().name.toLowerCase()}.`, 'sys'); return; }
     if (all) { setMinionSel(idle.map(m => m.id)); }
     else { const cur = ui.sel && ui.sel.type === 'minion' ? idle.findIndex(m => m.id === ui.sel.id) : -1; setMinionSel([idle[(cur + 1) % idle.length].id]); }
-    const f = selMinions()[0]; centerOn(f.x, f.y); ui.place = null; ui.mbuild = false; ui.scrollTo = 'sel'; renderSide(); drawMap();
+    const f = selMinions()[0]; minionSay(f, 'select'); centerOn(f.x, f.y); ui.place = null; ui.mbuild = false; ui.scrollTo = 'sel'; renderSide(); drawMap();
   }
   // the selected minions' routes as ground arrows: bright for tonight's walk, dim for later
   function minionRoutes(ms) {
@@ -1084,13 +1093,14 @@
   /* ============ the heroes talk: a portrait pops up and says a line, voiced and lip-synced when it's been recorded ============ */
   // 0.31: so do your villain and the monsters of the wilds. A speaker is { key (voice and mouth shapes in the manifest),
   // id, name, lines, port() (the portrait to fall back on), kind: hero | villain | monster }
-  const VO = { last: -1e9, cat: {}, cur: null, said: {}, queue: [] };
+  const VO = { last: -1e9, cat: {}, cur: null, said: {}, queue: [], pick: {} };
   const LINES = () => window.HERO_LINES || {};
   const HLINES = () => LINES().heroes || {};
   const VO_PRIORITY = { boss: 3, win: 3, dying: 3, march: 2, down: 2, hired: 2, walls: 2 };
   const VO_GAP = { explore: 70000, rest: 120000, town: 45000, start: 20000, danger: 20000, hard: 25000, easy: 25000, down: 12000, levelup: 8000, loot: 8000, march: 3e9, boss: 3e9, win: 3e9,
     walls: 30000, wave: 40000, lair: 40000, villain: 120000, dying: 0, hired: 0,
-    'v:ride': 90000, 'v:spotted': 150000, 'v:lair': 60000, 'v:wave': 90000, 'v:breach': 60000, 'v:kill': 15000, 'v:levelup': 0, 'v:march': 3e9, 'v:intro': 3e9 };
+    'v:ride': 60000, 'v:spotted': 120000, 'v:lair': 45000, 'v:wave': 60000, 'v:breach': 45000, 'v:kill': 12000, 'v:levelup': 0, 'v:march': 3e9, 'v:intro': 3e9,
+    'v:select': 5000, 'v:repelled': 60000, 'v:talent': 15000, 'v:summon': 20000, 'v:lairlost': 30000, 'v:minelost': 45000, 'v:bounty': 60000, 'v:heroesgrow': 90000, 'v:newparty': 0, 'v:dawn': 150000 };
   const portImg = key => { if (!key) return null; if (A.IMG[key]) return A.IMG[key]; const u = A.URI[key]; if (!u) return null; const im = new Image(); im.src = u; A.IMG[key] = im; return im; };
   function heroSpeaker(h) {
     const H = HLINES()[h && h.rid]; if (!H) return null;
@@ -1122,9 +1132,17 @@
   const vsay = (cat, o) => speak(villainSpeaker(), cat, Object.assign({ gapKey: 'v:' + cat }, o));
   const msay = (type, cat, o) => speak(monsterSpeaker(type), cat, Object.assign({ gapKey: 'm:' + cat, force: true }, o));
   // o: force (skip the waits), queue (wait for the line that's playing, then speak), prio (interrupt a lower one)
+  // 0.33: a category can have variants (cat, cat2, cat3...): pick one, never the one said last time
+  function pickLine(sp, key) {
+    const L = sp.lines || {}; const vs = Object.keys(L).filter(k => k === key || (k.indexOf(key) === 0 && /^\d+$/.test(k.slice(key.length))));
+    if (!vs.length) return null; if (vs.length === 1) return vs[0];
+    const last = VO.pick[sp.key + ':' + key]; const pool = vs.filter(k => k !== last);
+    const k = pool[Math.floor(Math.random() * pool.length)]; VO.pick[sp.key + ':' + key] = k; return k;
+  }
   function speak(sp, key, o) {
     o = o || {};
     if (!sp || !S || !ui.active || ui.chatter === false) return false;
+    const gk0 = o.gapKey || key; key = pickLine(sp, key); if (!key) return false; o = Object.assign({}, o, { gapKey: gk0 });
     const text = sp.lines && sp.lines[key]; if (!text) return false;
     const gk = o.gapKey || key; const now = performance.now();
     const pr = o.prio !== undefined ? o.prio : VO_PRIORITY[gk] || (sp.kind === 'hero' ? 0 : 1);
@@ -1199,7 +1217,11 @@
   function voiceWatch() {
     if (!S || S.title || S.phase !== 'map' || ui.modal) return;
     const w = ui.vwatch || (ui.vwatch = { shown: partyShown(), wipes: S.wipes || 0, hidden: 0 });
-    if ((S.wipes || 0) > w.wipes) { w.wipes = S.wipes || 0; const h = S.heroes.find(x => x.status === 'ok'); if (h) setTimeout(() => bark('hired', h, { force: true }), 900); return; }
+    if ((S.wipes || 0) > w.wipes) { w.wipes = S.wipes || 0; const h = S.heroes.find(x => x.status === 'ok'); if (h) setTimeout(() => { if (bark('hired', h, { force: true })) vsay('newparty', { queue: true }); else vsay('newparty'); }, 900); return; }
+    // 0.33: what the heroes did to you today: a lair or a mine wrecked, a bounty posted
+    { const wl = G.myLairs(S).filter(o => G.lairWrecked(S, o)).length, wm = (S.nodes || []).filter(n => n.dev && G.nodeRaided(S, n)).length, nq = (S.quests || []).filter(q => q.status === 'open').length;
+      if (w.wl !== undefined && wl > w.wl) vsay('lairlost'); else if (w.wm !== undefined && wm > w.wm) vsay('minelost'); else if (w.nq !== undefined && nq > w.nq) vsay('bounty');
+      w.wl = wl; w.wm = wm; w.nq = nq; }
     const shown = partyShown(); const day = G.dayIndex(S);
     if (!shown && w.shown) w.hidden = day;
     if (shown && !w.shown && day > w.hidden) {
@@ -1209,6 +1231,22 @@
     w.shown = shown;
     if (shown && G.villainOnMap(S) && Math.hypot(S.villain.x - S.party.x, S.villain.y - S.party.y) <= G.sightRadius(S) + 1) bark('villain');
   }
+  // 0.33: minions talk in a bubble over their heads (voiced when recorded), the way units answer in a strategy game
+  function minionSay(m, cat) {
+    if (!m || !S || !ui.active || ui.chatter === false) return false;
+    const look = MT().look; const M = (LINES().minions || {})[look]; if (!M) return false;
+    const sp = { key: M.key || 'minion-' + look, lines: M.lines };
+    const now = performance.now(); ui.msay = ui.msay || new Map();
+    if (cat === 'select' && now - (VO.cat['m:select'] || 0) < 2500) return false;
+    const key = pickLine(sp, cat); if (!key) return false; VO.cat['m:' + cat] = now;
+    const V = ART.voice && ART.voice[sp.key] && ART.voice[sp.key][key];
+    const dur = V ? V.dur : Math.max(1.4, M.lines[key].length * 0.06);
+    for (const [id, b] of ui.msay) if (b.voice && b.voice.stop) b.voice.stop();
+    ui.msay.clear(); const b = { text: M.lines[key], until: now + dur * 1000 + 900 }; ui.msay.set(m.id, b);
+    if (V && window.SND) SND.voice('voice/' + V.file.replace(/^voice\//, ''), V.at, V.dur).then(p => { if (ui.msay.get(m.id) === b && p) b.voice = p; else if (p && p.stop) p.stop(); });
+    kick(); return true;
+  }
+  const minionBubble = m => { const b = ui.msay && ui.msay.get(m.id); if (!b) return null; if (performance.now() > b.until) { ui.msay.delete(m.id); return null; } return b.text; };
   // after anything that might have handed a hero a magic item, the one who got it says so
   function lootCheck(quiet) {
     if (!S) return; ui.items = ui.items || {};
@@ -1272,6 +1310,7 @@
         if (ev.t === 'event') {
           if (!seenHere) { stepLoop(); return; }   // what the heroes find in the fog, you hear about later in the chronicle
           for (const m of ev.msgs) toast(m, 'good');
+          if (ev.msgs.some(m => /drive off your/.test(m))) { const fm = (S.minions || []).find(m => m.path && m.path.length); if (fm) minionSay(fm, 'fled'); }
           ui.floats.push({ x: ev.x * TILE + TILE / 2, y: ev.y * TILE, text: '★', color: '#ffe066', t0: performance.now() });
           renderSide(); setTimeout(stepLoop, ui.fast ? 250 : 650); return;
         }
@@ -1312,7 +1351,13 @@
       for (const o of S.objects.filter(z => z.wave && z.atGates)) toast(`${G.bandName(o)} wait at Millbrook's gates. The heroes will man the walls.`, 'warn');
       // 0.31: your villain has something to say about the night
       { const br = (n.sieges || []).some(r => r.breached || r.hallDmg > 0); const wv = (n.released || []).some(id => { const b = S.objects.find(z => z.id === id); return b && b.wave; });
-        const cat = br ? 'breach' : n.built.length ? 'lair' : wv ? 'wave' : null; if (cat) setTimeout(() => vsay(cat), 900); }
+        const rp = !br && (n.sieges || []).length > 0;
+        const cat = br ? 'breach' : rp ? 'repelled' : n.built.length ? 'lair' : wv ? 'wave' : Math.random() < 0.3 ? 'dawn' : null; if (cat) setTimeout(() => vsay(cat), 900);
+        // the minions: one that finished a job says so, a new one introduces itself, an idle one grumbles
+        const at = (x, y) => (S.minions || []).find(m => m.x === x && m.y === y);
+        const doneM = n.built.map(id => S.objects.find(z => z.id === id)).filter(Boolean).map(o => at(o.x, o.y)).concat((n.opened || []).map(id => S.nodes.find(z => z.id === id)).filter(Boolean).map(nd => at(nd.x, nd.y))).filter(Boolean)[0];
+        const newM = (n.summoned || []).length ? S.minions[S.minions.length - 1] : null; const idleM = G.idleMinions(S)[0];
+        setTimeout(() => { if (doneM) minionSay(doneM, 'done'); else if (newM) minionSay(newM, 'summoned'); else if (idleM && Math.random() < 0.35) minionSay(idleM, 'idle'); }, 2600); }
       if (n.town && n.town.started) { const k = n.town.started; toast(`Millbrook starts work on ${k === 'walls' ? G.TOWN_B.walls.names[G.townLv(S, 'walls')].toLowerCase() : 'the ' + G.TOWN_B[k].name + (G.townLv(S, k) ? ' ' + G.roman(G.townLv(S, k) + 1) : '')}.`, 'sys'); }
     }
     if (S.phase === 'over') { commit(); showOver(); return; }
@@ -1478,15 +1523,15 @@
       const a = G.assignedTo(S, n)[0]; const here = a && !a.path.length && a.x === n.x && a.y === n.y; const days = a && a.path.length ? minionDays(a) : 0;
       const gl = G.guardOf(S, n); const near = Math.hypot(n.x - S.party.x, n.y - S.party.y) < G.sightRadius(S) + 2;
       let st, bar = '';
-      if (raided) st = `<b class="warn">The heroes drove your minions off. Safe to go back in ${n.raidedUntil - G.dayIndex(S)} day${n.raidedUntil - G.dayIndex(S) > 1 ? 's' : ''}.</b>`;
+      if (raided) st = `<b class="warn">The heroes wrecked it. It yields again in ${n.raidedUntil - G.dayIndex(S)} day${n.raidedUntil - G.dayIndex(S) > 1 ? 's' : ''}.</b>`;
       else if (!n.dev) {
-        st = !a ? `Untouched. A minion needs one night here to ${K.sink}; after that it ${K.verb} ${per} ${K.res} a day.` : here ? `Your ${one} will ${K.sink} here tonight. From tomorrow night it ${K.verb} ${per} ${K.res} a day.` : `A ${one} is on the way, ${days} day${days > 1 ? 's' : ''} out. It needs one night here to ${K.sink}.`;
+        st = !a ? `Untouched. A minion spends a day here to ${K.sink}; after that it ${K.verb} ${per} ${K.res} every night on its own.` : here ? `Your ${one} will ${K.sink} here tonight. From tomorrow night it ${K.verb} ${per} ${K.res} a day.` : `A ${one} is on the way, ${days} day${days > 1 ? 's' : ''} out. It needs one night here to ${K.sink}.`;
         if (a) bar = `<div class="prow">${pbar(here ? 0 : 1 - a.path.length / Math.max(a.trip || 0, a.path.length))}<small>${here ? 'opens tonight' : 'on the way'}</small></div>`;
-      } else st = here ? `Your ${one} ${K.verb} ${per} ${K.res} a day here.` : a ? `A ${one} is on the way, ${days} day${days > 1 ? 's' : ''} out.` : `Nobody works it. One minion here ${K.verb} ${per} ${K.res} a day.`;
+      } else st = `<b class="good">Yours.</b> It ${K.verb} ${per} ${K.res} every night on its own, with nobody there.`;
       return `<section class="panel sel">${img('obj-' + (n.dev ? 'node-' : 'dep-') + n.kind, 'selimg')}<div>${close}<h2 class="cap">${esc(G.nodeName(n))}</h2>
         <p>${esc(n.dev ? K.text : K.rawText)} ${st}</p>${bar}
-        <p class="hint">One minion per site.${gl ? ` Guarded by your ${esc(G.DUNGEONS[gl.dtype].name)}.` : ' Unguarded: a lair within two tiles would defend it.'}${near ? ' <b class="warn">The heroes are close.</b>' : ''}</p>
-        <div class="row">${!a ? `<button class="btn sm" data-act="work" data-id="${n.id}"${raided || !G.idleMinions(S).length ? ' disabled' : ''}>Send a ${esc(one)}</button>${!G.idleMinions(S).length && !raided ? '<span class="hint">No idle minions</span>' : ''}` : `<button class="btn sm" data-act="recall" data-id="${n.id}">Call it off</button>`}</div></div></section>`;
+        <p class="hint">${n.dev ? 'The heroes wreck mines they reach.' : 'One minion sinks it, then it works on its own.'}${gl ? ` Guarded by your ${esc(G.DUNGEONS[gl.dtype].name)}.` : ' Unguarded: a lair within two tiles would defend it.'}${near ? ' <b class="warn">The heroes are close.</b>' : ''}</p>
+        <div class="row">${!a && !n.dev ? `<button class="btn sm" data-act="work" data-id="${n.id}"${raided || !G.idleMinions(S).length ? ' disabled' : ''}>Send a ${esc(one)}</button>${!G.idleMinions(S).length && !raided ? '<span class="hint">No idle minions</span>' : ''}` : `<button class="btn sm" data-act="recall" data-id="${n.id}">Call it off</button>`}</div></div></section>`;
     }
     if (sel.type === 'lair') {
       const o = S.objects.find(z => z.id === sel.id); if (!o) { ui.sel = null; return ''; }
@@ -2230,7 +2275,7 @@
   function showLevelUps(then) {
     const L = S.pendingLevelUps.splice(0);
     if (L.length) {
-      const who = S.heroes.find(x => x.id === L[Math.floor(Math.random() * L.length)].id); if (who && Math.random() < 0.5) setTimeout(() => bark('levelup', who), 500);
+      const who = S.heroes.find(x => x.id === L[Math.floor(Math.random() * L.length)].id); if (who && Math.random() < 0.5) setTimeout(() => { const b = bark('levelup', who); if (Math.random() < 0.5) vsay('heroesgrow', b ? { queue: true } : {}); }, 500);
       const lv = Math.max.apply(null, L.map(u => u.level)); const ab = L.filter(u => u.ability).map(u => `${shortName(u.name)}: ${G.ABILITIES[u.ability].name}`);
       toast(`The heroes grow stronger: level ${lv}.${ab.length ? ' ' + ab.slice(0, 4).join(', ') + '.' : ''}`, 'sys');
     }
@@ -2418,7 +2463,36 @@
   /* ============ battle ============ */
   let BF = null;
   const bcv = () => $('bcv');
+  // 0.33: a fight between the heroes and a band of the wilds (nothing of yours in it) happens off stage: no battle screen
+  function offstageFight() {
+    const b = S.battle; if (!b) return false;
+    if (b.duel || b.siege || b.finale || b.boss || b.dungeonId || b.guardLair || b.attack || b.raidNode) return false;
+    const o = b.objId && S.objects.find(z => z.id === b.objId);
+    return !(o && (o.lair || o.yours || o.wave || o.mine));
+  }
+  function resolveOffstage() {
+    const b = S.battle; const o = b.objId && S.objects.find(z => z.id === b.objId); const seen = partyShown();
+    const foe = o && G.CREATURES[o.type] ? (o.count > 1 ? G.CREATURES[o.type].name : G.CREATURES[o.type].one).toLowerCase() : 'monsters';
+    let g = 0;
+    while (S.battle && !S.battle.over && g++ < 20000) {
+      if (S.battle.phase === 'deploy') { G.beginBattle(S); continue; }
+      if (S.battle.pendingTPK) { G.acceptTPK(S); continue; }
+      if (G.autoStep(S)) break;
+    }
+    const res = S.battle ? G.finishBattle(S) : null;
+    renderBar(); save(true);
+    if (res) {
+      if (res.died && res.died.length) toast(`${res.died.join(' and ')} ${res.died.length > 1 ? 'were' : 'was'} killed fighting ${foe} in the wilds.${res.wiped ? ' The whole party is dead.' : ''}`, 'good', 7000);
+      else if (seen) { toast(res.result === 'win' ? `The heroes cut down the ${foe}.` : `The ${foe} drive the heroes off.`, 'sys'); if (res.result === 'win' && Math.random() < 0.4) setTimeout(() => bark(res.label === 'Tense' || res.label === 'Harrowing' ? 'hard' : 'easy'), 400); }
+    }
+    if (S.phase === 'over') { showOver(); return; }
+    if (S.phase === 'battle' && S.battle) { enterBattle(); return; }
+    const goOn = () => { if (ui.moving) stepLoop(); else commit(); };
+    const after = () => showVillainUps(goOn);
+    if (S.pendingLevelUps.length) showLevelUps(after); else after();
+  }
   function enterBattle() {
+    if (offstageFight()) { resolveOffstage(); return; }
     clearTimeout(ui.meterT); ui.meterTok++; ui.fair = null;
     // no deployment: your monsters line up and the fight starts at once
     if (S.battle.phase === 'deploy') G.beginBattle(S);
@@ -3094,7 +3168,7 @@
         case 'tlearn': case 'tpath': {
           const n = G.webOf(S).nodes[d.id]; if (!n) return;
           const err = act === 'tpath' ? G.learnPath(S, d.id) : G.learnTalent(S, d.id); if (err) { sfx('deny'); toast(err, 'bad'); return; }
-          sfx('researched'); toast(`Talent: ${tLabel(n.t, G.tRank(S, n.t))}.`, 'good');
+          sfx('researched'); toast(`Talent: ${tLabel(n.t, G.tRank(S, n.t))}.`, 'good'); vsay('talent');
           ui.finaleEst = null; ui.est = null; ui.tFree = G.talentFree(S); commit(); return;
         }
         case 'talent': {
@@ -3116,9 +3190,9 @@
         case 'selm': setMinionSel([d.id]); ui.mbuild = false; ui.place = null; { const m = selMinions()[0]; if (m) centerOn(m.x, m.y); } renderSide(); drawMap(); return;
         case 'nextidle': closeScreen(); nextIdle(e.shiftKey); return;
         case 'mmove': ui.mode = ui.mode === 'move' ? null : 'move'; ui.place = null; ui.mbuild = false; renderSide(); drawMap(); return;
-        case 'mdance': for (const m of selMinions()) G.orderDance(S, m.id); ui.mode = null; ui.place = null; kick(); commit(); return;
+        case 'mdance': for (const m of selMinions()) G.orderDance(S, m.id); minionSay(selMinions()[0], 'dance'); ui.mode = null; ui.place = null; kick(); commit(); return;
         case 'bpatrol': ui.mode = ui.mode === 'patrol' ? null : 'patrol'; renderSide(); drawMap(); return;
-        case 'vsel': { const V = S.villain; ui.sel = { type: 'villain', x: V.x, y: V.y }; ui.mode = null; const p = G.villainOnMap(S) ? V : G.siteOf(S, 'tower'); centerOn(p.x, p.y); renderSide(); drawMap(); if (V.meet) showParley(); return; }
+        case 'vsel': { const V = S.villain; if (!V.meet) vsay('select'); ui.sel = { type: 'villain', x: V.x, y: V.y }; ui.mode = null; const p = G.villainOnMap(S) ? V : G.siteOf(S, 'tower'); centerOn(p.x, p.y); renderSide(); drawMap(); if (V.meet) showParley(); return; }
         case 'vgo': { const o = S.objects.find(z => z.id === d.id); if (o) sendVillain(o.x, o.y); return; }
         case 'vhome': { const tw = G.siteOf(S, 'tower'); sendVillain(tw.x, tw.y); return; }
         case 'vstop': { S.villain.path = []; S.villain.target = null; S.villain.goHome = false; commit(); return; }
@@ -3140,7 +3214,7 @@
         case 'buildhelp': { const err = G.orderHelp(S, d.id); if (err) { toast(err, 'bad'); return; } commit(); return; }
         case 'cancelbuild': { G.cancelBuild(S, d.id); ui.sel = null; toast('Building called off. Half the cost comes back.', 'sys'); commit(); return; }
         case 'expand': { const err = G.expandLair(S, d.id); if (err) { toast(err, 'bad'); return; } ui.reachCache = null; toast('The lair is expanded.', 'good'); ui.meter = null; commit(); return; }
-        case 'train': { const err = G.trainMinion(S); if (err) { toast(err, 'bad'); return; } sfx('summon'); const w = S.summons.reduce((t, q) => t + q.days, 0); toast(`Summoning a ${MT().one.toLowerCase()} at the tower: ready in ${w} days.`, 'good'); commit(); return; }
+        case 'train': { const err = G.trainMinion(S); if (err) { toast(err, 'bad'); return; } sfx('summon'); vsay('summon'); const w = S.summons.reduce((t, q) => t + q.days, 0); toast(`Summoning a ${MT().one.toLowerCase()} at the tower: ready in ${w} days.`, 'good'); commit(); return; }
         case 'unsummon': { sfx('coins'); const err = G.cancelSummon(S, +d.i); if (err) { toast(err, 'bad'); return; } toast('Summoning cancelled. The gold is back in your coffers.', 'sys'); commit(); return; }
         case 'library': { const err = G.buildLibrary(S); if (err) { toast(err, 'bad'); return; } sfx('build'); toast(`Your ${MT().name.toLowerCase()} start on the ${G.libraryLevel(S) ? "Library's new wing" : 'Forbidden Library'}: ${S.base.libBuild.days} days.`, 'good'); commit(); return; }
         case 'sellair': case 'selnode': { const o = act === 'sellair' ? S.objects.find(z => z.id === d.id) : S.nodes.find(z => z.id === d.id); if (!o) return; closeScreen(); ui.sel = { type: act === 'sellair' ? 'lair' : 'node', id: o.id, x: o.x, y: o.y }; centerOn(o.x, o.y); ui.scrollTo = 'sel'; renderSide(); drawMap(); return; }
@@ -3323,5 +3397,5 @@
     if (ui.r3d) { const M = W3._map(); const T3 = M.camera.position.constructor; const v = new T3(x + 0.5, M.hAt(x + 0.5, y + 0.5), y + 0.5); v.project(M.camera); const r = W3.canvas.getBoundingClientRect(); return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height }; }
     const r = mapCv().getBoundingClientRect(); return { x: r.left + (x + 0.5) * TILE - Math.round(ui.cam.x), y: r.top + (y + 0.5) * TILE - Math.round(ui.cam.y) };
   }
-  window.__bts = { state: () => S, ui, vo: () => VO, bark: (c, w, o) => bark(c, w, o), vsay: (c, o) => vsay(c, o), msay: (t, c, o) => msay(t, c, o), TILE, minionScreen, tileScreen, centerOn: (x, y) => { centerOn(x, y, true); drawMap(); }, enterBattle: () => enterBattle(), commit: () => commit(), openScreen: k => openScreen(k), renderSide: () => renderSide(), findFair: () => findFair(), showOver: () => showOver(), spellbook: () => spellbook(), select: sel => { ui.sel = sel; renderSide(); drawMap(); }, showWeek: () => showWeek(), showVillainUps: () => showVillainUps(), dawn: () => dawn() };
+  window.__bts = { state: () => S, ui, vo: () => VO, bark: (c, w, o) => bark(c, w, o), vsay: (c, o) => vsay(c, o), msay: (t, c, o) => msay(t, c, o), minionSay: (m, c) => minionSay(m, c), minionBubble: m => minionBubble(m), TILE, minionScreen, tileScreen, centerOn: (x, y) => { centerOn(x, y, true); drawMap(); }, enterBattle: () => enterBattle(), commit: () => commit(), openScreen: k => openScreen(k), renderSide: () => renderSide(), findFair: () => findFair(), showOver: () => showOver(), spellbook: () => spellbook(), select: sel => { ui.sel = sel; renderSide(); drawMap(); }, showWeek: () => showWeek(), showVillainUps: () => showVillainUps(), dawn: () => dawn() };
 })();

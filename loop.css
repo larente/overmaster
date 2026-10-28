@@ -652,3 +652,10 @@ ul.log small { color: #8a7a60; margin-right: 4px; }
 .tside .tinf .pbar, .tside .tinf > div { width: 100%; }
 .tside .tinf .pgb { width: 100%; }
 .towerbtn.static { cursor: default; } .towerbtn.static:hover { filter: none; }
+
+/* 0.33: a minion's words over its head */
+.l3.l-say { z-index: 3; }
+.l3.l-say .lc { display: inline-block; transform: translate(-50%, -100%); padding: 3px 9px; border-radius: 8px; background: rgba(20,14,8,.92); border: 1px solid #c8a050; color: #f2e6c8;
+  font-family: var(--font-body); font-weight: 500; text-shadow: none; font-style: italic; font-size: calc(12.5px * var(--z, 1)); white-space: nowrap; box-shadow: 0 4px 10px rgba(0,0,0,.5); position: absolute; }
+.l3.l-say .lc::after { content: ''; position: absolute; left: 50%; bottom: -6px; margin-left: -5px; border: 5px solid transparent; border-top-color: #c8a050; border-bottom: 0; }
+@keyframes lsayin { from { opacity: 0; transform: translate(-50%, -80%); } }
