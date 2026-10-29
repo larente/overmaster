@@ -1,5 +1,11 @@
 # Overmaster — roadmap
 
+## In progress for alpha 0.34: the storyteller's intro
+- **A 90-second intro before the title**, told by an old storyteller in Millbrook's tavern: why the heroes are bounty hunters, why the monsters need you, and why Millbrook's hall has to burn. Script and shot list: the "Overmaster intro cinematic" doc. The same edit makes a 1:39 trailer, a 60-second trailer, a 30-second teaser and a vertical teaser.
+- **Made with the game's own tools**: ElevenLabs for the storyteller, the score and 16 new effects (`elevenlabs_gen.py intro`), PixelLab for the storyteller and 10 scenes (`pixellab_gen.py intro`), and real game footage recorded frame by frame in a film mode (`tools/intro/film.py`). `tools/intro/build_intro.py` cuts it all with subtitles (see the art guide).
+- **Plays once per device** after the first key press, skippable, with **Watch the intro** on the title screen. It switches on when the finished intro is installed in `art/intro/`.
+- **Still to do:** run the two generation commands on the Mac, then the final cut, and pick the web address for the trailers' end slate.
+
 ## Delivered in alpha 0.33: villains with a lot to say, talking minions, fights off stage
 - **Every villain has about 78 lines** (it had 19): two to five versions of each moment, never the same one twice in a row, in the villain's own voice. New moments: when you select your villain (on the map, the sidebar, or V), when a wave is thrown back from the walls, when you learn a talent, summon a minion, lose a lair or a mine to the heroes, when Millbrook puts a bounty on you, when the heroes level up or a new party takes up the sword, and now and then at dawn.
 - **Minions talk.** Each villain's minions (Bone Thralls, Kobolds, Imps, Clay Servants, Thralls, Grave Diggers) have 29 lines, strategy-game style, in a speech bubble over their heads: when you select one, order it to move, build, sink a mine or dance, when it finishes a job, when it's newly summoned, when it's been idle, and when the heroes chase it off.

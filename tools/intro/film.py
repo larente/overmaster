@@ -10,7 +10,7 @@ camera is flown along a path while the game plays. Frames land in FOLDER/<shot>/
 build_intro.py reads as footage.
 Needs Python 3 with Playwright (and its Chromium).
 """
-import argparse, json, math, os, subprocess, sys, time
+import argparse, base64, json, math, os, subprocess, sys, time
 from playwright.sync_api import sync_playwright
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -40,7 +40,8 @@ CLOCK = r"""
   window.setInterval = (cb, ms, ...a) => { if (!F.on) return rSI(cb, ms, ...a); const i = ++id; const e = Math.max(4, +ms || 0); timers.set(i, { at: F.t + e, cb, a, every: e }); return i; };
   window.clearInterval = i => { timers.delete(i); cSI(i); };
   const run = f => { try { f(); } catch (e) { console.error('film: ' + (e && e.stack || e)); } };
-  F.start = () => { if (F.on) return; F.t = rnow(); dateBase = rDate() - F.t; F.on = true; };
+  // a do-nothing loop on the real clock keeps the browser producing frames, so a screenshot never waits for one
+  F.start = () => { if (F.on) return; F.t = rnow(); dateBase = rDate() - F.t; F.on = true; const keep = () => rAF(keep); rAF(keep); };
   F.step = ms => {
     const end = F.t + ms;
     for (let guard = 0; guard < 500; guard++) {
@@ -119,6 +120,8 @@ class Film:
         self.pg.wait_for_timeout(500)
         # onto the virtual clock, then restart the 3D loop so its next frame is ours to give
         self.js("() => { __film.start(); World3D.resize(); const m = World3D._mode(); World3D.setMode(null); World3D.setMode(m); }")
+        if os.environ.get('FILM_TWEAK'):
+            self.js(os.environ['FILM_TWEAK'])
         # the camera: the game places it each frame, then we move it where the shot wants it
         self.js("""() => {
           const M = World3D._map(); const cam = M.camera; if (cam.__film) return; cam.__film = true;
@@ -161,7 +164,7 @@ class Film:
     def end_day(self):
         return "() => { document.querySelector('#endday').click(); }"
 
-    def record(self, name, secs, cam, at=None, settle=0.0, speed=1.0):
+    def record(self, name, secs, cam, at=None, settle=0.0, speed=1.0, grab='canvas'):
         """cam(t) -> dict(x, z, d, pitch, yaw, lift, fov); at: {seconds: js} run when the clock passes it;
         speed < 1 plays the game slower than the film runs"""
         folder = os.path.join(self.out, name); os.makedirs(folder, exist_ok=True)
@@ -171,17 +174,27 @@ class Film:
         n = int(round(secs * FPS)); dt = 1000.0 / FPS * speed
         t_settle = int(round(settle * FPS))
         t0 = time.time()
-        e = self.every
+        e = self.every; tc = [0.0, 0.0, 0.0]
+        limit = int(os.environ.get('FILM_FRAMES', '0') or 0)
         for i in range(-t_settle, n, e):
+            if limit and i >= limit: break
             t = i / FPS
             for k in sorted(at):
                 if k <= t and k not in done:
                     done.add(k); self.js(at[k])
-            self.js("c => { __film.cam = c; }", cam(max(0.0, t)))
-            self.js("ms => __film.step(ms)", dt * e)
-            if i >= 0:
-                self.pg.screenshot(path=os.path.join(folder, '%04d.jpg' % i), type='jpeg', quality=93, timeout=180000)
-        print('%s: %d frames in %.0f s' % (name, n, time.time() - t0), flush=True)
+            a0 = time.time()
+            if grab == 'canvas' and i >= 0:
+                # the 3D view alone, read straight off the canvas in the same task that drew it: far quicker than a screenshot
+                url = self.js("([c, ms]) => { __film.cam = c; __film.step(ms); return World3D.canvas.toDataURL('image/jpeg', 0.93); }", [cam(max(0.0, t)), dt * e])
+                a1 = time.time()
+                open(os.path.join(folder, '%04d.jpg' % i), 'wb').write(base64.b64decode(url.split(',', 1)[1]))
+            else:
+                self.js("([c, ms]) => { __film.cam = c; return __film.step(ms); }", [cam(max(0.0, t)), dt * e])
+                a1 = time.time()
+                if i >= 0:
+                    self.pg.screenshot(path=os.path.join(folder, '%04d.jpg' % i), type='jpeg', quality=93, timeout=180000)
+            a2 = time.time(); tc[0] += a1 - a0; tc[1] += a2 - a1; tc[2] += 1
+        print('%s: %d frames in %.0f s (step %.2f s, picture %.2f s a frame)' % (name, n, time.time() - t0, tc[0] / max(1, tc[2]), tc[1] / max(1, tc[2])), flush=True)
 
 
 def ease(u):
@@ -363,7 +376,7 @@ def shot_s16(F, probe):
         for _ in range(6): F.js("() => __film.step(33.3)")
         F.js("c => { __film.cam = c; }", cam(0)); F.js("() => __film.step(33.3)")
         F.pg.screenshot(path=os.path.join(F.out, 'probe-s16.png')); return
-    F.record('s16', 6.5, cam, at={0.4: F.end_day()}, settle=0.4, speed=0.8)
+    F.record('s16', 6.2, cam, at={0.4: F.end_day()}, settle=0.4, speed=0.8)
 
 
 def meet_band(F, types=('goblin', 'bandit', 'orc', 'wolf', 'ogre')):
@@ -399,7 +412,7 @@ def shot_s13a(F, probe):
         F.js("c => { __film.cam = c; }", cam(0)); F.js("() => __film.step(33.3)")
         F.pg.screenshot(path=os.path.join(F.out, 'probe-s13a.png')); return
     press = "() => { const b = document.querySelector('[data-act=ppay]'); if (b) b.classList.add('film-press'); }"
-    F.record('s13a', 4.0, cam, at={0.05: "() => window.__bts.parley()", 1.25: press, 1.7: "() => window.__bts.parleyAct('ppay')"}, settle=0.2)
+    F.record('s13a', 2.9, cam, at={0.05: "() => window.__bts.parley()", 1.25: press, 1.7: "() => window.__bts.parleyAct('ppay')"}, settle=0.2, grab='page')
 
 
 @shot
@@ -425,7 +438,7 @@ def shot_s13b(F, probe):
         for _ in range(10): F.js("() => __film.step(33.3)")
         F.js("c => { __film.cam = c; }", cam(0)); F.js("() => __film.step(33.3)")
         F.pg.screenshot(path=os.path.join(F.out, 'probe-s13b.png')); return
-    F.record('s13b', 4.0, cam, at={0.05: "() => window.__bts.parley()", 0.9: press, 1.35: lie}, settle=0.2)
+    F.record('s13b', 2.9, cam, at={0.05: "() => window.__bts.parley()", 0.9: press, 1.35: lie}, settle=0.2, grab='page')
 
 
 @shot
@@ -447,7 +460,7 @@ def shot_s13c(F, probe):
     if probe:
         for _ in range(40): F.js("() => __film.step(33.3)")
         F.pg.screenshot(path=os.path.join(F.out, 'probe-s13c.png')); return
-    F.record('s13c', 6.0, cam, settle=0.3, speed=1.3)
+    F.record('s13c', 2.8, cam, settle=0.3, speed=1.3, grab='page')
 
 
 if __name__ == '__main__':

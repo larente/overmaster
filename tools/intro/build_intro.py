@@ -775,7 +775,7 @@ def write_vtt(tl, path):
 
 
 # ---------------------------------------------------------------- one cut
-def build_cut(data, name, assets, out_dir, fast=False, sheet=False):
+def build_cut(data, name, assets, out_dir, fast=False, sheet=False, captions=False):
     cuts = data['edit']['cuts']
     cut = copy.deepcopy(cuts[name])
     if cut.get('same_as'):
@@ -819,7 +819,7 @@ def build_cut(data, name, assets, out_dir, fast=False, sheet=False):
                 dw.text((OW / 2, OH / 10), 'OVERMASTER', font=font('Cinzel-800.ttf', OW * 0.1), fill=(232, 191, 90, 255), anchor='mm')
             canvas.alpha_composite(wm, (0, OH - OH // 5 - OH // 20))
             fr = canvas
-        if cut.get('captions'):
+        if cut.get('captions') or captions:
             c = tl.caption_at(t)
             if c:
                 draw_caption(fr, c, vertical)
@@ -851,6 +851,7 @@ def main():
     ap.add_argument('--out', default=os.path.join(ROOT, 'dist', 'intro'))
     ap.add_argument('--fast', action='store_true')
     ap.add_argument('--sheet', action='store_true')
+    ap.add_argument('--captions', action='store_true', help='burn the subtitles into every cut (for a rough cut without the narration)')
     ap.add_argument('--install', action='store_true', help="put the game cut into the game's art folder (art/intro/) and list it in art/manifest.json")
     a = ap.parse_args()
     data = json.load(open(a.data))
@@ -860,7 +861,7 @@ def main():
     if bad:
         sys.exit('Unknown cuts: %s (known: %s)' % (', '.join(bad), ', '.join(data['edit']['cuts'])))
     assets = Assets(a.assets, a.art, data)
-    reports = [build_cut(data, n, assets, a.out, a.fast, a.sheet) for n in names]
+    reports = [build_cut(data, n, assets, a.out, a.fast, a.sheet, a.captions) for n in names]
     rep = {'cuts': reports, 'used': sorted(assets.used), 'missing (stood in)': sorted(assets.missing)}
     json.dump(rep, open(os.path.join(a.out, 'report.json'), 'w'), indent=1)
     for r in reports:

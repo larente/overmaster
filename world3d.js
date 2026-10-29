@@ -135,7 +135,7 @@ const World3D = (() => {
   function init(h) {
     hooks = h;
     if (renderer) return true;
-    try { renderer = new T.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' }); } catch (e) { renderer = null; return false; }
+    try { renderer = new T.WebGLRenderer({ antialias: !window.__film, powerPreference: 'high-performance' }); } catch (e) { renderer = null; return false; }
     quality.pr = Math.min(1.75, window.devicePixelRatio || 1);
     renderer.setPixelRatio(quality.pr);
     renderer.outputEncoding = T.sRGBEncoding;
