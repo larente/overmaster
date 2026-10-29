@@ -88,6 +88,19 @@ class Assets:
             im = None
             if p:
                 im = Image.open(p).convert('RGBA')
+                # PixelLab sometimes leaves a transparent margin: trim it, then crop to 16:9 from the middle
+                a = np.asarray(im).astype(int)
+                solid = (a[..., 3] > 200) & ~((a[..., 0] > 238) & (a[..., 1] > 238) & (a[..., 2] > 238))   # not see-through, not paper-white
+                rows, cols = np.where(solid.mean(1) > 0.5)[0], np.where(solid.mean(0) > 0.5)[0]
+                bb = (cols[0], rows[0], cols[-1] + 1, rows[-1] + 1) if len(rows) and len(cols) else None
+                if bb and (bb[2] - bb[0] < im.width - 2 or bb[3] - bb[1] < im.height - 2):
+                    im = im.crop((bb[0] + 1, bb[1] + 1, bb[2] - 1, bb[3] - 1))
+                w, h = im.size
+                if abs(w / h - 16 / 9) > 0.01:
+                    if w / h > 16 / 9:
+                        nw = int(round(h * 16 / 9)); im = im.crop(((w - nw) // 2, 0, (w - nw) // 2 + nw, h))
+                    else:
+                        nh = int(round(w * 9 / 16)); im = im.crop((0, (h - nh) // 2, w, (h - nh) // 2 + nh))
                 k = max(1, math.ceil(3840 / im.width))
                 im = im.resize((im.width * k, im.height * k), Image.NEAREST)
                 self.used['scene ' + sid] = p
@@ -110,7 +123,18 @@ class Assets:
             d = self._p('storyteller', part)
             if d:
                 fs = sorted(f for f in os.listdir(d) if f.endswith('.png'))
-                val = [up(Image.open(os.path.join(d, f)).convert('RGBA')) for f in fs] or None
+                raw = [Image.open(os.path.join(d, f)).convert('RGBA') for f in fs]
+                if part == 'blow' and raw:
+                    # the animation forgets his red eyes after its first frame: lay them back on every frame
+                    pe, pp = self._p('storyteller', 'eyes.png'), self._p('storyteller', 'portrait.png')
+                    if pe and pp:
+                        E = np.asarray(Image.open(pe).convert('RGBA')).astype(int); P0 = np.asarray(Image.open(pp).convert('RGBA')).astype(int)
+                        red = (E[..., 0] > 150) & (E[..., 0] - E[..., 1] > 70) & (np.abs(E[..., :3] - P0[..., :3]).sum(-1) > 90)
+                        out = []
+                        for im in raw:
+                            a = np.asarray(im).copy(); a[red] = E[red]; out.append(Image.fromarray(a.astype(np.uint8), 'RGBA'))
+                        raw = out
+                val = [up(im) for im in raw] or None
         elif part.startswith('talk'):
             d = self._p('storyteller', part)
             if d and os.path.exists(os.path.join(d, 'visemes.json')):
@@ -166,8 +190,7 @@ class Assets:
                 if i >= 0 and len(en) >= i + len(say):
                     t0, t1 = st[i], en[i + len(say) - 1]
                     sub = {'say': say, 'alignment': {'characters': list(say),
-                           'character_start_times_seconds': [t - t0 for t in st[i:i + len(say)]],
-                           'character_end_times_seconds': [t - t0 for t in en[i:i + len(say)]]}}
+                           'character_start_times_seconds': st[i:i + len(say)], 'character_end_times_seconds': en[i:i + len(say)]}}
                     return p, max(0.0, t0 - 0.05), (t1 - t0) + 0.25, sub
             take = 1
         p, j = self._p('voice', '%s-%s.mp3' % (lid, take)), self._p('voice', '%s-%s.json' % (lid, take))
@@ -175,7 +198,16 @@ class Assets:
             self.missing.add('voice ' + lid)
             return None
         self.used['voice %s' % lid] = p
-        return p, 0.0, self.dur(p), (json.load(open(j)) if j else {})
+        meta = json.load(open(j)) if j else {}
+        al = meta.get('alignment') or {}
+        st, en, say = al.get('character_start_times_seconds') or [], al.get('character_end_times_seconds') or [], meta.get('say') or ''
+        if st and en and len(st) == len(say):
+            # the spoken part only: from the first real letter (after any [tag]) to the last, a breath either side
+            # a line that opens with a [tag] (a chuckle, a whisper) keeps everything from the top: the tag is the sound
+            i0 = 0 if say.startswith('[') else next((k for k, c in enumerate(say) if c != ' '), 0)
+            off = 0.0 if say.startswith('[') else max(0.0, st[i0] - 0.06); end = min(self.dur(p) or en[-1], en[-1] + 0.14)
+            return p, off, end - off, meta
+        return p, 0.0, self.dur(p), meta
 
     def music(self, key):
         p = self._p('music', key + '.mp3')
@@ -225,23 +257,45 @@ def word_frac(text, word):
 
 
 class Timeline:
+    """Shots laid end to end. A shot can start on a word of a line already placed ("start": {"word": [line, words], "lead": s}),
+    which also ends the shot before it; and it can stretch to hold its lines ("fit": true, "tail": s). Lines are placed
+    from the start of their shot. With the real voice in, the cut follows the storyteller's pace."""
     def __init__(self, data, cut, assets):
         self.data, self.assets = data, assets
-        self.shots, self.length = shot_list(data, cut)
+        ed = data['edit']
+        self.tempo = float(cut.get('voice_tempo', ed.get('voice_tempo', 1.0)))
         self.lines = {l['id']: l for l in data['lines']}
-        takes = data['edit'].get('takes', {})
-        self.placed = {}   # line id -> {start, dur, path, off, meta, text}
-        for s in self.shots:
+        takes = ed.get('takes', {})
+        self.placed = {}   # line id -> {start, dur, path, off, src, meta, text, say}
+        shots, _ = shot_list(data, cut)
+        t = 0.0
+        for i, s in enumerate(shots):
+            st = s.get('start')
+            if isinstance(st, dict) and 'word' in st and i:
+                w = self.word_time(*st['word'])
+                if w is not None:
+                    t = max(shots[i - 1]['t0'] + 0.3, w - st.get('lead', 0.12))
+                    shots[i - 1]['t1'] = t; shots[i - 1]['dur'] = t - shots[i - 1]['t0']
+            s['t0'] = t
+            end = t + s['dur']
             for lid, at in s.get('lines', []):
-                v = assets.voice(lid, takes.get(lid, 1))
                 L = self.lines[lid]
+                v = assets.voice(lid, takes.get(lid, 1))
                 if v:
-                    path, off, dur, meta = v
+                    path, off, src, meta = v
+                    dur = src / self.tempo
                 else:
-                    path, off, meta = None, 0.0, {}
+                    path, off, src, meta = None, 0.0, 0.0, {}
                     dur = 0.35 + len(L['text'].split()) / 2.4
-                self.placed[lid] = {'start': s['t0'] + at, 'dur': dur, 'path': path, 'off': off, 'meta': meta, 'text': L['text'],
+                self.placed[lid] = {'start': t + at, 'dur': dur, 'path': path, 'off': off, 'src': src, 'meta': meta, 'text': L['text'],
                                     'say': L.get('say', L['text']), 'shot': s['n']}
+            if s.get('fit'):
+                # hold until every line already running (this shot's, or one carried over from before) has finished
+                last = max([P['start'] + P['dur'] for P in self.placed.values()] or [t])
+                end = max(end, last + s.get('tail', 0.5))
+            s['t1'] = end; s['dur'] = end - t
+            t = end
+        self.shots, self.length = shots, t
         self.warn = []
         order = sorted(self.placed.items(), key=lambda kv: kv[1]['start'])
         for (a, A), (b, B) in zip(order, order[1:]):
@@ -251,6 +305,14 @@ class Timeline:
             a, A = order[-1]
             if A['start'] + A['dur'] > self.length:
                 self.warn.append('%s runs past the end by %.2f s' % (a, A['start'] + A['dur'] - self.length))
+
+    def char_time(self, P, i):
+        """when character i of a placed line is spoken, on the cut's clock"""
+        al = (P['meta'] or {}).get('alignment') or {}
+        st = al.get('character_start_times_seconds') or []
+        if P['path'] and len(st) > i:
+            return P['start'] + max(0.0, st[i] - P['off']) / self.tempo
+        return P['start'] + P['dur'] * i / max(1, len(P['say']))
 
     def shot_at(self, t):
         for s in self.shots:
@@ -268,14 +330,8 @@ class Timeline:
         P = self.placed.get(lid)
         if not P:
             return None
-        say = P['say']; al = (P['meta'] or {}).get('alignment') or {}
-        st = al.get('character_start_times_seconds') or []
-        i = say.lower().find(word.lower())
-        if i < 0:
-            return P['start']
-        if len(st) > i:
-            return P['start'] + st[i]
-        return P['start'] + P['dur'] * i / max(1, len(say))
+        i = P['say'].lower().find(word.lower())
+        return self.char_time(P, max(0, i)) if i >= 0 else P['start']
 
     def when(self, shot, at):
         if isinstance(at, dict) and 'word' in at:
@@ -461,10 +517,10 @@ class Renderer:
         ends = al.get('character_end_times_seconds') or []
         shift = max(0, len(P['say']) - len(plan.get('text', P['text']))) if P['say'].endswith(plan.get('text', P['text'])[-8:]) else 0
         times = []
-        if ends:
+        if ends and P['path']:
             for f in frames:
                 k = max(0, min(len(ends), int(f.get('text_offset', 0)) + shift))
-                times.append(ends[k - 1] if k > 0 else 0.0)
+                times.append((ends[k - 1] - P['off']) / self.tl.tempo if k > 0 else 0.0)
         else:
             tot = sum(f.get('duration_ms', 90) for f in frames) or 1; acc = 0
             for f in frames:
@@ -514,6 +570,25 @@ class Renderer:
         if a < 1:
             im.putalpha(im.getchannel('A').point(lambda v: int(v * a)))
         frame.alpha_composite(im, ((self.W - h) // 2, (self.H - h) // 2))
+
+    def lay_portraits(self, frame, L, s, lt, u):
+        """several villains side by side, rising in one after another"""
+        col = hexrgb(L.get('glow', '#ffaa55'))
+        frame.alpha_composite(glow(self.size, col, 0.6 + 0.2 * math.sin(lt * 5)))
+        embers(frame, s['t0'] + lt, 50, seed=7, color=col)
+        keys = L['portraits']; n = len(keys); h = int(L.get('h', 0.5) * self.H); gap = int(h * 0.12)
+        x0 = (self.W - (n * h + (n - 1) * gap)) // 2
+        for i, k in enumerate(keys):
+            p = self.A.portrait(k)
+            if p is None:
+                continue
+            a = ease((lt - i * 0.12) / 0.35, 'out')
+            if a <= 0:
+                continue
+            im = p.resize((h, h), Image.NEAREST)
+            if a < 1:
+                im.putalpha(im.getchannel('A').point(lambda v: int(v * a)))
+            frame.alpha_composite(im, (x0 + i * (h + gap), int((self.H - h) / 2 + (1 - a) * self.H * 0.03)))
 
     def lay_footage(self, frame, L, s, lt, u):
         p = self.A.footage(L['footage'])
@@ -613,6 +688,7 @@ class Renderer:
             elif 'story' in L: self.lay_story(fr, L, s, lt, u)
             elif 'sprites' in L: self.lay_sprites(fr, L, s, lt, u)
             elif 'portrait' in L: self.lay_portrait(fr, L, s, lt, u)
+            elif 'portraits' in L: self.lay_portraits(fr, L, s, lt, u)
             elif 'footage' in L: self.lay_footage(fr, L, s, lt, u)
             elif L.get('title'): self.lay_title(fr, L, s, lt, u)
             elif L.get('endslate'): self.lay_endslate(fr, L, s, lt, u)
@@ -697,7 +773,7 @@ def mix_audio(data, cut, tl, assets, out_wav, report):
     vg = ed.get('voice_gain_db', 0)
     for lid, P in tl.placed.items():
         if P['path']:
-            ev.append((P['path'], P['start'], P['off'], P['dur'], vg, 0.0, 0.03, 'voice'))
+            ev.append((P['path'], P['start'], P['off'], P['src'], vg, 0.02, 0.06, 'voice'))
     for s in tl.shots:
         for e in s.get('sfx', []):
             key, at, gain = e[0], e[1], (e[2] if len(e) > 2 else -6)
@@ -735,9 +811,13 @@ def mix_audio(data, cut, tl, assets, out_wav, report):
     args = ['ffmpeg', '-v', 'error', '-y']
     for e in ev:
         args += ['-i', e[0]]
+    # a silent bed the full length of the cut, so the mix starts at zero and runs to the end whatever starts when
+    args += ['-f', 'lavfi', '-t', '%.3f' % tl.length, '-i', 'anullsrc=r=48000:cl=stereo']
     parts, buses = [], {'voice': [], 'sfx': [], 'music': []}
     for i, (p, start, off, dur, gain, fi, fo, bus) in enumerate(ev):
         chain = '[%d:a]aresample=48000,aformat=channel_layouts=stereo,atrim=start=%.3f:duration=%.3f,asetpts=PTS-STARTPTS' % (i, off, dur)
+        if bus == 'voice' and abs(tl.tempo - 1) > 1e-3:
+            chain += ',atempo=%.4f' % tl.tempo; dur = dur / tl.tempo
         if fi > 0:
             chain += ',afade=t=in:d=%.3f' % fi
         if fo > 0:
@@ -756,7 +836,8 @@ def mix_audio(data, cut, tl, assets, out_wav, report):
         outs = [('[v1]' if o == 'voice' else '[mduck]' if o == 'music' else '[%s]' % o) for o in outs]
     else:
         outs = ['[%s]' % o for o in outs]
-    parts.append('%samix=inputs=%d:normalize=0:duration=longest,atrim=duration=%.3f,loudnorm=I=%g:TP=-1.5:LRA=11[out]' % (''.join(outs), len(outs), tl.length, ed.get('lufs', -14)))
+    parts.append('[%d:a]anull[bed]' % len(ev))
+    parts.append('[bed]%samix=inputs=%d:normalize=0:duration=first,loudnorm=I=%g:TP=-1.5:LRA=11[out]' % (''.join(outs), len(outs) + 1, ed.get('lufs', -14)))
     args += ['-filter_complex', ';'.join(parts), '-map', '[out]', '-ar', '48000', '-ac', '2', out_wav]
     subprocess.run(args, check=True)
 
@@ -817,7 +898,8 @@ def build_cut(data, name, assets, out_dir, fast=False, sheet=False, captions=Fal
             if wm is None:
                 wm = Image.new('RGBA', (OW, OH // 5), (0, 0, 0, 0)); dw = ImageDraw.Draw(wm)
                 dw.text((OW / 2, OH / 10), 'OVERMASTER', font=font('Cinzel-800.ttf', OW * 0.1), fill=(232, 191, 90, 255), anchor='mm')
-            canvas.alpha_composite(wm, (0, OH - OH // 5 - OH // 20))
+            if not any(L.get('title') or L.get('endslate') for L in tl.shot_at(t).get('layers', [])):
+                canvas.alpha_composite(wm, (0, OH - OH // 5 - OH // 20))   # the title card carries its own
             fr = canvas
         if cut.get('captions') or captions:
             c = tl.caption_at(t)
@@ -851,6 +933,7 @@ def main():
     ap.add_argument('--out', default=os.path.join(ROOT, 'dist', 'intro'))
     ap.add_argument('--fast', action='store_true')
     ap.add_argument('--sheet', action='store_true')
+    ap.add_argument('--plan', action='store_true', help='print each cut\'s timing (shots and lines) and stop')
     ap.add_argument('--captions', action='store_true', help='burn the subtitles into every cut (for a rough cut without the narration)')
     ap.add_argument('--install', action='store_true', help="put the game cut into the game's art folder (art/intro/) and list it in art/manifest.json")
     a = ap.parse_args()
@@ -861,6 +944,19 @@ def main():
     if bad:
         sys.exit('Unknown cuts: %s (known: %s)' % (', '.join(bad), ', '.join(data['edit']['cuts'])))
     assets = Assets(a.assets, a.art, data)
+    if a.plan:
+        cuts = data['edit']['cuts']
+        for n in names:
+            cut = copy.deepcopy(cuts[n])
+            if cut.get('same_as'):
+                base = copy.deepcopy(cuts[cut['same_as']]); base.update({k: v for k, v in cut.items() if k != 'same_as'}); cut = base
+            tl = Timeline(data, cut, assets)
+            print('== %s: %.2f s (voice at %.2fx)' % (n, tl.length, tl.tempo))
+            for sh in tl.shots:
+                ls = ', '.join('%s %.2f-%.2f' % (lid, P['start'], P['start'] + P['dur']) for lid, P in tl.placed.items() if P['shot'] == sh['n'])
+                print('  %-4s %6.2f %5.2f  %s' % (sh['n'], sh['t0'], sh['dur'], ls))
+            for w in tl.warn: print('  !', w)
+        return
     reports = [build_cut(data, n, assets, a.out, a.fast, a.sheet, a.captions) for n in names]
     rep = {'cuts': reports, 'used': sorted(assets.used), 'missing (stood in)': sorted(assets.missing)}
     json.dump(rep, open(os.path.join(a.out, 'report.json'), 'w'), indent=1)
@@ -888,10 +984,14 @@ def install(a, data, reports, assets):
     shutil.copy(os.path.join(a.out, 'game.mp4'), os.path.join(dst, 'intro.mp4'))
     shutil.copy(os.path.join(a.out, 'game.vtt'), os.path.join(dst, 'intro.vtt'))
     # a WebM too, for the browsers (and builds of Chromium) that can't play H.264
-    kbps = int((23 * 8 * 1024 - 112 * r['length']) / r['length'])
-    webm = os.path.join(dst, 'intro.webm')
-    subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', os.path.join(a.out, 'game.mp4'), '-c:v', 'libvpx-vp9', '-b:v', '%dk' % min(kbps, 5000),
-                    '-deadline', 'good', '-cpu-used', '4', '-row-mt', '1', '-c:a', 'libopus', '-b:a', '112k', webm], check=True)
+    # two passes, so the file lands on its budget (one pass of VP9 overshoots by half)
+    kbps = int((20 * 8 * 1024 - 112 * r['length']) / r['length'])
+    webm = os.path.join(dst, 'intro.webm'); src = os.path.join(a.out, 'game.mp4'); log = os.path.join(a.out, 'vp9pass')
+    common = ['-c:v', 'libvpx-vp9', '-b:v', '%dk' % min(kbps, 5000), '-deadline', 'good', '-cpu-used', '4', '-row-mt', '1', '-passlogfile', log]
+    subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', src] + common + ['-pass', '1', '-an', '-f', 'webm', os.devnull], check=True)
+    subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', src] + common + ['-pass', '2', '-c:a', 'libopus', '-b:a', '112k', webm], check=True)
+    if os.path.getsize(webm) > 24.5 * 1048576:
+        sys.exit('The WebM came out %.1f MB: over what Cloudflare serves as one file.' % (os.path.getsize(webm) / 1048576))
     mp = os.path.join(a.art, 'manifest.json')
     man = json.load(open(mp)) if os.path.exists(mp) else {}
     man['intro'] = {'video': 'intro/intro.mp4', 'webm': 'intro/intro.webm', 'vtt': 'intro/intro.vtt', 'dur': r['length']}
