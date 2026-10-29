@@ -1,0 +1,1701 @@
+{
+ "about": "The intro cinematic: the storyteller's script, his voice, the music, the sound effects, the PixelLab scenes and the edit. elevenlabs_gen.py intro and pixellab_gen.py intro make the assets from this file; tools/intro/build_intro.py cuts them into the game intro and the trailers. The script and shot list doc is the source: change both together.",
+ "narrator": {
+  "key": "narrator",
+  "name": "Storyteller",
+  "voice": "An old storyteller in his seventies, telling a fireside tale in a fantasy tavern. A warm, slightly gravelly baritone, slow and deliberate, with a smile in his voice and a dry, wry edge. He can drop to a near-whisper. Close and intimate, no room echo.",
+  "takes": 3
+ },
+ "lines": [
+  {
+   "id": "L1",
+   "text": "Every tavern in Millbrook tells the same story."
+  },
+  {
+   "id": "L2",
+   "text": "Brave heroes ride out. Monsters fall. Gold comes home. Everyone cheers."
+  },
+  {
+   "id": "L3",
+   "text": "Funny thing about that story. It never says whose door they kicked in.",
+   "say": "[chuckles] Funny thing about that story. It never says whose door they kicked in."
+  },
+  {
+   "id": "L4",
+   "text": "Millbrook pays by the head. Wolf pelts. Goblin ears. Anything that lives in the dark."
+  },
+  {
+   "id": "L5",
+   "text": "For a hundred years, the town grew fat on what its heroes carried home. And the wilds grew quiet.",
+   "say": "For a hundred years, the town grew fat on what its heroes carried home... And the wilds grew quiet."
+  },
+  {
+   "id": "L6",
+   "text": "Too quiet.",
+   "say": "[whispers] Too quiet."
+  },
+  {
+   "id": "L7",
+   "text": "Until something old remembered how to be angry."
+  },
+  {
+   "id": "L8",
+   "text": "A lich. A dragon. A prince of the Pit. Which one doesn't matter."
+  },
+  {
+   "id": "L9",
+   "text": "The monsters have no heroes. They have you."
+  },
+  {
+   "id": "L10",
+   "text": "You start small. Two servants. One lair. A tower nobody visits."
+  },
+  {
+   "id": "L11",
+   "text": "Win the wilds back with gold, with lies, or with your fists."
+  },
+  {
+   "id": "L12",
+   "text": "Then send them down the road, to the town that sent the heroes."
+  },
+  {
+   "id": "L13",
+   "text": "Burn Millbrook's hall, and the bounties stop."
+  },
+  {
+   "id": "L14",
+   "text": "Mind you, Millbrook won't make it easy. Its heroes get stronger every day."
+  },
+  {
+   "id": "L15",
+   "text": "And sooner or later, they'll come up your stairs."
+  },
+  {
+   "id": "L16",
+   "text": "Let them."
+  },
+  {
+   "id": "L14b",
+   "text": "Its heroes get stronger every day.",
+   "trailer": true
+  }
+ ],
+ "music_style": "instrumental orchestral score, dark fantasy video game trailer, medieval instruments",
+ "music": {
+  "intro-tavern": {
+   "about": "The legend: from shot 2 until the music stops dead at shot 4",
+   "chunks": [
+    {
+     "text": "[Tavern tune]",
+     "ms": 20000,
+     "plus": [
+      "warm medieval tavern folk tune",
+      "fiddle",
+      "lute",
+      "tin whistle",
+      "light hand drum",
+      "cheerful and homely",
+      "110 BPM",
+      "D major",
+      "instrumental"
+     ],
+     "minus": [
+      "vocals",
+      "lyrics",
+      "singing",
+      "modern drum kit",
+      "synth",
+      "electric guitar"
+     ]
+    }
+   ]
+  },
+  "intro-dark": {
+   "about": "From the bounty board (shot 6) to the silence before the title: four parts in one piece",
+   "chunks": [
+    {
+     "text": "[Lament]",
+     "ms": 19000,
+     "plus": [
+      "a lone cello",
+      "slow and sparse",
+      "sorrowful",
+      "cold wind texture",
+      "D minor",
+      "60 BPM",
+      "instrumental"
+     ],
+     "minus": [
+      "drums",
+      "choir",
+      "vocals",
+      "lyrics",
+      "upbeat"
+     ]
+    },
+    {
+     "text": "[Waking]",
+     "ms": 14000,
+     "plus": [
+      "low drone",
+      "pipe organ",
+      "deep cellos",
+      "ominous",
+      "slow building dread",
+      "D minor"
+     ],
+     "minus": [
+      "vocals",
+      "lyrics",
+      "upbeat",
+      "drum kit"
+     ]
+    },
+    {
+     "text": "[War]",
+     "ms": 22000,
+     "plus": [
+      "pounding war drums",
+      "staccato strings",
+      "low brass",
+      "dark wordless choir pad building",
+      "epic and menacing",
+      "D minor",
+      "100 BPM"
+     ],
+     "minus": [
+      "lyrics",
+      "sung words",
+      "rock drums",
+      "synth",
+      "major key"
+     ]
+    },
+    {
+     "text": "[Threat]",
+     "ms": 12000,
+     "plus": [
+      "one slow heavy drum like a heartbeat",
+      "a single low sustained string",
+      "near silence",
+      "tense"
+     ],
+     "minus": [
+      "melody",
+      "choir",
+      "vocals",
+      "lyrics",
+      "brass"
+     ]
+    }
+   ]
+  },
+  "intro-sting": {
+   "about": "Under the title card (trailers only)",
+   "chunks": [
+    {
+     "text": "[Title]",
+     "ms": 8000,
+     "plus": [
+      "one massive orchestral hit",
+      "dark wordless choir chord",
+      "huge low drum boom",
+      "rings out and fades to silence",
+      "D minor"
+     ],
+     "minus": [
+      "melody",
+      "lyrics",
+      "sung words",
+      "beat",
+      "rhythm"
+     ]
+    }
+   ]
+  }
+ },
+ "sfx": {
+  "tavern-murmur": [
+   "a cozy medieval tavern crowd murmuring and chatting quietly, mugs clinking, a fire crackling in a hearth",
+   12
+  ],
+  "lute-tune": [
+   "a single lute being tuned, a few plucked notes adjusted, intimate and close",
+   3
+  ],
+  "crowd-cheer": [
+   "a small tavern crowd cheers and claps, mugs banging on wooden tables",
+   2.5
+  ],
+  "door-crash": [
+   "a wooden door smashed open with one hard kick, splintering wood",
+   1.5
+  ],
+  "goblin-squeak": [
+   "a small frightened creature squeaks once in surprise",
+   0.8
+  ],
+  "nail-hammer": [
+   "three hammer blows driving a nail into a wooden board",
+   1.5
+  ],
+  "cart-wheels": [
+   "heavy wooden ox carts creaking over cobblestones, wheels rumbling, a cheerful crowd far off",
+   5
+  ],
+  "wind-howl": [
+   "cold night wind through an empty forest, one wolf howls far away, no answer",
+   6
+  ],
+  "thunder": [
+   "a close thunderclap with a long rolling rumble",
+   3
+  ],
+  "bone-rattle": [
+   "dry bones rattling and a ghostly hiss",
+   1.5
+  ],
+  "hellfire": [
+   "a roaring burst of hellfire, a deep whoosh and crackling flames",
+   1.5
+  ],
+  "war-horns": [
+   "distant war horns blowing over marching feet and clanking armor",
+   4
+  ],
+  "roof-collapse": [
+   "a burning timber roof caves in with a great crash, fire roaring",
+   3
+  ],
+  "bell-stop": [
+   "a town alarm bell ringing fast, then stopping abruptly mid-ring",
+   3
+  ],
+  "candle-out": [
+   "one soft breath blowing out a candle, a tiny hiss",
+   0.8
+  ],
+  "title-boom": [
+   "a huge deep cinematic boom with a long dark tail",
+   4
+  ]
+ },
+ "storyteller": {
+  "size": 256,
+  "look": "pixel art close-up portrait of an old hooded storyteller, head and shoulders, long white beard, patched brown hooded cloak, kind wrinkled face with a sly glint in his eyes, holding a lit candle in front of his chest that lights his face warmly from below, looking straight at the viewer, dark background",
+  "lean": "slowly leans toward the viewer, conspiratorial, the candle flame flickering",
+  "eyes": "make his eyes glow red, everything else the same",
+  "blow": "blows out the candle, the flame goes out and his face falls into darkness",
+  "moods": [
+   "neutral",
+   "happy"
+  ]
+ },
+ "scene_size": [
+  640,
+  360
+ ],
+ "scene_style": "dark fantasy pixel art, cinematic wide shot, side view, rich dramatic lighting, detailed background, no text, no border",
+ "scenes": {
+  "A": {
+   "name": "Tavern",
+   "prompt": "cozy medieval tavern at night, a big stone hearth with a roaring fire, villagers on wooden benches facing an old hooded storyteller in a high-backed chair beside the fire, warm candlelight, wooden beams",
+   "refs": [
+    [
+     "storyteller",
+     "the old storyteller in the high-backed chair by the fire"
+    ]
+   ]
+  },
+  "B": {
+   "name": "The road out",
+   "prompt": "storybook illustration of a dirt road leading out of a walled village at dawn, banners on the gate, green rolling hills, golden morning light, framed like an old parchment page, empty road for heroes to ride along"
+  },
+  "C": {
+   "name": "The warren",
+   "prompt": "inside a cozy goblin burrow lit by a small fire, a little goblin family huddled around a cooking pot, a wooden door bursting inward with bright light pouring through and splinters flying",
+   "refs": [
+    [
+     "out-objects/warren/object.png",
+     "the goblin warren this burrow belongs to"
+    ]
+   ]
+  },
+  "D": {
+   "name": "Bounty board",
+   "prompt": "a wooden bounty board in a village square, pinned paper notices with simple drawings of a wolf and a goblin and gold coin prices, a few coins on the ledge, cobblestones, daylight",
+   "refs": [
+    [
+     "out-objects/t-board/object.png",
+     "Millbrook's notice board"
+    ]
+   ]
+  },
+  "E": {
+   "name": "The gate",
+   "prompt": "ox carts piled with wolf pelts and chests of gold rolling through a stone town gate, cheering townsfolk, banners, warm afternoon sun",
+   "refs": [
+    [
+     "out-objects/t-walls/object.png",
+     "Millbrook's town walls and gate"
+    ]
+   ]
+  },
+  "F": {
+   "name": "Empty wilds",
+   "prompt": "a dark forest at night, abandoned monster dens, a cold campfire, a broken goblin hut, drifting mist and moonlight, lonely and silent",
+   "refs": [
+    [
+     "out-objects/den/object.png",
+     "an empty monster den"
+    ]
+   ]
+  },
+  "G": {
+   "name": "Dark Tower",
+   "prompt": "a tall black tower on a jagged crag in a thunderstorm, a lightning bolt behind it, green glowing windows, low angle looking up, rain",
+   "refs": [
+    [
+     "out-objects/tower/object.png",
+     "the Dark Tower"
+    ]
+   ]
+  },
+  "H": {
+   "name": "Throne",
+   "prompt": "a dark throne room, a huge shadowy figure on a throne of black stone, only two glowing eyes visible, purple torchlight, banners with a sigil"
+  },
+  "I": {
+   "name": "Tower window",
+   "prompt": "view from a high stone tower window at night looking down a winding hill road, a long line of tiny torches climbing toward the tower, dark landscape, stars"
+  },
+  "J": {
+   "name": "Hall burning",
+   "prompt": "a timber village town hall on fire at night, roof caving in, sparks and embers rising, a bell tower, smoke",
+   "refs": [
+    [
+     "out-objects/t-hall-5/object.png",
+     "Millbrook's town hall"
+    ]
+   ]
+  }
+ },
+ "edit": {
+  "fps": 30,
+  "size": [
+   1920,
+   1080
+  ],
+  "address": "",
+  "takes": {},
+  "voice_gain_db": 0,
+  "music_db": -6,
+  "duck_db": 8,
+  "lufs": -14,
+  "temp": {
+   "_": "stand-ins from the game until the real sounds exist",
+   "music": {
+    "intro-tavern": "music-map",
+    "intro-dark": "music-title",
+    "intro-sting": null
+   },
+   "sfx": {
+    "tavern-murmur": "amb-day",
+    "coins": "coins",
+    "door-crash": "hit-2",
+    "nail-hammer": "build",
+    "cart-wheels": "steps-road",
+    "wind-howl": "amb-night",
+    "thunder": "dark",
+    "bone-rattle": "minion-2",
+    "hellfire": "fire",
+    "war-horns": "horde",
+    "roof-collapse": "built",
+    "candle-out": null,
+    "title-boom": "dark",
+    "crowd-cheer": "win",
+    "lute-tune": null,
+    "goblin-squeak": null,
+    "bell-stop": "night"
+   }
+  },
+  "shots": [
+   {
+    "n": "1",
+    "dur": 4,
+    "desc": "Black. A candle flame flickers up in the middle of the frame",
+    "layers": [
+     {
+      "story": "still",
+      "x": 0.5,
+      "y": 0.5,
+      "h": 1.0,
+      "cam": [
+       [
+        0.5,
+        0.8,
+        3.2
+       ],
+       [
+        0.5,
+        0.78,
+        2.8
+       ]
+      ],
+      "dim": 0.35
+     }
+    ],
+    "fx": {
+     "fade_in": 2.5,
+     "flicker": 0.12
+    },
+    "sfx": [
+     [
+      "lute-tune",
+      0.6,
+      -6
+     ],
+     [
+      "tavern-murmur",
+      0.0,
+      -12,
+      {
+       "fade_in": 3.0,
+       "until": "4",
+       "fade_out": 0.15
+      }
+     ]
+    ]
+   },
+   {
+    "n": "2",
+    "dur": 5,
+    "desc": "Millbrook's tavern at night: a crowd round the hearth, the hooded storyteller in the big chair",
+    "layers": [
+     {
+      "scene": "A",
+      "cam": [
+       [
+        0.5,
+        0.5,
+        1.0
+       ],
+       [
+        0.62,
+        0.55,
+        1.25
+       ]
+      ]
+     }
+    ],
+    "fx": {
+     "flicker": 0.05
+    },
+    "lines": [
+     [
+      "L1",
+      1.0
+     ]
+    ]
+   },
+   {
+    "n": "3",
+    "dur": 6,
+    "desc": "Storybook page: the four heroes ride out of Millbrook at dawn under a banner",
+    "layers": [
+     {
+      "scene": "B",
+      "cam": [
+       [
+        0.42,
+        0.5,
+        1.15
+       ],
+       [
+        0.58,
+        0.5,
+        1.15
+       ]
+      ]
+     },
+     {
+      "sprites": [
+       "unit-hero-brakka",
+       "unit-hero-ione",
+       "unit-hero-vex",
+       "unit-hero-orrin"
+      ],
+      "dir": 2,
+      "y": 0.82,
+      "h": 0.2,
+      "x": [
+       [
+        -0.05,
+        0.35
+       ],
+       [
+        -0.16,
+        0.24
+       ],
+       [
+        -0.27,
+        0.13
+       ],
+       [
+        -0.38,
+        0.02
+       ]
+      ],
+      "bob": 0.012
+     }
+    ],
+    "lines": [
+     [
+      "L2",
+      0.5
+     ]
+    ],
+    "sfx": [
+     [
+      "crowd-cheer",
+      {
+       "word": [
+        "L2",
+        "cheers"
+       ]
+      },
+      -8
+     ]
+    ]
+   },
+   {
+    "n": "4",
+    "dur": 3,
+    "desc": "Close on the storyteller. He leans toward the camera, candle under his face",
+    "layers": [
+     {
+      "scene": "A",
+      "cam": [
+       [
+        0.62,
+        0.55,
+        1.6
+       ],
+       [
+        0.62,
+        0.55,
+        1.7
+       ]
+      ],
+      "dim": 0.55,
+      "blur": 8
+     },
+     {
+      "story": "talk",
+      "line": "L3",
+      "x": 0.5,
+      "y": 0.56,
+      "h": 1.0,
+      "cam": [
+       [
+        0.5,
+        0.5,
+        1.0
+       ],
+       [
+        0.5,
+        0.52,
+        1.12
+       ]
+      ]
+     }
+    ],
+    "fx": {
+     "flicker": 0.08
+    },
+    "lines": [
+     [
+      "L3",
+      0.4
+     ]
+    ]
+   },
+   {
+    "n": "5",
+    "dur": 4,
+    "desc": "A warren door bursts in. A goblin family freezes round a cooking pot",
+    "layers": [
+     {
+      "scene": "C",
+      "cam": [
+       [
+        0.5,
+        0.5,
+        1.0
+       ],
+       [
+        0.62,
+        0.48,
+        1.45
+       ]
+      ],
+      "ease": "snap",
+      "snap": 0.25
+     }
+    ],
+    "sfx": [
+     [
+      "door-crash",
+      {
+       "word": [
+        "L3",
+        "door"
+       ]
+      },
+      -3
+     ],
+     [
+      "goblin-squeak",
+      {
+       "word": [
+        "L3",
+        "kicked"
+       ]
+      },
+      -6
+     ]
+    ]
+   },
+   {
+    "n": "6",
+    "dur": 7,
+    "desc": "Millbrook's bounty board: WOLVES 2g, GOBLINS 3g, ANYTHING IN THE DARK: ASK INSIDE",
+    "layers": [
+     {
+      "scene": "D",
+      "cam": [
+       [
+        0.5,
+        0.36,
+        1.45
+       ],
+       [
+        0.5,
+        0.64,
+        1.45
+       ]
+      ]
+     }
+    ],
+    "lines": [
+     [
+      "L4",
+      0.5
+     ]
+    ],
+    "sfx": [
+     [
+      "nail-hammer",
+      0.1,
+      -6
+     ],
+     [
+      "coins",
+      {
+       "word": [
+        "L4",
+        "head"
+       ]
+      },
+      -6
+     ]
+    ]
+   },
+   {
+    "n": "7",
+    "dur": 5,
+    "desc": "Carts heavy with pelts and gold roll in through Millbrook's gate",
+    "layers": [
+     {
+      "scene": "E",
+      "cam": [
+       [
+        0.5,
+        0.52,
+        1.0
+       ],
+       [
+        0.5,
+        0.5,
+        1.22
+       ]
+      ]
+     }
+    ],
+    "lines": [
+     [
+      "L5",
+      0.3
+     ]
+    ],
+    "sfx": [
+     [
+      "cart-wheels",
+      0.0,
+      -10,
+      {
+       "fade_out": 0.8
+      }
+     ]
+    ]
+   },
+   {
+    "n": "8",
+    "dur": 7,
+    "desc": "The wilds at night: empty dens, cold lair fires, a broken warren",
+    "layers": [
+     {
+      "scene": "F",
+      "cam": [
+       [
+        0.4,
+        0.5,
+        1.25
+       ],
+       [
+        0.6,
+        0.5,
+        1.25
+       ]
+      ]
+     }
+    ],
+    "lines": [
+     [
+      "L6",
+      4.2
+     ]
+    ],
+    "sfx": [
+     [
+      "wind-howl",
+      0.2,
+      -8,
+      {
+       "fade_out": 1.0
+      }
+     ]
+    ]
+   },
+   {
+    "n": "9",
+    "dur": 5,
+    "desc": "The Dark Tower on its crag. Lightning shows it for a moment",
+    "layers": [
+     {
+      "scene": "G",
+      "cam": [
+       [
+        0.5,
+        0.68,
+        1.3
+       ],
+       [
+        0.5,
+        0.42,
+        1.3
+       ]
+      ]
+     }
+    ],
+    "fx": {
+     "flash": [
+      [
+       0.6,
+       0.35
+      ],
+      [
+       1.2,
+       0.15
+      ]
+     ]
+    },
+    "lines": [
+     [
+      "L7",
+      0.9
+     ]
+    ],
+    "sfx": [
+     [
+      "thunder",
+      0.55,
+      -4
+     ]
+    ]
+   },
+   {
+    "n": "10a",
+    "dur": 2,
+    "desc": "The Lich over its sigil",
+    "layers": [
+     {
+      "portrait": "unit-king",
+      "glow": "#5cff9a",
+      "h": 0.8
+     }
+    ],
+    "lines": [
+     [
+      "L8",
+      0.25
+     ]
+    ],
+    "sfx": [
+     [
+      "bone-rattle",
+      0.1,
+      -6
+     ]
+    ]
+   },
+   {
+    "n": "10b",
+    "dur": 2,
+    "desc": "The Ancient Dragon over its sigil",
+    "layers": [
+     {
+      "portrait": "unit-wyrm",
+      "glow": "#ff9a3c",
+      "h": 0.8
+     }
+    ],
+    "sfx": [
+     [
+      "roar",
+      0.1,
+      -6
+     ]
+    ]
+   },
+   {
+    "n": "10c",
+    "dur": 2,
+    "desc": "The Demon Prince over its sigil",
+    "layers": [
+     {
+      "portrait": "unit-archfiend",
+      "glow": "#ff3c3c",
+      "h": 0.8
+     }
+    ],
+    "sfx": [
+     [
+      "hellfire",
+      0.1,
+      -6
+     ]
+    ]
+   },
+   {
+    "n": "11",
+    "dur": 5,
+    "desc": "A dark shape on the Throne of Shadows. Its eyes open",
+    "layers": [
+     {
+      "scene": "H",
+      "cam": [
+       [
+        0.5,
+        0.52,
+        1.0
+       ],
+       [
+        0.5,
+        0.4,
+        1.7
+       ]
+      ]
+     }
+    ],
+    "lines": [
+     [
+      "L9",
+      0.8
+     ]
+    ]
+   },
+   {
+    "n": "12",
+    "dur": 5,
+    "desc": "Two minions leave the tower and start hammering at a new lair",
+    "layers": [
+     {
+      "footage": "s12"
+     }
+    ],
+    "lines": [
+     [
+      "L10",
+      0.3
+     ]
+    ],
+    "sfx": [
+     [
+      "build",
+      1.2,
+      -8
+     ],
+     [
+      "minion-1",
+      3.0,
+      -6
+     ]
+    ]
+   },
+   {
+    "n": "13a",
+    "dur": 2,
+    "desc": "Gold paid to a monster camp",
+    "layers": [
+     {
+      "footage": "s13a",
+      "from": 0.6
+     }
+    ],
+    "lines": [
+     [
+      "L11",
+      0.3
+     ]
+    ],
+    "sfx": [
+     [
+      "coins",
+      {
+       "word": [
+        "L11",
+        "gold"
+       ]
+      },
+      -4
+     ]
+    ]
+   },
+   {
+    "n": "13b",
+    "dur": 2,
+    "desc": "A parley speech bubble",
+    "layers": [
+     {
+      "footage": "s13b",
+      "from": 0.55
+     }
+    ],
+    "sfx": [
+     [
+      "laugh",
+      {
+       "word": [
+        "L11",
+        "lies"
+       ]
+      },
+      -8
+     ]
+    ]
+   },
+   {
+    "n": "13c",
+    "dur": 2,
+    "desc": "The villain fighting a neutral monster",
+    "layers": [
+     {
+      "footage": "s13c",
+      "from": 0.4,
+      "cam": [
+       [
+        0.72,
+        0.38,
+        1.6
+       ],
+       [
+        0.72,
+        0.38,
+        1.75
+       ]
+      ]
+     }
+    ],
+    "sfx": [
+     [
+      "hit-1",
+      {
+       "word": [
+        "L11",
+        "fists"
+       ]
+      },
+      -4
+     ]
+    ]
+   },
+   {
+    "n": "14",
+    "dur": 5,
+    "desc": "A wave of monsters marches down the road to Millbrook's walls at dusk",
+    "layers": [
+     {
+      "footage": "s14"
+     }
+    ],
+    "lines": [
+     [
+      "L12",
+      0.3
+     ]
+    ],
+    "sfx": [
+     [
+      "horde",
+      0.0,
+      -8
+     ],
+     [
+      "war-horns",
+      0.4,
+      -8
+     ]
+    ],
+    "fx": {
+     "grade": [
+      1.08,
+      0.86,
+      0.72
+     ]
+    }
+   },
+   {
+    "n": "15",
+    "dur": 4,
+    "desc": "Millbrook's town hall in flames. The roof caves in",
+    "layers": [
+     {
+      "scene": "J",
+      "cam": [
+       [
+        0.5,
+        0.5,
+        1.0
+       ],
+       [
+        0.5,
+        0.48,
+        1.18
+       ]
+      ]
+     }
+    ],
+    "fx": {
+     "shake": [
+      [
+       1.6,
+       0.6,
+       0.006
+      ]
+     ]
+    },
+    "lines": [
+     [
+      "L13",
+      0.5
+     ]
+    ],
+    "sfx": [
+     [
+      "bell-stop",
+      0.0,
+      -8
+     ],
+     [
+      "fire",
+      0.0,
+      -8
+     ],
+     [
+      "roof-collapse",
+      1.5,
+      -3
+     ]
+    ]
+   },
+   {
+    "n": "16",
+    "dur": 6,
+    "desc": "The heroes level up in a burst of light, then set off up the road",
+    "layers": [
+     {
+      "footage": "s16"
+     }
+    ],
+    "lines": [
+     [
+      "L14",
+      0.5
+     ]
+    ],
+    "sfx": [
+     [
+      "levelup",
+      0.2,
+      -6
+     ]
+    ],
+    "fx": {
+     "burst": [
+      [
+       0.35,
+       1.4,
+       0.5,
+       0.47
+      ]
+     ]
+    }
+   },
+   {
+    "n": "17",
+    "dur": 4,
+    "desc": "From the tower window: a line of torches climbing the hill in the dark",
+    "layers": [
+     {
+      "scene": "I",
+      "cam": [
+       [
+        0.5,
+        0.5,
+        1.0
+       ],
+       [
+        0.5,
+        0.52,
+        1.15
+       ]
+      ]
+     }
+    ],
+    "lines": [
+     [
+      "L15",
+      0.5
+     ]
+    ],
+    "sfx": [
+     [
+      "steps-road",
+      0.0,
+      -20,
+      {
+       "fade_in": 1.0
+      }
+     ]
+    ]
+   },
+   {
+    "n": "18",
+    "dur": 3,
+    "desc": "The storyteller smiles. His eyes catch red, and he blows out the candle",
+    "layers": [
+     {
+      "scene": "A",
+      "cam": [
+       [
+        0.62,
+        0.55,
+        1.7
+       ],
+       [
+        0.62,
+        0.55,
+        1.75
+       ]
+      ],
+      "dim": 0.6,
+      "blur": 8
+     },
+     {
+      "story": "end",
+      "line": "L16",
+      "x": 0.5,
+      "y": 0.56,
+      "h": 1.0,
+      "cam": [
+       [
+        0.5,
+        0.52,
+        1.12
+       ],
+       [
+        0.5,
+        0.52,
+        1.16
+       ]
+      ],
+      "eyes": 1.4,
+      "blow": 2.1
+     }
+    ],
+    "fx": {
+     "flicker": 0.08,
+     "black_at": 2.75
+    },
+    "lines": [
+     [
+      "L16",
+      0.6
+     ]
+    ],
+    "sfx": [
+     [
+      "candle-out",
+      2.45,
+      -4
+     ]
+    ]
+   },
+   {
+    "n": "19",
+    "dur": 5,
+    "desc": "The emblem, the OVERMASTER wordmark, and The heroes are coming. Be ready.",
+    "layers": [
+     {
+      "title": true
+     }
+    ],
+    "sfx": [
+     [
+      "title-boom",
+      0.0,
+      -4
+     ]
+    ]
+   },
+   {
+    "n": "end",
+    "dur": 4,
+    "desc": "End slate",
+    "layers": [
+     {
+      "endslate": true
+     }
+    ]
+   }
+  ],
+  "cuts": {
+   "game": {
+    "name": "Game intro",
+    "shots": [
+     "1",
+     "2",
+     "3",
+     "4",
+     "5",
+     "6",
+     "7",
+     "8",
+     "9",
+     "10a",
+     "10b",
+     "10c",
+     "11",
+     "12",
+     "13a",
+     "13b",
+     "13c",
+     "14",
+     "15",
+     "16",
+     "17",
+     "18"
+    ],
+    "music": [
+     [
+      "intro-tavern",
+      {
+       "shot": "2"
+      },
+      {
+       "until": "4",
+       "fade_out": 0.05
+      }
+     ],
+     [
+      "intro-dark",
+      {
+       "shot": "6"
+      },
+      {
+       "until_end": true,
+       "fade_out": 0.3
+      }
+     ]
+    ]
+   },
+   "full": {
+    "name": "Full trailer",
+    "shots": [
+     "1",
+     "2",
+     "3",
+     "4",
+     "5",
+     "6",
+     "7",
+     "8",
+     "9",
+     "10a",
+     "10b",
+     "10c",
+     "11",
+     "12",
+     "13a",
+     "13b",
+     "13c",
+     "14",
+     "15",
+     "16",
+     "17",
+     "18",
+     "19",
+     "end"
+    ],
+    "music": [
+     [
+      "intro-tavern",
+      {
+       "shot": "2"
+      },
+      {
+       "until": "4",
+       "fade_out": 0.05
+      }
+     ],
+     [
+      "intro-dark",
+      {
+       "shot": "6"
+      },
+      {
+       "until": "19",
+       "fade_out": 0.3
+      }
+     ],
+     [
+      "intro-sting",
+      {
+       "shot": "19"
+      },
+      {
+       "fade_out": 2.0
+      }
+     ]
+    ]
+   },
+   "t60": {
+    "name": "60-second trailer",
+    "captions": true,
+    "shots": [
+     [
+      "2",
+      {
+       "dur": 4.5
+      }
+     ],
+     [
+      "3",
+      {
+       "dur": 5.5
+      }
+     ],
+     "4",
+     [
+      "5",
+      {
+       "dur": 3.5
+      }
+     ],
+     [
+      "6",
+      {
+       "dur": 6.5
+      }
+     ],
+     [
+      "9",
+      {
+       "dur": 4.5
+      }
+     ],
+     [
+      "10a",
+      {
+       "dur": 1.4,
+       "lines": []
+      }
+     ],
+     [
+      "10b",
+      {
+       "dur": 1.4
+      }
+     ],
+     [
+      "10c",
+      {
+       "dur": 1.4
+      }
+     ],
+     [
+      "11",
+      {
+       "dur": 4.5
+      }
+     ],
+     [
+      "13a",
+      {
+       "dur": 1.6
+      }
+     ],
+     [
+      "13b",
+      {
+       "dur": 1.6
+      }
+     ],
+     [
+      "13c",
+      {
+       "dur": 1.6
+      }
+     ],
+     [
+      "15",
+      {
+       "dur": 3.8
+      }
+     ],
+     [
+      "16",
+      {
+       "dur": 3.6,
+       "lines": [
+        [
+         "L14b",
+         0.3
+        ]
+       ]
+      }
+     ],
+     [
+      "17",
+      {
+       "dur": 3.6
+      }
+     ],
+     "18",
+     [
+      "19",
+      {
+       "dur": 4
+      }
+     ],
+     [
+      "end",
+      {
+       "dur": 3
+      }
+     ]
+    ],
+    "music": [
+     [
+      "intro-tavern",
+      {
+       "shot": "2"
+      },
+      {
+       "until": "4",
+       "fade_out": 0.05
+      }
+     ],
+     [
+      "intro-dark",
+      {
+       "shot": "6",
+       "from": 12.5
+      },
+      {
+       "until": "11",
+       "fade_out": 0.4
+      }
+     ],
+     [
+      "intro-dark",
+      {
+       "shot": "11",
+       "from": 31.0
+      },
+      {
+       "until": "19",
+       "fade_in": 0.3,
+       "fade_out": 0.3
+      }
+     ],
+     [
+      "intro-sting",
+      {
+       "shot": "19"
+      },
+      {
+       "fade_out": 2.0
+      }
+     ]
+    ]
+   },
+   "t30": {
+    "name": "30-second teaser",
+    "captions": true,
+    "shots": [
+     [
+      "3",
+      {
+       "dur": 5.5
+      }
+     ],
+     "4",
+     [
+      "5",
+      {
+       "dur": 3.2
+      }
+     ],
+     [
+      "11",
+      {
+       "dur": 4.2
+      }
+     ],
+     [
+      "12",
+      {
+       "dur": 1,
+       "lines": [],
+       "sfx": []
+      }
+     ],
+     [
+      "13c",
+      {
+       "dur": 1,
+       "lines": [],
+       "sfx": [
+        [
+         "hit-1",
+         0.05,
+         -4
+        ]
+       ]
+      }
+     ],
+     [
+      "14",
+      {
+       "dur": 1,
+       "lines": [],
+       "sfx": [
+        [
+         "war-horns",
+         0.0,
+         -8
+        ]
+       ]
+      }
+     ],
+     [
+      "15",
+      {
+       "dur": 1.2,
+       "lines": [],
+       "sfx": [
+        [
+         "roof-collapse",
+         0.1,
+         -3
+        ]
+       ]
+      }
+     ],
+     [
+      "19",
+      {
+       "dur": 5,
+       "lines": [
+        [
+         "L16",
+         2.6
+        ]
+       ]
+      }
+     ],
+     [
+      "end",
+      {
+       "dur": 3
+      }
+     ]
+    ],
+    "music": [
+     [
+      "intro-tavern",
+      {
+       "shot": "3"
+      },
+      {
+       "until": "4",
+       "fade_out": 0.05
+      }
+     ],
+     [
+      "intro-dark",
+      {
+       "shot": "11",
+       "from": 31.0
+      },
+      {
+       "until": "19",
+       "fade_in": 0.2,
+       "fade_out": 0.2
+      }
+     ],
+     [
+      "intro-sting",
+      {
+       "shot": "19"
+      },
+      {
+       "fade_out": 2.0
+      }
+     ]
+    ]
+   },
+   "vertical": {
+    "name": "Vertical teaser",
+    "same_as": "t30",
+    "size": [
+     1080,
+     1920
+    ],
+    "captions": true
+   }
+  }
+ }
+}

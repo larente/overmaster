@@ -16,6 +16,8 @@ Run it in Terminal:
     python3 ~/Documents/bts-art/pixellab_gen.py talk            # talking portraits: mouth shapes for everyone who speaks, lip-sync for their lines
     python3 ~/Documents/bts-art/pixellab_gen.py talk ione pip   # just these heroes
     python3 ~/Documents/bts-art/pixellab_gen.py talk villains   # 0.31: the six villains (or: talk heroes, talk monsters)
+    python3 ~/Documents/bts-art/pixellab_gen.py intro           # 0.34: the intro's storyteller and its 10 scenes (from intro.json)
+    python3 ~/Documents/bts-art/pixellab_gen.py intro scenes    # just the scenes (or: intro storyteller, intro A G)
 
 It reads your PixelLab token from pixellab-token.txt (or the .rtf TextEdit makes) in this folder and
 never prints it. Each character's 8 directions are saved in out/<name>/. Progress goes to log.txt.
@@ -787,16 +789,17 @@ def objects(tok, keys):
 # ---------------- talking portraits ----------------
 TALK_VISEMES = 7
 
-def make_talk(tok, key, lines):
-    """mouth shapes for one hero's portrait (paid once), then the lip-sync plan of each line (free)"""
-    folder = os.path.join(OUT, key); src = os.path.join(folder, 'portrait.png')
-    talk = os.path.join(folder, 'talk'); os.makedirs(talk, exist_ok=True)
+def make_talk(tok, key, lines, folder=None, mood='neutral'):
+    """mouth shapes for one hero's portrait (paid once), then the lip-sync plan of each line (free).
+    0.34: folder and mood let the intro's storyteller talk too (a second mood goes in talk-<mood>/)"""
+    folder = folder or os.path.join(OUT, key); src = os.path.join(folder, 'portrait.png')
+    talk = os.path.join(folder, 'talk' if mood == 'neutral' else 'talk-' + mood); os.makedirs(talk, exist_ok=True)
     if not os.path.exists(src):
         log('%s: no portrait yet, so it cannot talk' % key); return 'skip'
     order_file = os.path.join(talk, 'visemes.json')
     if not os.path.exists(order_file) or REDO[0]:
         body = {'portrait': {'type': 'base64', 'base64': base64.b64encode(open(src, 'rb').read()).decode(), 'format': 'png'},
-                'mood': 'neutral', 'viseme_count': TALK_VISEMES, 'no_background': True}
+                'mood': mood, 'viseme_count': TALK_VISEMES, 'no_background': True}
         log('%s: asking for mouth shapes' % key)
         t_wait = time.time()
         while True:
@@ -881,10 +884,225 @@ def talk(tok, which):
     log('generations left: %s' % gens_left(tok))
     log('All finished. Tell Claude in the chat.')
 
+# ---------------- the intro cinematic (0.34) ----------------
+INTRO_OUT = os.path.join(HERE, 'out-intro')
+INTRO_FLOOR = 40   # stop before PixelLab generations drop below this, so the game's own art can still be redone
+
+def load_intro():
+    for p in (os.path.join(HERE, 'intro.json'), os.path.join(HERE, 'intro', 'intro.json')):
+        if os.path.exists(p):
+            return json.load(open(p))
+    sys.exit('intro.json is missing. It goes next to this script.')
+
+def png_size(path):
+    raw = open(path, 'rb').read(32)
+    if raw[:8] != b'\x89PNG\r\n\x1a\n':
+        return None
+    return int.from_bytes(raw[16:20], 'big'), int.from_bytes(raw[20:24], 'big')
+
+def b64img(path):
+    return {'type': 'base64', 'base64': base64.b64encode(open(path, 'rb').read()).decode(), 'format': 'png'}
+
+def pl_job(tok, path, body, label, poll='/background-jobs/%s', wait=20 * 60):
+    """POST, then wait for the background job; returns (status, final reply)"""
+    t_wait = time.time()
+    while True:
+        code, b = http('POST', path, body, tok)
+        if code != 429 or time.time() - t_wait > 90 * 60:
+            break
+        time.sleep(15)
+    try:
+        resp = json.loads(b or b'{}')
+    except ValueError:
+        resp = {'raw': b[:300].decode('utf-8', 'replace')}
+    if code in (401, 402):
+        log('%s: STOP: %s %s' % (label, code, json.dumps(strip(resp))[:300])); return 'stop', resp
+    if code >= 400:
+        log('%s: refused (%s): %s' % (label, code, json.dumps(strip(resp))[:500])); return 'fail', resp
+    jid = find_key(resp, 'background_job_id')
+    if not jid:
+        return 'ok', resp
+    final, t0, last = resp, time.time(), time.time()
+    while time.time() - t0 < wait:
+        time.sleep(6)
+        code, b = http('GET', poll % jid, None, tok)
+        if code != 200:
+            continue
+        try:
+            final = json.loads(b)
+        except ValueError:
+            continue
+        st = str(final.get('status', '')).lower()
+        if st in ('completed', 'failed', 'error', 'cancelled'):
+            return ('ok' if st == 'completed' else 'fail'), final
+        if time.time() - last > 60:
+            last = time.time(); log('  %s: still working (%d min)' % (label, (time.time() - t0) // 60))
+    return 'fail', final
+
+def pl_images(final):
+    """every picture in a reply, as PNG/WebP bytes, in order"""
+    out = []
+    for _, b64 in find_images(final):
+        out.append(base64.b64decode(b64.split(',', 1)[1] if b64.startswith('data:') else b64))
+    if not out:
+        for _, url in find_urls(final):
+            c2, raw = http('GET', url, None, None)
+            if c2 == 200: out.append(raw)
+    return out
+
+def keep_old(dst):
+    if os.path.exists(dst):
+        keep = os.path.join(os.path.dirname(dst), 'previous'); os.makedirs(keep, exist_ok=True)
+        os.replace(dst, os.path.join(keep, os.path.basename(dst)))
+
+def intro_portrait(tok, data):
+    """the storyteller's close-up: everything else of his is drawn from it"""
+    folder = os.path.join(INTRO_OUT, 'storyteller'); os.makedirs(folder, exist_ok=True)
+    dst = os.path.join(folder, 'portrait.png')
+    if os.path.exists(dst) and not REDO[0]:
+        return 'had'
+    T = data['storyteller']; n = int(T.get('size', 256))
+    body = {'description': T['look'], 'image_size': {'width': n, 'height': n}, 'no_background': True}
+    log('storyteller: drawing his close-up')
+    st, final = pl_job(tok, '/generate-image-v2', body, 'storyteller')
+    save_json(folder, 'portrait-result', final)
+    imgs = pl_images(final) if st == 'ok' else []
+    if not imgs:
+        return st if st == 'stop' else 'fail'
+    keep_old(dst); open(dst, 'wb').write(imgs[0])
+    log('storyteller: close-up done'); return 'ok'
+
+def intro_scene(tok, data, sid):
+    folder = os.path.join(INTRO_OUT, 'scenes'); os.makedirs(folder, exist_ok=True)
+    dst = os.path.join(folder, sid + '.png')
+    if os.path.exists(dst) and not REDO[0]:
+        return 'had'
+    S = data['scenes'][sid]; w, h = data.get('scene_size', [640, 360])
+    body = {'description': '%s, %s' % (S['prompt'], data.get('scene_style', '')), 'image_size': {'width': w, 'height': h}, 'no_background': False}
+    face = os.path.join(INTRO_OUT, 'storyteller', 'portrait.png')
+    if os.path.exists(face):
+        # the storyteller's close-up sets the pixel size, outline and shading of every scene, so they match; not its colours
+        body['style_image'] = {'image': b64img(face), 'size': dict(zip(('width', 'height'), png_size(face) or (256, 256)))}
+        body['style_options'] = {'color_palette': False, 'outline': True, 'detail': True, 'shading': True}
+    refs = []
+    for ref, use in S.get('refs', []):
+        p = face if ref == 'storyteller' else os.path.join(HERE, ref)
+        if os.path.exists(p) and png_size(p):
+            w0, h0 = png_size(p)
+            refs.append({'image': b64img(p), 'size': {'width': w0, 'height': h0}, 'usage_description': use[:500]})
+        else:
+            log('scene %s: no %s yet, so it goes without that reference' % (sid, ref))
+    if refs:
+        body['reference_images'] = refs[:4]
+    log('scene %s (%s): asking' % (sid, S.get('name', sid)))
+    st, final = pl_job(tok, '/generate-image-v2', body, 'scene ' + sid)
+    save_json(folder, sid + '-result', final)
+    imgs = pl_images(final) if st == 'ok' else []
+    if not imgs:
+        return st if st == 'stop' else 'fail'
+    keep_old(dst); open(dst, 'wb').write(imgs[0])
+    for i, raw in enumerate(imgs[1:], 2):
+        open(os.path.join(folder, '%s-%d.png' % (sid, i)), 'wb').write(raw)
+    log('scene %s: done' % sid); return 'ok'
+
+def intro_moves(tok, data):
+    """red eyes (an edit), then leaning in and blowing out the candle (animations), all from the close-up"""
+    folder = os.path.join(INTRO_OUT, 'storyteller'); face = os.path.join(folder, 'portrait.png')
+    if not os.path.exists(face):
+        return {'moves': 'no close-up'}
+    T = data['storyteller']; w, h = png_size(face) or (256, 256); res = {}
+    eyes = os.path.join(folder, 'eyes.png')
+    if os.path.exists(eyes) and not REDO[0]:
+        res['eyes'] = 'had'
+    else:
+        log('storyteller: red eyes')
+        st, final = pl_job(tok, '/edit-image-pixen', {'image': b64img(face), 'description': T['eyes'], 'width': w, 'height': h, 'no_background': True}, 'eyes')
+        imgs = pl_images(final) if st == 'ok' else []
+        if imgs:
+            keep_old(eyes); open(eyes, 'wb').write(imgs[0]); res['eyes'] = 'ok'
+        else:
+            res['eyes'] = st if st == 'stop' else 'fail'
+            if st == 'stop': return res
+    for move, start in (('lean', face), ('blow', eyes if os.path.exists(eyes) else face)):
+        mdir = os.path.join(folder, move)
+        if os.path.isdir(mdir) and os.listdir(mdir) and not REDO[0]:
+            res[move] = 'had'; continue
+        frames = max(4, min(16, (524288 // (w * h)) // 2 * 2))
+        log('storyteller: animating "%s" (%d frames)' % (move, frames))
+        st, final = pl_job(tok, '/animate-with-text-v3', {'first_frame': b64img(start), 'action': T[move], 'frame_count': frames, 'no_background': True}, move)
+        imgs = pl_images(final) if st == 'ok' else []
+        if not imgs:
+            res[move] = st if st == 'stop' else 'fail'
+            if st == 'stop': return res
+            continue
+        if os.path.isdir(mdir):
+            keep = os.path.join(folder, 'previous-' + move); os.makedirs(keep, exist_ok=True)
+            for fn in os.listdir(mdir): os.replace(os.path.join(mdir, fn), os.path.join(keep, fn))
+        os.makedirs(mdir, exist_ok=True)
+        for i, raw in enumerate(imgs):
+            open(os.path.join(mdir, '%02d.png' % i), 'wb').write(raw)
+        res[move] = 'ok'
+    return res
+
+def intro(tok, which):
+    """python3 pixellab_gen.py intro [storyteller] [scenes] [A B ...]: the storyteller and the scenes of the intro"""
+    data = load_intro(); scenes = list(data['scenes'])
+    which = which or ['storyteller', 'scenes']
+    want_face = 'storyteller' in which
+    want = scenes if 'scenes' in which else [w for w in which if w in scenes]
+    bad = [w for w in which if w not in scenes and w not in ('storyteller', 'scenes')]
+    if bad:
+        sys.exit('Unknown intro parts: %s\nKnown: storyteller, scenes, %s' % (', '.join(bad), ', '.join(scenes)))
+    os.makedirs(INTRO_OUT, exist_ok=True)
+    before = gens_left(tok); results = {}
+    log('--- %s: intro (%s) · %s generations left' % (time.strftime('%Y-%m-%d %H:%M'), ' '.join(which), before))
+    def low():
+        g = gens_left(tok)
+        if g is not None and g < INTRO_FLOOR:
+            log('Stopping: only %g PixelLab generations left (keeping %d in hand).' % (g, INTRO_FLOOR)); return True
+        return False
+    if want_face or not os.path.exists(os.path.join(INTRO_OUT, 'storyteller', 'portrait.png')):
+        # the close-up comes first even for scenes alone: it sets their style
+        results['storyteller'] = intro_portrait(tok, data)
+        after = gens_left(tok)
+        if before is not None and after is not None and results['storyteller'] == 'ok':
+            log('his close-up cost %g generations; %g left' % (before - after, after))
+        if results['storyteller'] == 'stop':
+            want, want_face = [], False
+    if want and not low():
+        g0 = gens_left(tok)
+        results['scene ' + want[0]] = intro_scene(tok, data, want[0])
+        g1 = gens_left(tok)
+        if g0 is not None and g1 is not None and results['scene ' + want[0]] == 'ok':
+            log('one scene cost %g generations; %d more to go, about %g; %g left' % (g0 - g1, len(want) - 1, (g0 - g1) * (len(want) - 1), g1))
+        if results['scene ' + want[0]] != 'stop' and len(want) > 1 and not low():
+            with ThreadPoolExecutor(max_workers=WORKERS) as ex:
+                futs = {sid: ex.submit(intro_scene, tok, data, sid) for sid in want[1:]}
+                for sid, f in futs.items():
+                    try:
+                        results['scene ' + sid] = f.result()
+                    except Exception as e:
+                        results['scene ' + sid] = 'error'; log('scene %s: error %s' % (sid, e))
+    if want_face and not low():
+        results.update(intro_moves(tok, data))
+        folder = os.path.join(INTRO_OUT, 'storyteller')
+        lines = {l['id']: l['text'] for l in data['lines']}
+        for mood in data['storyteller'].get('moods', ['neutral']):
+            if low(): break
+            results['talk ' + mood] = make_talk(tok, 'storyteller', lines, folder=folder, mood=mood)
+    log('intro art: %s' % ', '.join('%s %s' % kv for kv in results.items()))
+    log('generations left: %s' % gens_left(tok))
+    log('Intro art is in out-intro. All finished. Tell Claude in the chat.')
+
 def main():
     args = sys.argv[1:] or ['test']
     if '--redo' in args:
         REDO[0] = True; args = [a for a in args if a != '--redo']
+    if args and args[0] == 'intro':
+        tok = read_token()
+        if not tok:
+            sys.exit('No token found. Save it in %s/pixellab-token.txt' % HERE)
+        return intro(tok, args[1:])
     if args and args[0] == 'talk':
         tok = read_token()
         if not tok:

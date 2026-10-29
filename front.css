@@ -284,3 +284,15 @@ ul.pw { display: grid; gap: 6px; }
 .adtab tr.off td { opacity: .5; }
 .adtab .mono { font-family: ui-monospace, Menlo, Consolas, monospace; letter-spacing: .03em; }
 @media (max-width: 560px) { .adtab th:nth-child(4), .adtab td:nth-child(4) { display: none; } }
+
+/* the storyteller's intro (0.34) */
+.cine { position: fixed; inset: 0; z-index: 130; background: #000; display: grid; place-items: center; cursor: pointer; }
+.cine video { width: 100%; height: 100%; object-fit: contain; background: #000; }
+.cine video::cue { font-family: var(--font-body); font-size: clamp(17px, 2.3vw, 30px); line-height: 1.3; color: #fff6e0; background: rgba(0, 0, 0, .55); }
+.cine-skip { position: absolute; right: max(2vw, 16px); bottom: max(2.5vh, 16px); display: flex; align-items: center; gap: 8px; padding: 6px 12px; border: 1px solid rgba(232, 191, 90, .35); border-radius: 6px; background: rgba(0, 0, 0, .45); color: #d8c79f; font-family: var(--font-display); font-weight: 700; font-size: 12px; letter-spacing: .2em; text-transform: uppercase; cursor: pointer; opacity: .55; transition: opacity .2s; }
+.cine-skip:hover, .cine-skip:focus-visible { opacity: 1; }
+.cine-skip kbd { font: inherit; font-size: 10px; letter-spacing: .1em; padding: 1px 5px; border: 1px solid currentColor; border-radius: 3px; opacity: .8; }
+.cine.out { animation: introout .7s ease forwards; pointer-events: none; }
+.intro.cinefirst .i-press { animation: ifade 1s ease 2.2s forwards, ipulse 2.2s ease-in-out 3.2s infinite; }
+.intro.cinefirst .i-pres { animation-name: ipresstay; }
+@keyframes ipresstay { 0% { opacity: 0; transform: translateY(6px); } 30%, 100% { opacity: 1; transform: none; } }

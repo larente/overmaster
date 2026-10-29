@@ -15,6 +15,8 @@ Run it in Terminal:
     python3 ~/Documents/bts-art/elevenlabs_gen.py monsters          # 0.31: the monsters of the wilds you parley with
     python3 ~/Documents/bts-art/elevenlabs_gen.py minions           # 0.33: each villain's minions
     python3 ~/Documents/bts-art/elevenlabs_gen.py voices            # all of them: heroes, villains, minions, monsters
+    python3 ~/Documents/bts-art/elevenlabs_gen.py intro             # 0.34: the intro's storyteller, music and sounds (from intro.json)
+    python3 ~/Documents/bts-art/elevenlabs_gen.py intro music       # just one part: voice, music or sfx
 
 Lines and voice descriptions are in hero_lines.json next to this script. Each speaker's voice is designed once
 and saved in your ElevenLabs voices (one of your custom voice slots each); its id is kept in out-voice/voices.json.
@@ -422,12 +424,153 @@ def heroes(which, group='heroes'):
     if left is not None and l3 is not None: log('the lines used %d credits; %d left' % (left - l3, l3))
     log('All finished. Tell Claude in the chat.')
 
+# ---------------- the intro cinematic (0.34) ----------------
+INTRO_OUT = os.path.join(HERE, 'out-intro')
+
+def load_intro():
+    for p in (os.path.join(HERE, 'intro.json'), os.path.join(HERE, 'intro', 'intro.json')):
+        if os.path.exists(p):
+            return json.load(open(p))
+    sys.exit('intro.json is missing. It goes next to this script.')
+
+def intro_speak(job):
+    """one take of one narration line (or the whole read-through), with the timing of every letter"""
+    lid, take, say, text, vid = job
+    if STOP[0]: return 'skipped'
+    folder = os.path.join(INTRO_OUT, 'voice'); os.makedirs(folder, exist_ok=True)
+    name = lid if take is None else '%s-%d' % (lid, take)
+    mp3, meta = os.path.join(folder, name + '.mp3'), os.path.join(folder, name + '.json')
+    if os.path.exists(mp3) and os.path.exists(meta) and not REDO[0]:
+        if json.load(open(meta)).get('say') == say: return 'had'
+    import base64
+    for model in TTS_MODELS:
+        body = {'text': say, 'model_id': model}
+        if take: body['seed'] = 1000 + take   # a different read each take, the same one if made again
+        code, b = ask(name, '/v1/text-to-speech/%s/with-timestamps?output_format=mp3_44100_128' % vid, body)
+        if code == 200:
+            d = json.loads(b)
+            open(mp3, 'wb').write(base64.b64decode(d['audio_base64']))
+            with open(meta, 'w') as f:
+                json.dump({'id': lid, 'take': take, 'say': say, 'text': text, 'model': model,
+                           'alignment': d.get('alignment'), 'normalized_alignment': d.get('normalized_alignment')}, f)
+            return 'ok'
+        if stopper(name, code, b): return 'stop'
+        log('%s: %s refused (%s): %s' % (name, model, code, reason(b)))
+    return 'fail'
+
+INTRO = [None]
+
+def intro_cue(key):
+    """one music cue from its timed parts (a composition plan), falling back to an older model, then to a prompt"""
+    cue, style = INTRO[0]['music'][key], INTRO[0].get('music_style', MUSIC_STYLE)
+    if STOP[0]: return 'skipped'
+    folder = os.path.join(INTRO_OUT, 'music'); os.makedirs(folder, exist_ok=True)
+    dst = os.path.join(folder, key + '.mp3')
+    if os.path.exists(dst) and not REDO[0]:
+        return 'had'
+    ch = cue['chunks']; total = sum(c['ms'] for c in ch)
+    tries = []
+    for model in ('music_v2_5', 'music_v2'):
+        tries.append((model, {'composition_plan': {'chunks': [
+            {'text': c['text'], 'duration_ms': c['ms'], 'positive_styles': (style.split(', ') if i == 0 else []) + c['plus'],
+             'negative_styles': c['minus'], 'context_adherence': 'high'} for i, c in enumerate(ch)]}, 'model_id': model}))
+    tries.append(('music_v1', {'composition_plan': {
+        'positive_global_styles': style.split(', '), 'negative_global_styles': ['vocals', 'lyrics'],
+        'sections': [{'section_name': c['text'].strip('[]'), 'positive_local_styles': c['plus'], 'negative_local_styles': c['minus'],
+                      'duration_ms': c['ms'], 'lines': []} for c in ch]}, 'model_id': 'music_v1'}))
+    words, at = [], 0
+    for c in ch:
+        words.append('From %d seconds: %s.' % (at // 1000, ', '.join(c['plus']))); at += c['ms']
+    tries.append(('prompt', {'prompt': style.capitalize() + '. ' + ' '.join(words), 'music_length_ms': total, 'force_instrumental': True, 'model_id': 'music_v2_5'}))
+    for label, body in tries:
+        log('%s: composing %d s (%s; this takes a minute or two)' % (key, total // 1000, label))
+        code, b = ask(key, '/v1/music?output_format=' + MUSIC_FORMAT, body)
+        if code == 200:
+            if os.path.exists(dst):
+                keep = os.path.join(folder, 'previous'); os.makedirs(keep, exist_ok=True)
+                os.replace(dst, os.path.join(keep, key + '.mp3'))
+            open(dst, 'wb').write(b)
+            with open(os.path.join(folder, key + '.json'), 'w') as f:
+                json.dump({'how': label, 'chunks': ch}, f, indent=1)
+            log('%s: done (%d KB, %s)' % (key, len(b) // 1024, label)); return 'ok'
+        if stopper(key, code, b): return 'stop'
+        log('%s: %s refused (%s): %s' % (key, label, code, reason(b)))
+    return 'fail'
+
+def intro_fx(job):
+    key, desc, secs = job
+    if STOP[0]: return 'skipped'
+    folder = os.path.join(INTRO_OUT, 'sfx'); os.makedirs(folder, exist_ok=True)
+    dst = os.path.join(folder, key + '.mp3')
+    if os.path.exists(dst) and not REDO[0]:
+        return 'had'
+    body = {'text': '%s. %s' % (desc, FX), 'duration_seconds': max(0.5, min(30, secs)), 'prompt_influence': 0.5, 'model_id': 'eleven_text_to_sound_v2'}
+    log('%s: asking (%.1f s)' % (key, secs))
+    code, b = ask(key, '/v1/sound-generation?output_format=' + SFX_FORMAT, body)
+    if code != 200:
+        if stopper(key, code, b): return 'stop'
+        log('%s: refused (%s): %s' % (key, code, reason(b))); return 'fail'
+    open(dst, 'wb').write(b); log('%s: done (%d KB)' % (key, len(b) // 1024)); return 'ok'
+
+def intro(parts):
+    """python3 elevenlabs_gen.py intro [voice] [music] [sfx]: the storyteller, the score and the new sounds"""
+    data = load_intro(); INTRO[0] = data; parts = parts or ['voice', 'music', 'sfx']
+    bad = [p for p in parts if p not in ('voice', 'music', 'sfx')]
+    if bad:
+        sys.exit('Unknown intro parts: %s (use voice, music or sfx)' % ', '.join(bad))
+    os.makedirs(INTRO_OUT, exist_ok=True); os.makedirs(VOICE_OUT, exist_ok=True)
+    left, tier = credits_left(KEY[0])
+    if left is None:
+        code, b = http('GET', '/v1/user/subscription', KEY[0], timeout=30)
+        sys.exit('ElevenLabs refused the key (%s): %s. Check elevenlabs-key.txt.' % (code, reason(b)))
+    log('--- %s: intro (%s) · plan %s · %d credits left' % (time.strftime('%Y-%m-%d %H:%M'), ', '.join(parts), tier, left))
+    def spent(what):
+        l2, _ = credits_left(KEY[0])
+        if l2 is not None:
+            log('%s used %d credits; %d left' % (what, spent.left - l2, l2)); spent.left = l2
+    spent.left = left
+    if 'voice' in parts:
+        N = data['narrator']; key = N.get('key', 'narrator')
+        main_lines = [l for l in data['lines'] if not l.get('trailer')]
+        H = {'voice': N['voice'], 'name': N.get('name', 'Storyteller'), 'lines': {l['id']: l['text'] for l in main_lines}}
+        redo = REDO[0]; REDO[0] = False   # --redo speaks the lines again; it never replaces the voice
+        r = design_voice(key, H)
+        REDO[0] = redo
+        log('narrator voice: %s' % r)
+        vid = (voices_file().get(key) or {}).get('voice_id')
+        if not vid:
+            log('No narrator voice, so no lines. If your plan is out of voice slots, delete an unused voice in ElevenLabs and run this again.')
+        else:
+            spent('the voice')
+            takes = int(N.get('takes', 3))
+            jobs = [(l['id'], t, l.get('say', l['text']), l['text'], vid) for l in data['lines'] for t in range(1, takes + 1)]
+            jobs.append(('all', None, '\n\n'.join(l.get('say', l['text']) for l in main_lines), '\n\n'.join(l['text'] for l in main_lines), vid))
+            log('speaking %d takes and one read-through' % (len(jobs) - 1))
+            res = run(jobs, intro_speak, 3)
+            bad = ['%s-%s %s' % (j[0], j[1], r) for j, r in res.items() if r not in ('ok', 'had')]
+            log('narration: %d ok, %d already made%s' % (sum(r == 'ok' for r in res.values()), sum(r == 'had' for r in res.values()), ('; problems: ' + ', '.join(bad[:20])) if bad else ''))
+            spent('the narration')
+    if 'music' in parts and not STOP[0]:
+        res = run(list(data['music']), intro_cue, 1)
+        log('music: %s' % ', '.join('%s %s' % kv for kv in res.items()))
+        spent('the music')
+    if 'sfx' in parts and not STOP[0]:
+        res = run([(k, d, s) for k, (d, s) in data['sfx'].items()], intro_fx, WORKERS)
+        log('sound effects: %s' % ', '.join('%s %s' % (j[0], r) for j, r in res.items()))
+        spent('the sound effects')
+    log('Intro sounds are in out-intro. All finished. Tell Claude in the chat.')
+
 KEY = [None]
 
 def main():
     args = sys.argv[1:] or ['test']
     if '--redo' in args:
         REDO[0] = True; args = [a for a in args if a != '--redo']
+    if args and args[0] == 'intro':
+        KEY[0] = read_key()
+        if not KEY[0]:
+            sys.exit('No key found. Save it in %s/elevenlabs-key.txt' % HERE)
+        return intro(args[1:])
     if args and args[0] in ('heroes', 'villains', 'minions', 'monsters', 'voices'):
         KEY[0] = read_key()
         if not KEY[0]:

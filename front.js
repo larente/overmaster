@@ -41,11 +41,14 @@ const Front = (() => {
     let seen = false; try { seen = sessionStorage.getItem('om-intro') === '1'; } catch (e) { /* no storage */ }
     const calm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
     const el = $('intro'); if (!el || seen || calm) return;
+    // 0.34: on a device that hasn't seen the storyteller's intro, the key press that starts the game plays it first
+    // (browsers only allow sound after one). The logo waits: the title screen shows it when the film ends.
+    const film = !!CINE && !cineSeen();
     el.innerHTML = `<canvas class="i-embers" aria-hidden="true"></canvas>
       <p class="i-pres"><span>Alex Larente</span><small>presents</small></p>
-      <div class="i-logo">${emblem('i')}${wordmark('big')}<p class="i-tag">The heroes are coming. Be ready.</p></div>
+      ${film ? '' : `<div class="i-logo">${emblem('i')}${wordmark('big')}<p class="i-tag">The heroes are coming. Be ready.</p></div>`}
       <p class="i-press">${window.matchMedia && matchMedia('(hover: none)').matches ? 'Tap to begin' : 'Press any key'}</p>`;
-    el.hidden = false; el.classList.remove('out', 'go'); $('front').classList.add('introing');
+    el.hidden = false; el.classList.remove('out', 'go'); el.classList.toggle('cinefirst', film); $('front').classList.add('introing');
     embers(el.querySelector('canvas'), () => !el.hidden);
     // start the sequence once the display font is in, so the wordmark never flashes in a fallback face
     const fonts = document.fonts && document.fonts.ready ? Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 1500))]) : Promise.resolve();
@@ -55,10 +58,49 @@ const Front = (() => {
       if (done) return; done = true; if (e) { e.preventDefault(); e.stopPropagation(); }
       try { sessionStorage.setItem('om-intro', '1'); } catch (err) { /* no storage */ }
       removeEventListener('keydown', go, true); el.removeEventListener('pointerdown', go);
+      const out = () => { el.classList.add('out', 'go'); $('front').classList.remove('introing'); setTimeout(() => { el.hidden = true; el.innerHTML = ''; }, 900); };
+      if (CINE && !cineSeen()) { playCine(out); return; }   // decided at the key press: a manifest that came in late still counts
       if (window.SND) setTimeout(() => SND.play('dark', { vol: 0.55, rate: 0.8 }), 30);
-      el.classList.add('out', 'go'); $('front').classList.remove('introing'); setTimeout(() => { el.hidden = true; el.innerHTML = ''; }, 900);
+      out();
     };
     addEventListener('keydown', go, true); el.addEventListener('pointerdown', go);
+  }
+
+  /* ================= the storyteller's intro (0.34): once per device, then from the title's "Watch the intro" ================= */
+  let CINE = null;   // { video, vtt, poster } from art/manifest.json, once the intro has been made
+  const cineSeen = () => { try { return localStorage.getItem('om-cine') === '1'; } catch (e) { return true; } };
+  function loadCine() {
+    const ask = fetch('art/manifest.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : null)
+      .then(m => { CINE = m && m.intro && m.intro.video ? m.intro : null; if (CINE) rerenderFront(); return CINE; }).catch(() => null);
+    // a slow manifest never holds up the title for long: the opening goes ahead without the film (the title's link still comes)
+    return Promise.race([ask, new Promise(r => setTimeout(() => r(null), 2500))]);
+  }
+  function playCine(after) {
+    if (!CINE) { if (after) after(); return; }
+    const box = document.createElement('div'); box.className = 'cine';
+    box.innerHTML = `<video playsinline preload="auto"${CINE.poster ? ` poster="art/${esc(CINE.poster)}"` : ''}>${CINE.webm ? `<source src="art/${esc(CINE.webm)}" type="video/webm">` : ''}<source src="art/${esc(CINE.video)}" type="video/mp4">${CINE.vtt ? `<track kind="subtitles" srclang="en" label="English" src="art/${esc(CINE.vtt)}" default>` : ''}</video>
+      <button class="cine-skip" type="button">Skip <kbd>Esc</kbd></button>`;
+    document.body.appendChild(box);
+    const v = box.querySelector('video'); const t0 = performance.now(); let done = false;
+    const S = window.SND && SND._s ? SND._s() : null; const wasMuted = window.SND ? SND.muted : false;
+    v.volume = S ? (S.muted ? 0 : Math.max(0, Math.min(1, S.vol.master))) : 0.8;
+    if (window.SND) SND.setMuted(true);   // the game's own music and sounds wait
+    const end = () => {
+      if (done) return; done = true;
+      try { localStorage.setItem('om-cine', '1'); } catch (e) { /* no storage */ }
+      removeEventListener('keydown', key, true); v.pause();
+      if (window.SND) SND.setMuted(wasMuted);
+      box.classList.add('out'); setTimeout(() => box.remove(), 700);
+      if (after) after();
+    };
+    // the press that started the film never skips it: only one a second or more later does
+    const key = e => { e.preventDefault(); e.stopPropagation(); if (performance.now() - t0 > 1000) end(); };
+    addEventListener('keydown', key, true);
+    box.addEventListener('pointerdown', e => { e.preventDefault(); if (performance.now() - t0 > 1000 || e.target.closest('.cine-skip')) end(); });
+    v.addEventListener('ended', end); v.addEventListener('error', end);
+    { const src = box.querySelectorAll('source'); if (src.length) src[src.length - 1].addEventListener('error', end); }   // no source this browser can play
+    const tr = v.textTracks && v.textTracks[0]; if (tr) tr.mode = 'showing';
+    const p = v.play(); if (p && p.catch) p.catch(() => { v.muted = true; v.play().catch(end); });
   }
   // sparks drifting up from below, like embers from a brazier
   function embers(cv, alive) {
@@ -113,7 +155,7 @@ const Front = (() => {
         </nav>
         ${accountHtml()}
       </div>
-      <footer class="tfoot"><span class="credit">Developed by <b>Alex Larente</b></span><span class="ver">Alpha ${esc(Store.VERSION.replace(/-alpha$/, ''))}</span><button class="lnk" data-fx="feedback">Send feedback</button><button class="lnk" data-fx="feedback" data-kind="bug">Report a bug</button></footer>`;
+      <footer class="tfoot"><span class="credit">Developed by <b>Alex Larente</b></span><span class="ver">Alpha ${esc(Store.VERSION.replace(/-alpha$/, ''))}</span>${CINE ? '<button class="lnk" data-fx="cine">Watch the intro</button>' : ''}<button class="lnk" data-fx="feedback">Send feedback</button><button class="lnk" data-fx="feedback" data-kind="bug">Report a bug</button></footer>`;
   }
 
   /* ================= new campaign: villain ================= */
@@ -589,6 +631,7 @@ const Front = (() => {
       case 'savegame': showSave(); return;
       case 'saveto': saveTo(d.slot, d.where, el); return;
       case 'howto': if (UI.active()) UI.rules(); else showHowTo(); return;
+      case 'cine': playCine(); return;
       case 'settings': showSettings(); return;
       case 'chronicle': UI.closeModal(); UI.chronicle(); return;
       case 'feedback': showFeedback(d.kind); return;
@@ -696,7 +739,7 @@ const Front = (() => {
     Shop.refresh();
     const hot = window.claude && window.claude.hot && window.claude.hot.data;
     if (hot && hot.state && G.migrate(hot.state)) { $('front').hidden = true; UI.open(hot.state); }
-    else { showTitle(); if (!ret && link === null) showIntro(); }
+    else { showTitle(); if (!ret && link === null) await loadCine().then(showIntro); else loadCine(); }
     if (Store.recovering()) showAccount('reset');
     else if (ret) afterCheckout(ret);
     else if (link !== null && Store.cloudReady()) { ssx.set('om-code', null); showRedeem(link); }
