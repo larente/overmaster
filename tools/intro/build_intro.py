@@ -797,7 +797,7 @@ def build_cut(data, name, assets, out_dir, fast=False, sheet=False, captions=Fal
     if fast:
         vargs += ['-preset', 'veryfast', '-crf', '26']
     elif name == 'game':
-        kbps = int((24 * 8 * 1024 - 128 * tl.length) / tl.length)   # stay under 24 MB with 128 kbps audio
+        kbps = int((21 * 8 * 1024 - 128 * tl.length) / tl.length)   # aim at 21 MB with 128 kbps audio, so the overshoot stays under 24
         vargs += ['-preset', 'slow', '-b:v', '%dk' % min(kbps, 6000), '-maxrate', '%dk' % int(min(kbps, 6000) * 1.5), '-bufsize', '%dk' % (kbps * 2), '-tune', 'animation']
     else:
         vargs += ['-preset', 'slow', '-crf', '18', '-tune', 'animation']
