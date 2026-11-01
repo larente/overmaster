@@ -8,6 +8,9 @@ holding its 8 direction images as pixellab_gen.py saved them. They're joined int
 south, south-east, east, north-east, north, north-west, west, south-west, saved as lossless WebP,
 art/sprites/<key>.webp, and art/manifest.json gets {"sprite": ..., "dirs": 8, "pixel": true}.
 A portrait.png in the folder (from `pixellab_gen.py portraits`) becomes art/portraits/<key>.webp, the round token.
+0.35: anim-<name>/<direction>/NN.png folders (from `pixellab_gen.py moves`) become animation sheets,
+art/sprites/<key>-<name>.webp (a column per direction in the order above, a row per frame), listed under
+"anim" in the manifest: {"anim": {"unit-m-thrall": {"walk": {"sprite": ..., "dirs": 8, "frames": 8, "fps": 10}}}}.
 
     python3 tools/pixellab_import.py PATH/TO/bts-art/out-objects
 
@@ -65,6 +68,27 @@ def strip(paths):
     return out
 
 
+ANIM_FPS = {'walk': 10, 'build': 9}
+
+
+def sheet(folder):
+    """anim-<name>/<direction>/NN.png -> one image: a column per direction, a row per frame (None if a direction is missing)"""
+    cols = []
+    for d in ORDER:
+        dd = os.path.join(folder, d)
+        fs = sorted(f for f in os.listdir(dd) if f.lower().endswith('.png')) if os.path.isdir(dd) else []
+        if not fs:
+            return None, 0
+        cols.append([Image.open(os.path.join(dd, f)).convert('RGBA') for f in fs])
+    n = min(len(c) for c in cols)
+    w = max(i.width for c in cols for i in c); h = max(i.height for c in cols for i in c)
+    out = Image.new('RGBA', (w * len(ORDER), h * n), (0, 0, 0, 0))
+    for x, c in enumerate(cols):
+        for y, im in enumerate(c[:n]):
+            out.paste(im, (x * w + (w - im.width) // 2, y * h + (h - im.height)))
+    return out, n
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('input')
@@ -108,6 +132,17 @@ def main():
         e = man['art'].setdefault(key, {})
         e.update({'sprite': rel, 'dirs': 8, 'pixel': True})
         done.append('%s -> %s (%dx%d, %d KB)' % (name, rel, im.width, im.height, os.path.getsize(os.path.join(args.art, rel)) // 1024))
+        # 0.35: its animations
+        for sub in sorted(os.listdir(folder)):
+            if not sub.startswith('anim-') or not os.path.isdir(os.path.join(folder, sub)):
+                continue
+            an = sub[5:]; sim, nf = sheet(os.path.join(folder, sub))
+            if not sim:
+                skipped.append('%s %s (a direction is missing)' % (name, an)); continue
+            arel = 'sprites/%s-%s.webp' % (key, an)
+            sim.save(os.path.join(args.art, arel), 'WEBP', lossless=True, method=6, quality=100)
+            man.setdefault('anim', {}).setdefault(key, {})[an] = {'sprite': arel, 'dirs': 8, 'frames': nf, 'fps': ANIM_FPS.get(an, 10), 'pixel': True}
+            done.append('%s %s -> %s (%d frames, %dx%d, %d KB)' % (name, an, arel, nf, sim.width, sim.height, os.path.getsize(os.path.join(args.art, arel)) // 1024))
         # the bust portrait, if PixelLab made one (pixellab_gen.py portraits)
         pp = os.path.join(folder, 'portrait.png')
         if os.path.exists(pp):

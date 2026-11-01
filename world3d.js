@@ -650,7 +650,8 @@ const World3D = (() => {
     const put = (kind, x, z, s, ry, tint) => {
       const v = Math.floor(R() * 3); const key = kind + v; (buckets[key] = buckets[key] || { kind, v, list: [] }).list.push({ x, z, s, ry, tint });
     };
-    const siteNear = (x, z) => G.sitesOf(S).some(s => Math.hypot(s.x + 0.5 - x, s.y + 0.5 - z) < (s.kind === 'town' ? 1.6 : s.kind === 'tower' ? 2.2 : 1.05));
+    // 0.35: and a clearing around every mine, camp and deposit, so the trees don't hide them
+    const siteNear = (x, z) => G.sitesOf(S).some(s => Math.hypot(s.x + 0.5 - x, s.y + 0.5 - z) < (s.kind === 'town' ? 1.6 : s.kind === 'tower' ? 2.2 : 1.05)) || (S.nodes || []).some(n => { const dx = n.x + 0.5 - x, dz = n.y + 0.5 - z; return Math.hypot(dx, dz) < 0.62 || (dz < 0 && dz > -1.25 && Math.abs(dx) < 0.7); });
     const regionAt = (x, y) => x >= 0 && y >= 0 && x < G.MW && y < G.MH ? Mp.regionOf[y * G.MW + x] : null;
     for (let y = -EX; y < G.MH + EX; y++) for (let x = -EX; x < G.MW + EX; x++) {
       const t = tclamp(x, y); const reg = regionAt(x, y); const inside = x >= 0 && y >= 0 && x < G.MW && y < G.MH;
@@ -743,7 +744,7 @@ const World3D = (() => {
   // rendered once from a three-quarter view the first time it's needed. Single pictures face right and flip to face
   // left. Directional art (a strip of 8 frames: S, SE, E, NE, N, NW, W, SW) shows the frame for the way the character
   // faces relative to the camera. Pixel art keeps hard pixel edges when it's drawn larger than it was made.
-  const SPR = { on: true, tex: new Map(), art: new Map(), list: new Set(), geo: new Map(), rt: null, scene: null, cam: null, shadow: null };
+  const SPR = { on: true, tex: new Map(), art: new Map(), list: new Set(), geo: new Map(), rt: null, scene: null, cam: null, shadow: null, anims: new Map(), atex: new Map() };
   const SPR_W = 192, SPR_H = 256, SPR_LIGHT = 0.62;
   function spriteRig() {
     if (SPR.rt) return;
@@ -813,7 +814,38 @@ const World3D = (() => {
     const tex = new T.CanvasTexture(out); tex.encoding = T.sRGBEncoding; if (pixel) pixelTex(tex); else tex.anisotropy = 2;
     const bp = M.blueprint(key); const upp = (bp && bp.h ? bp.h : 0.6) * 1.12 / (y1 + 1 - y0);
     const w = bw * upp, h = bh * upp;
-    return { tex, w, h, left: -w / 2, bottom: 0, painted: true, top: h, dirs: n, cell: (bw + G * 2) / out.width, inset: G / out.width, frame: bw / out.width, v0: 1 - (G + bh) / out.height, v1: 1 - G / out.height };
+    return { tex, w, h, left: -w / 2, bottom: 0, painted: true, top: h, dirs: n, cell: (bw + G * 2) / out.width, inset: G / out.width, frame: bw / out.width, v0: 1 - (G + bh) / out.height, v1: 1 - G / out.height, upp, ground: y1 + 1, fw, fh: H };
+  }
+  // 0.35: an animation sheet: a column per direction (in the strip's order), a row per frame. Cut to one box like the
+  // strip, at the same scale, with the standing pose's feet on the ground, so walking and building never change its size.
+  function fromSheet(img, dirs, frames, pixel, base) {
+    const W = img.naturalWidth || img.width, H = img.naturalHeight || img.height, fw = Math.floor(W / dirs), fh = Math.floor(H / frames); if (!fw || !fh) return null;
+    const src = document.createElement('canvas'); src.width = W; src.height = H; const sc = src.getContext('2d', { willReadFrequently: true }); sc.drawImage(img, 0, 0);
+    const d = sc.getImageData(0, 0, W, H).data; let x0 = fw, y0 = fh, x1 = -1, y1 = -1;
+    for (let y = 0; y < fh * frames; y++) for (let x = 0; x < fw * dirs; x++) if (d[(y * W + x) * 4 + 3] > 8) { const lx = x % fw, ly = y % fh; if (lx < x0) x0 = lx; if (lx > x1) x1 = lx; if (ly < y0) y0 = ly; if (ly > y1) y1 = ly; }
+    if (x1 < 0) return null;
+    const cx = Math.floor(fw / 2); const half = Math.min(cx, Math.max(cx - x0, x1 + 1 - cx) + 1);
+    const bw = half * 2, fy0 = Math.max(0, y0 - 1), bh = y1 + 1 - fy0, fx0 = cx - half; const G = 2;
+    const pot = v => { let p = 1; while (p < v) p *= 2; return p; };
+    const out = document.createElement('canvas'); out.width = pot((bw + G * 2) * dirs); out.height = pot((bh + G * 2) * frames); const oc = out.getContext('2d'); oc.imageSmoothingEnabled = false;
+    for (let f = 0; f < frames; f++) for (let i = 0; i < dirs; i++) oc.drawImage(src, i * fw + fx0, f * fh + fy0, bw, bh, i * (bw + G * 2) + G, f * (bh + G * 2) + G, bw, bh);
+    const tex = new T.CanvasTexture(out); tex.encoding = T.sRGBEncoding; if (pixel) pixelTex(tex); else tex.anisotropy = 2;
+    const k = base && base.fw ? base.fw / fw : 1; const upp = (base && base.upp ? base.upp : 0.6 * 1.12 / (y1 + 1 - y0)) * k;
+    const ground = base && base.ground ? base.ground / k : y1 + 1;
+    const w = bw * upp, h = bh * upp, bottom = (ground - (y1 + 1)) * upp;
+    return { tex, w, h, left: -w / 2, bottom, painted: true, top: h + bottom, dirs, frames, cell: (bw + G * 2) / out.width, inset: G / out.width, frame: bw / out.width, rowH: (bh + G * 2) / out.height, v0: 1 - (G + bh) / out.height, v1: 1 - G / out.height };
+  }
+  function setAnim(key, name, img, meta) {
+    const A = SPR.anims.get(key) || {}; A[name] = Object.assign({ img }, meta || {}); SPR.anims.set(key, A);
+    const ak = key + '~' + name; SPR.atex.delete(ak); for (const g of [...SPR.geo.keys()]) if (g.indexOf(ak + '#') === 0) SPR.geo.delete(g);
+  }
+  const hasAnim = (key, name) => SPR.on && !!(SPR.anims.get(key) || {})[name];
+  function animRec(key, name) {
+    const ak = key + '~' + name; if (SPR.atex.has(ak)) return SPR.atex.get(ak);
+    const a = (SPR.anims.get(key) || {})[name]; const base = spriteTex(key);
+    const r = a && base && base.dirs === a.dirs ? fromSheet(a.img, a.dirs, a.frames, a.pixel, base) : null;
+    if (r) r.fps = a.fps || 10;
+    SPR.atex.set(ak, r); return r;
   }
   // crops to the drawing and works out the quad's size and where its feet are, in world units
   function cutSprite(cv, upp, fx, fy, painted) {
@@ -833,14 +865,14 @@ const World3D = (() => {
     if (!rec) rec = prerender(key);
     SPR.tex.set(key, rec); return rec;
   }
-  function spriteGeo(key, r, dir) {
-    const ck = r.dirs ? key + '#' + (dir || 0) : key;
+  function spriteGeo(key, r, dir, frame) {
+    const ck = r.dirs ? key + '#' + (dir || 0) + (frame === undefined ? '' : '#' + frame) : key;
     let g = SPR.geo.get(ck); if (g) return g;
     g = new T.PlaneGeometry(r.w, r.h); g.translate(r.left + r.w / 2, r.bottom + r.h / 2, 0);
     if (r.dirs) {
-      // point this quad at one frame of the strip
-      const uv = g.attributes.uv;
-      for (let i = 0; i < uv.count; i++) { uv.setX(i, (dir || 0) * r.cell + r.inset + uv.getX(i) * r.frame); uv.setY(i, r.v0 + uv.getY(i) * (r.v1 - r.v0)); }
+      // point this quad at one frame of the strip (0.35: or one cell of an animation sheet, a row per frame)
+      const uv = g.attributes.uv; const dv = frame === undefined ? 0 : frame * r.rowH;
+      for (let i = 0; i < uv.count; i++) { uv.setX(i, (dir || 0) * r.cell + r.inset + uv.getX(i) * r.frame); uv.setY(i, r.v0 - dv + uv.getY(i) * (r.v1 - r.v0)); }
       uv.needsUpdate = true;
     }
     SPR.geo.set(ck, g); return g;
@@ -883,7 +915,11 @@ const World3D = (() => {
         const step = Math.PI * 2 / ud.dirs; const a = Math.atan2(d, -(_f.x * _cf.x + _f.z * _cf.z));
         let i = ((Math.round(a / step) % ud.dirs) + ud.dirs) % ud.dirs;
         if (i !== ud.dir && angDiff(a, ud.dir * step) < step / 2 + 0.12) i = ud.dir; // a little stickiness, so it doesn't flicker
-        if (i !== ud.dir) { ud.dir = i; q.geometry = spriteGeo(ud.key, ud.rec, i); }
+        // 0.35: walking or building: this frame of that animation, if there is one
+        let rec = ud.rec, k = ud.key, f; const ar = ud.anim ? animRec(ud.key, ud.anim) : null;
+        if (ar) { rec = ar; k = ud.key + '~' + ud.anim; f = (((ud.frame | 0) % ar.frames) + ar.frames) % ar.frames; }
+        const gk = k + '#' + i + '#' + (f === undefined ? '' : f);
+        if (gk !== ud.gk) { ud.gk = gk; ud.dir = i; q.geometry = spriteGeo(k, rec, i, f); if (q.material.map !== rec.tex) q.material.map = rec.tex; }
         _rq.setFromAxisAngle(_Z, -g.rotation.z);
         q.quaternion.copy(_pq.invert()).multiply(_cq).multiply(_rq);
         q.scale.x = 1; continue;
@@ -933,7 +969,7 @@ const World3D = (() => {
     const q = new T.Mesh(geo, mat); q.renderOrder = 0.5; q.userData = { still: true, anchor: d.w * 0.45 }; // after ground rings (0), before characters (1)
     const g = new T.Group(); g.add(q); SPR.list.add(q);
     spriteRig(); const sh = new T.Mesh(SPR.shadow.geo, SPR.shadow.mat); sh.rotation.x = -Math.PI / 2; sh.position.y = 0.012; sh.scale.set(w * 0.9, w * 0.45, 1); g.add(sh);
-    g.userData = { sprite: true, prop: true, quad: q, mat, shadow: sh, top: h };
+    g.userData = { sprite: true, prop: true, quad: q, mat, shadow: sh, top: h, w, pw: r.pw, ph: r.ph };
     return g;
   }
 
@@ -1037,11 +1073,86 @@ const World3D = (() => {
   }
   // the fx ride on the front of the picture
   function fxOnQuad(fx, q) { fx.position.copy(q.position); fx.quaternion.copy(q.quaternion); }
+
+  /* --- 0.35: a site you hold shows it's at work (a lantern in the mine mouth, chips off the chopping stump, glints in the ore cart),
+         and sparkles when it's full and waiting for you to collect it --- */
+  function glowTex() {
+    return FXT.glow || (FXT.glow = pxCanvas(16, 16, px => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const d = Math.hypot(x - 7.5, y - 7.5) / 7.5; if (d >= 1) continue; const a = Math.round(255 * Math.pow(1 - d, 1.8)); px(x, y, `rgba(255,255,255,${(a / 255).toFixed(3)})`); } }));
+  }
+  function starTex() {
+    return FXT.star || (FXT.star = pxCanvas(9, 9, px => { px(4, 0, '#fff', 1, 9); px(0, 4, '#fff', 9, 1); px(3, 3, '#fff', 3, 3); px(2, 2, '#ffffff88', 5, 5); px(4, 4, '#fff'); }));
+  }
+  function chipTex() {
+    return FXT.chip || (FXT.chip = pxCanvas(4, 3, px => { px(0, 0, '#e8c088', 4, 1); px(0, 1, '#b07a40', 4, 1); px(1, 2, '#7a4e26', 3, 1); }));
+  }
+  function lampTex() {
+    return FXT.lamp || (FXT.lamp = pxCanvas(5, 9, px => { px(2, 0, '#2a2018', 1, 2); px(1, 2, '#2a2018', 3, 1); px(0, 3, '#2a2018', 5, 5); px(1, 4, '#ffd27a', 3, 3); px(2, 5, '#fff6d0'); px(1, 8, '#2a2018', 3, 1); }));
+  }
+  // where on each picture (in its own pixels) the lantern hangs, the axe falls, the ore glints
+  const NODE_FX = { gold: { lamp: [69, 40], deep: [67, 46], glint: [[50, 76], [54, 64]] }, lumber: { chop: [15, 49] }, ore: { lamp: [39, 6], glint: [[7, 37], [5, 22]] } };
+  const FULL_COL = { gold: '#ffe27a', lumber: '#d2ff9e', ore: '#d6ecff' };
+  function nodeFx(kind, g) {
+    const u = g.userData; const P = NODE_FX[kind] || {}; const fx = new T.Group();
+    const W = u.quad && u.pw ? u.w : 0.8, H = u.quad && u.pw ? u.top : 0.8;
+    const at = p => u.quad && u.pw ? [(p[0] / u.pw - 0.5) * W, (1 - p[1] / u.ph) * H] : [0.12, H * 0.35];
+    const spr = (tex, col, add, ro) => { const s = new T.Sprite(new T.SpriteMaterial({ map: tex.tex, color: new T.Color(col || '#ffffff'), transparent: true, depthWrite: false, toneMapped: false, blending: add ? T.AdditiveBlending : T.NormalBlending })); s.renderOrder = ro || 0.6; fx.add(s); return s; };
+    const F = { kind, fx, W, H, chips: [], glints: [], stars: [] };
+    if (P.lamp) { F.lampAt = at(P.lamp); F.halo = spr(glowTex(), '#ffa640', true); F.lamp = spr(lampTex()); }
+    if (P.deep) { F.deepAt = at(P.deep); F.deep = spr(glowTex(), '#ff8a30', true); }
+    if (P.chop) { F.chopAt = at(P.chop); for (let i = 0; i < 6; i++) F.chips.push(spr(chipTex())); F.dust = workFx(3, 0); fx.add(F.dust); }
+    if (P.glint) { const [[x0, x1], [y0, y1]] = P.glint; F.gl = [at([x0, y0]), at([x1, y1])]; for (let i = 0; i < 4; i++) F.glints.push(spr(sparkTex(), FULL_COL[kind], true)); }
+    for (let i = 0; i < 12; i++) F.stars.push(spr(starTex(), FULL_COL[kind], true, 0.7));
+    F.aura = spr(glowTex(), FULL_COL[kind], true, 0.45);
+    g.add(fx); u.nfx = F; return F;
+  }
+  // state: 'work' (filling), 'full' (waiting for you), anything else (raw, wrecked): quiet
+  function runNodeFx(F, t, state, seed) {
+    const work = state === 'work', full = state === 'full', lit = work || full;
+    if (F.lamp) {
+      // a flame that gutters: two slow waves and a fast one
+      const fl = 0.78 + 0.12 * Math.sin(t * 7.3 + seed) + 0.07 * Math.sin(t * 17.1 + seed * 2) + 0.06 * Math.sin(t * 2.1);
+      const [x, y] = F.lampAt; const sw = Math.sin(t * 1.6 + seed) * 0.006;
+      F.lamp.visible = lit; F.halo.visible = lit; F.lamp.position.set(x + sw, y, 0.05); F.lamp.scale.set(0.075, 0.135, 1);
+      F.halo.position.set(x + sw, y - 0.01, 0.055); const hs = 0.5 * fl; F.halo.scale.set(hs, hs, 1); F.halo.material.opacity = Math.min(1, 1.05 * fl);
+      F.lamp.material.color.setScalar(0.85 + 0.15 * fl);
+    }
+    if (F.deep) { const [x, y] = F.deepAt; F.deep.visible = lit; const k = 0.65 + 0.2 * Math.sin(t * 3.1 + seed) + 0.15 * Math.sin(t * 9.7 + seed); F.deep.position.set(x, y, 0.03); F.deep.scale.set(0.62 * k, 0.4 * k, 1); F.deep.material.opacity = 0.8 * k; }
+    // the camp: every second or so the axe falls on the stump and chips fly
+    if (F.chopAt) {
+      const P = 1.15, ph = t / P + seed, a = ph % 1, c = Math.floor(ph); const [x0, y0] = F.chopAt;
+      F.chips.forEach((sp, i) => {
+        const on = work && a < 0.55; sp.visible = on; if (!on) return;
+        const vx = (fxHash(c, i) - 0.5) * 0.9, vy = 0.55 + fxHash(c + 5, i) * 0.5, k = a / 0.55;
+        sp.position.set(x0 + vx * k * 0.45, y0 + (vy * k - 1.4 * k * k) * 0.38, 0.06); const sz = 0.05; sp.scale.set(sz, sz * 0.75, 1);
+        sp.material.rotation = (fxHash(c, i + 9) - 0.5) * 6 * k; sp.material.opacity = k < 0.8 ? 1 : (1 - k) / 0.2;
+      });
+      F.dust.position.set(x0, 0, 0); runFx(F.dust, t, work ? 0.5 : 0, y0 - 0.02, 0.18, 0.5);
+    }
+    if (F.gl) {
+      const [[gx0, gy0], [gx1, gy1]] = F.gl;
+      F.glints.forEach((sp, i) => {
+        const P = 0.9, ph = t / P + i * 0.31 + seed, a = ph % 1, c = Math.floor(ph);
+        const on = work && a < 0.4 && fxHash(c, i + 13) < 0.7; sp.visible = on; if (!on) return;
+        const k = Math.sin(Math.PI * a / 0.4); const sz = 0.1 * k + 0.02; sp.scale.set(sz, sz, 1);
+        sp.position.set(gx0 + (gx1 - gx0) * fxHash(c, i + 2), gy1 + (gy0 - gy1) * fxHash(c + 1, i + 4), 0.07); sp.material.opacity = k;
+      });
+    }
+    // full: stars wink on and off all over it, and a soft glow breathes behind
+    F.stars.forEach((sp, i) => {
+      const P = 1.3, ph = t / P + i / F.stars.length + seed * 0.37, a = ph % 1, c = Math.floor(ph);
+      sp.visible = full; if (!full) return;
+      const k = Math.sin(Math.PI * a); const sz = (0.08 + 0.12 * fxHash(c, i + 1)) * k; sp.scale.set(sz, sz, 1);
+      sp.position.set((fxHash(c, i + 3) - 0.5) * F.W * 0.95, F.H * (0.15 + 0.95 * fxHash(c + 2, i + 7)) + a * 0.08, 0.08);
+      sp.material.rotation = a * 1.2; sp.material.opacity = k;
+    });
+    F.aura.visible = full; if (full) { const b = 0.8 + 0.2 * Math.sin(t * 2.6 + seed); F.aura.position.set(0, F.H * 0.5, -0.02); F.aura.scale.set(F.W * 1.7 * b, F.H * 1.5 * b, 1); F.aura.material.opacity = 0.5 * b; }
+  }
   function setSprites(on) { on = !!on; if (on === SPR.on) return; SPR.on = on; refreshFigures(); }
   // painted art arrives: use it from now on
   function setArt(key, img, meta) {
     SPR.art.set(key, Object.assign({ img }, meta || {})); const r = SPR.tex.get(key); if (r && r.tex) r.tex.dispose(); SPR.tex.delete(key);
-    for (const k of [...SPR.geo.keys()]) if (k === key || k.indexOf(key + '#') === 0) SPR.geo.delete(k);
+    for (const k of [...SPR.geo.keys()]) if (k === key || k.indexOf(key + '#') === 0 || k.indexOf(key + '~') === 0) SPR.geo.delete(k);
+    for (const k of [...SPR.atex.keys()]) if (k.indexOf(key + '~') === 0) SPR.atex.delete(k);
   }
   // throw away every character figure; they're rebuilt on the next frame
   function refreshFigures() {
@@ -1049,7 +1160,7 @@ const World3D = (() => {
       for (const [id, E] of MAP.objs) { MAP.scene.remove(E.grp); MAP.objs.delete(id); }
       if (MAP.nodes) { for (const E of MAP.nodes.values()) MAP.scene.remove(E.grp); MAP.nodes = new Map(); }
       if (MAP.sites && MAP.hAt && hooks.state()) placeSites(MAP.scene, hooks.state());
-      for (const E of MAP.mins.values()) MAP.scene.remove(E.grp); MAP.mins = new Map();
+      for (const E of MAP.mins.values()) { MAP.scene.remove(E.grp); if (E.kit) MAP.scene.remove(E.kit); } MAP.mins = new Map();
       if (MAP.party) MAP.party.userData.sig = null;
       if (MAP.villain) { MAP.scene.remove(MAP.villain); MAP.villain = null; }
       if (MAP.tw) { for (const k of ['sum', 'lib']) if (MAP.tw[k]) MAP.scene.remove(MAP.tw[k].g || MAP.tw[k]); MAP.tw = {}; }
@@ -1188,8 +1299,11 @@ const World3D = (() => {
     for (const n of S.nodes || []) {
     // 0.30: mines and camps stand smaller than the Dark Tower (they were 1.2)
       const look = hooks.nodeLook ? hooks.nodeLook(n) : 'node-' + n.kind; const nseen = hooks.seeTile ? hooks.seeTile(n.x, n.y) : true;
-      let E = MAP.nodes.get(n.id); if (!E || E.look !== look) { if (E) MAP.scene.remove(E.grp); const grp = prop(look); grp.scale.setScalar(0.72); MAP.scene.add(grp); E = { grp, look }; MAP.nodes.set(n.id, E); }
+      let E = MAP.nodes.get(n.id); if (!E || E.look !== look) { if (E) MAP.scene.remove(E.grp); const grp = prop(look); grp.scale.setScalar(0.72); MAP.scene.add(grp); E = { grp, look, fx: look.indexOf('node-') === 0 ? nodeFx(n.kind, grp) : null }; MAP.nodes.set(n.id, E); }
       const wx = n.x + 0.5, wz = n.y + 0.5; E.grp.position.set(wx, hAt(wx, wz), wz); E.grp.visible = nseen; if (!nseen) continue;
+      if (E.fx) { const u = E.grp.userData; if (u.quad) fxOnQuad(E.fx.fx, u.quad); runNodeFx(E.fx, t, hooks.nodeState ? hooks.nodeState(n) : 'work', n.x * 1.7 + n.y * 0.9); }
+      // collected: a little hop
+      { const p0 = hooks.nodePop ? hooks.nodePop(n) : 0; const a = p0 ? (performance.now() - p0) / 1000 : 9; E.grp.scale.setScalar(a < 1.1 ? 0.72 * (1 + 0.16 * Math.exp(-a * 4) * Math.sin(a * 15)) : 0.72); }
       const html = hooks.nodeLabel ? hooks.nodeLabel(n) : ''; if (html) { const L = label(MAP.labels, 'node-' + n.id, 'l-node', html); L.pos.set(wx, hAt(wx, wz) + 0.02, wz + 0.5); }
     }
     const look = G3.MINION_TYPES[S.villain && S.villain.type] ? G3.MINION_TYPES[S.villain.type].look : 'thrall'; const seenM = new Set();
@@ -1206,8 +1320,18 @@ const World3D = (() => {
       const p = hooks.minionPos ? hooks.minionPos(m) : { x: m.x, y: m.y }; const wx = p.x + 0.5, wz = p.y + 0.5;
       if (E.last && (Math.abs(E.last.x - wx) + Math.abs(E.last.z - wz)) > 0.001) E.rot = Math.atan2(wx - E.last.x, wz - E.last.z);
       E.last = { x: wx, z: wz }; E.grp.position.set(wx, hAt(wx, wz), wz); E.grp.rotation.y = E.rot;
-      E.grp.userData.fig.position.y = p.moving ? Math.abs(Math.sin(t * 12 + m.x)) * 0.04 : p.dance ? Math.abs(Math.sin(t * 9 + m.x)) * 0.09 : 0;
-      if (p.dance) { E.grp.rotation.y = t * 5 + m.x; E.grp.userData.fig.rotation.z = Math.sin(t * 4.5) * 0.25; }
+      // 0.35: painted walk and build animations when the art has them (frames from PixelLab), else the wobble below
+      const fig = E.grp.userData.fig, fq = fig.userData && fig.userData.quad; const mk = 'unit-m-' + look;
+      const want = p.moving ? 'walk' : p.work ? 'build' : null; const anim = want && fq && fq.userData.dirs && hasAnim(mk, want) && animRec(mk, want) ? want : null;
+      if (fq && fq.userData.dirs) { fq.userData.anim = anim; fq.userData.frame = anim ? Math.floor((t + m.x * 0.37 + m.y * 0.21) * animRec(mk, anim).fps) : 0; }
+      E.animated = !!anim;
+      fig.position.y = anim ? 0 : p.moving ? Math.abs(Math.sin(t * 12 + m.x)) * 0.045 : p.dance ? Math.abs(Math.sin(t * 9 + m.x)) * 0.09 : 0;
+      if (p.dance) { E.grp.rotation.y = t * 5 + m.x; fig.rotation.z = Math.sin(t * 4.5) * 0.25; }
+      else if (anim) { fig.rotation.z = 0; fig.scale.y = 1; }
+      else if (p.moving) {
+        // a waddle: lean into each step, a little squash as the foot comes down
+        const st = Math.sin(t * 12 + m.x); fig.rotation.z = st * 0.08; fig.scale.y = 1 - 0.05 * Math.max(0, 1 - Math.abs(Math.cos(t * 12 + m.x)) * 3);
+      }
       else if (p.work) {
         // 0.31: a proper swing: lean back with the tool raised, then bring it down hard, a hop, dust and sparks on every blow
         const ph = (t * 1.6 + m.x * 0.37 + m.y * 0.21) % 1; const up = ph < 0.6 ? ph / 0.6 : 1 - (ph - 0.6) / 0.4;   // 0: struck, 1: raised
@@ -1217,7 +1341,7 @@ const World3D = (() => {
         E.grp.userData.fig.scale.y = 1 - 0.08 * Math.max(0, 1 - Math.abs(ph - 0.98) / 0.06);
       }
       else { E.grp.userData.fig.rotation.z = 0; E.grp.userData.fig.scale.y = 1; }
-      { const K = E.kit.userData; const work = !!p.work && E.grp.visible !== false; K.tool.visible = work; E.kit.position.set(wx, hAt(wx, wz), wz);
+      { const K = E.kit.userData; const work = !!p.work && E.grp.visible !== false; K.tool.visible = work && !E.animated; E.kit.position.set(wx, hAt(wx, wz), wz);
         if (work) { const ph = (t * 1.6 + m.x * 0.37 + m.y * 0.21) % 1; const up = ph < 0.6 ? ph / 0.6 : 1 - (ph - 0.6) / 0.4; const ease = up * up * (3 - 2 * up);
           K.tool.position.set(0.1, 0.2 + 0.06 * ease, 0.05); K.tool.material.rotation = -0.9 + 2.0 * ease; }
         runFx(K.fx, t * 1.6 + m.x, work ? 1 : 0, 0.03, 0.5, 0.8); }
@@ -1253,16 +1377,17 @@ const World3D = (() => {
       if (MAP.hintRing) { MAP.hintRing.visible = !!H; if (H) { const hx = H.x + 0.5, hz = H.y + 0.5; MAP.hintRing.position.set(hx, hAt(hx, hz) + 0.25, hz); MAP.hintRing.rotation.y = t * 0.03; } }
       if (H) { const L = label(MAP.labels, 'town-hint', 'l-site hint', 'Millbrook lies somewhere here'); L.pos.set(H.x + 0.5, hAt(H.x + 0.5, H.y + 0.5) + 0.3, H.y + 0.5); } }
     // villain
-    const V = S.villain; const onMap = G.villainOnMap(S);
-    if (onMap && !MAP.villain) { MAP.villain = makeVillain(); MAP.scene.add(MAP.villain); MAP.vrot = null; }
-    if (!onMap && MAP.villain) { MAP.scene.remove(MAP.villain); MAP.villain = null; }
-    if (MAP.villain) MAP.villain.visible = !hooks.seeNow || hooks.seeNow(V.x, V.y);
+    // 0.35: at home, the villain stands on the tower's doorstep, facing you
+    const V = S.villain; const onMap = G.villainOnMap(S); const door = !onMap && hooks.villainHome ? hooks.villainHome() : null; const shown = onMap || !!door;
+    if (shown && !MAP.villain) { MAP.villain = makeVillain(); MAP.scene.add(MAP.villain); MAP.vrot = null; }
+    if (!shown && MAP.villain) { MAP.scene.remove(MAP.villain); MAP.villain = null; }
+    if (MAP.villain) MAP.villain.visible = !!door || !hooks.seeNow || hooks.seeNow(V.x, V.y);
     if (MAP.villain && MAP.villain.visible) {
-      const ap = hooks.animPos('villain'); const x = ap ? ap.x : V.x, y = ap ? ap.y : V.y; const wx = x + 0.5, wz = y + 0.5;
+      const ap = door ? null : hooks.animPos('villain'); const x = door ? door.x + 0.55 : ap ? ap.x : V.x, y = door ? door.y - 0.1 : ap ? ap.y : V.y; const wx = x + 0.5, wz = y + 0.5;
       MAP.villain.position.set(wx, hAt(wx, wz), wz);
-      const P = hooks.partyPos(); const want = Math.atan2(P.x - x, P.y - y); MAP.vrot = MAP.vrot === null ? want : lerpAng(MAP.vrot, want, 1 - Math.exp(-dt * 4)); MAP.villain.userData.king.rotation.y = MAP.vrot;
+      const P = hooks.partyPos(); const want = door ? 0.25 : Math.atan2(P.x - x, P.y - y); MAP.vrot = MAP.vrot === null ? want : lerpAng(MAP.vrot, want, 1 - Math.exp(-dt * 4)); MAP.villain.userData.king.rotation.y = MAP.vrot;
       MAP.villain.userData.ring.rotation.z = -t * 0.5; MAP.villain.userData.aura.material.opacity = 0.3 + 0.2 * Math.sin(t * 2.5);
-      const L = label(MAP.labels, 'villain', 'l-vil', `${esc(V.name || 'Malgrith')}${V.known ? ' <i class="k">!</i>' : ''}${questTag(S, { kind: 'villain' })}`); L.pos.set(wx, hAt(wx, wz) + 1.0, wz);
+      const L = label(MAP.labels, 'villain', 'l-vil', `${esc(V.name || 'Malgrith')}${V.known ? ' <i class="k">!</i>' : ''}${questTag(S, { kind: 'villain' })}`); L.pos.set(wx, hAt(wx, wz) + 1.45, wz);
     }
     // party
     const P = hooks.partyPos(); const pw = { x: P.x + 0.5, z: P.y + 0.5 };
@@ -2018,5 +2143,5 @@ const World3D = (() => {
     TWN.scene = null; TWN.items = new Map(); TWN.figs = new Map(); TWN.circle = null; TWN.water = null; TWN.poolLight = null; TWN.pops = new Map(); TWN.live = false;
   }
 
-  return { _map: () => MAP, _bat: () => BAT, _spec: () => spec, _fn: () => frameNo, _mode: () => mode, _pause: v => { paused = !!v; }, supported, init, attach, resize, setMode, buildMap, setMapSpec, setSprites, setArt, refreshFigures, spritesOn: () => SPR.on, _spr: () => SPR, pickTile, pickMinion, inView, frameTiles, camState, camTo, dragStart, dragMove, dragEnd, zoomAt, pan, centerOn, ensureVisible, viewQuad: minimapInfo, enterBattle, exitBattle, pickHexPx, fitBattleCamera, enterTown, exitTown, pickTown, townScreen, _town: () => TWN, get canvas() { return canvas; }, get ready() { return !!renderer; } };
+  return { _map: () => MAP, _bat: () => BAT, _spec: () => spec, _fn: () => frameNo, _mode: () => mode, _pause: v => { paused = !!v; }, supported, init, attach, resize, setMode, buildMap, setMapSpec, setSprites, setArt, setAnim, refreshFigures, spritesOn: () => SPR.on, _spr: () => SPR, pickTile, pickMinion, inView, frameTiles, camState, camTo, dragStart, dragMove, dragEnd, zoomAt, pan, centerOn, ensureVisible, viewQuad: minimapInfo, enterBattle, exitBattle, pickHexPx, fitBattleCamera, enterTown, exitTown, pickTown, townScreen, _town: () => TWN, get canvas() { return canvas; }, get ready() { return !!renderer; } };
 })();

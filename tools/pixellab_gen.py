@@ -18,6 +18,8 @@ Run it in Terminal:
     python3 ~/Documents/bts-art/pixellab_gen.py talk villains   # 0.31: the six villains (or: talk heroes, talk monsters)
     python3 ~/Documents/bts-art/pixellab_gen.py intro           # 0.34: the intro's storyteller and its 10 scenes (from intro.json)
     python3 ~/Documents/bts-art/pixellab_gen.py intro scenes    # just the scenes (or: intro storyteller, intro A G)
+    python3 ~/Documents/bts-art/pixellab_gen.py moves           # 0.35: the six minions walking and building, in all 8 directions
+    python3 ~/Documents/bts-art/pixellab_gen.py moves thrall    # just these (or: moves walk, moves build)
 
 It reads your PixelLab token from pixellab-token.txt (or the .rtf TextEdit makes) in this folder and
 never prints it. Each character's 8 directions are saved in out/<name>/. Progress goes to log.txt.
@@ -1094,6 +1096,126 @@ def intro(tok, which):
     log('generations left: %s' % gens_left(tok))
     log('Intro art is in out-intro. All finished. Tell Claude in the chat.')
 
+# ---------------- 0.35: minions walking and building ----------------
+# animations of the minion characters made in 0.33 (their PixelLab character ids are in out/<name>/character.json)
+MOVES = {
+    'thrall': {'walk': 'walking forward with a steady walk cycle, pickaxe over the shoulder, bones rattling',
+               'build': 'swinging the pickaxe high and bringing it down hard on the ground, again and again'},
+    'kobold': {'walk': 'scurrying forward in a quick, eager walk cycle, tail swaying, sack bouncing',
+               'build': 'hacking at the ground with the pick in quick strokes, chips flying'},
+    'imp':    {'walk': 'hopping forward in a bouncy walk cycle, little wings flapping, tail swishing',
+               'build': 'pounding the ground with both fists like a hammer, wings twitching, grinning'},
+    'golem':  {'walk': 'lumbering forward in a slow, heavy walk cycle, arms swinging',
+               'build': 'raising the wooden mallet overhead and pounding it down, slow and heavy, again and again'},
+    'ghoul':  {'walk': 'walking forward hunched over in a creeping walk cycle, lantern swinging',
+               'build': 'crouching and hammering at the ground with the free hand, lantern swaying'},
+    'digger': {'walk': 'trudging forward in a tired walk cycle, spade over the shoulder, lantern swinging',
+               'build': 'digging: driving the spade into the ground with a foot and heaving the earth aside, again and again'},
+}
+MOVE_DIRS = ['south', 'south-east', 'east', 'north-east', 'north', 'north-west', 'west', 'south-west']
+MOVE_FRAMES = 8
+MOVE_FLOOR = 120   # stop before the plan runs lower than this many generations
+
+def char_id(key):
+    for fn in ('character.json', 'submit.json'):
+        p = os.path.join(OUT, key, fn)
+        if os.path.exists(p):
+            try:
+                cid = find_key(json.load(open(p)), 'character_id') or (json.load(open(p)).get('id') if fn == 'character.json' else None)
+                if cid: return cid
+            except ValueError:
+                pass
+    return None
+
+def move_done(folder):
+    return all(os.path.isdir(os.path.join(folder, d)) and len([f for f in os.listdir(os.path.join(folder, d)) if f.endswith('.png')]) >= 4 for d in MOVE_DIRS)
+
+def move_one(tok, key, move):
+    folder = os.path.join(OUT, key, 'anim-' + move)
+    if os.path.isdir(folder) and move_done(folder) and not REDO[0]:
+        return 'had'
+    cid = char_id(key)
+    if not cid:
+        log('%s: no character id in out/%s, so no %s' % (key, key, move)); return 'no character'
+    body = {'character_id': cid, 'mode': 'v3', 'action_description': MOVES[key][move], 'frame_count': MOVE_FRAMES,
+            'directions': MOVE_DIRS, 'keep_first_frame': False, 'animation_name': move}
+    t0 = time.time()
+    while True:
+        code, b = http('POST', '/characters/animations', body, tok)
+        if code != 429 or time.time() - t0 > 60 * 60: break
+        time.sleep(20)
+    try:
+        resp = json.loads(b or b'{}')
+    except ValueError:
+        resp = {}
+    if code in (401, 402):
+        log('%s %s: STOP: %s %s' % (key, move, code, json.dumps(strip(resp))[:300])); return 'stop'
+    if code >= 400:
+        log('%s %s: refused (%s): %s' % (key, move, code, json.dumps(strip(resp))[:400])); return 'fail'
+    os.makedirs(folder, exist_ok=True); save_json(folder, 'submit', resp)
+    ids = resp.get('background_job_ids') or []; dirs = resp.get('directions') or MOVE_DIRS; gid = resp.get('animation_group_id')
+    log('%s: %s in %d directions (%d jobs)' % (key, move, len(dirs), len(ids)))
+    finals, left, t0, last = {}, set(ids), time.time(), time.time()
+    while left and time.time() - t0 < 40 * 60:
+        time.sleep(8)
+        for jid in list(left):
+            c2, b2 = http('GET', '/background-jobs/%s' % jid, None, tok)
+            if c2 != 200: continue
+            try:
+                f = json.loads(b2)
+            except ValueError:
+                continue
+            st = str(f.get('status', '')).lower()
+            if st in ('completed', 'failed', 'error', 'cancelled'):
+                finals[jid] = (st, f); left.discard(jid)
+        if left and time.time() - last > 60:
+            last = time.time(); log('  %s %s: %d of %d directions done (%d min)' % (key, move, len(ids) - len(left), len(ids), (time.time() - t0) // 60))
+    # the frames: from the character's animation list (public URLs, in order), else straight from each job's reply
+    got = {}
+    c3, b3 = http('GET', '/characters/%s' % cid, None, tok)
+    if c3 == 200:
+        try:
+            d = json.loads(b3)
+            for g in d.get('animations') or []:
+                if gid and g.get('animation_group_id') != gid: continue
+                for dd in g.get('directions') or []:
+                    if dd.get('direction') in MOVE_DIRS and dd.get('frames'): got[dd['direction']] = dd['frames']
+        except ValueError:
+            pass
+    ok = 0
+    for i, dname in enumerate(dirs):
+        ddir = os.path.join(folder, dname); os.makedirs(ddir, exist_ok=True)
+        frames = []
+        for u in got.get(dname) or []:
+            c4, raw = http('GET', u, None, None)
+            if c4 == 200: frames.append(raw)
+        if not frames and i < len(ids) and ids[i] in finals and finals[ids[i]][0] == 'completed':
+            frames = pl_images(finals[ids[i]][1])
+        for k, raw in enumerate(frames):
+            open(os.path.join(ddir, '%02d.png' % k), 'wb').write(raw)
+        if frames: ok += 1
+        else: log('  %s %s: nothing came back for %s' % (key, move, dname))
+    return 'ok' if ok == len(dirs) else 'partial %d/%d' % (ok, len(dirs)) if ok else 'fail'
+
+def moves(tok, which):
+    picks = [w for w in which if w in ('walk', 'build')] or ['walk', 'build']
+    keys = [w for w in which if w in MOVES] or list(MOVES)
+    log('--- %s: minion moves: %s for %s' % (time.strftime('%Y-%m-%d %H:%M'), ', '.join(picks), ', '.join(keys)))
+    res = {}
+    for key in keys:
+        for move in picks:
+            g0 = gens_left(tok)
+            if g0 is not None and g0 < MOVE_FLOOR:
+                log('Only %d generations left, so I stopped here to keep some for later.' % g0); res['%s %s' % (key, move)] = 'skipped'; continue
+            r = move_one(tok, key, move); res['%s %s' % (key, move)] = r
+            g1 = gens_left(tok)
+            if r != 'had' and g0 is not None and g1 is not None: log('%s %s: %s (used %d generations, %d left)' % (key, move, r, g0 - g1, g1))
+            if r == 'stop': break
+        if any(v == 'stop' for v in res.values()): break
+    log('moves: ' + ', '.join('%s %s' % kv for kv in res.items()))
+    log('generations left: %s' % gens_left(tok))
+    log('The moves are in out/<minion>/anim-walk and anim-build. All finished. Tell Claude in the chat.')
+
 def main():
     args = sys.argv[1:] or ['test']
     if '--redo' in args:
@@ -1103,6 +1225,11 @@ def main():
         if not tok:
             sys.exit('No token found. Save it in %s/pixellab-token.txt' % HERE)
         return intro(tok, args[1:])
+    if args and args[0] == 'moves':
+        tok = read_token()
+        if not tok:
+            sys.exit('No token found. Save it in %s/pixellab-token.txt' % HERE)
+        return moves(tok, args[1:])
     if args and args[0] == 'talk':
         tok = read_token()
         if not tok:

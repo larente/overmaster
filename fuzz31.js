@@ -91,6 +91,10 @@ for (let i = 0; i < N; i++) {
     for (const o of G.myLairs(s)) { if (R() < 0.15 && !G.expandLair(s, o.id)) c.expands++; if (o.building && R() < 0.05 && !G.cancelBuild(s, o.id)) c.cancels++; }
     if (R() < 0.2 && s.minions.length) { if (!G.recallMinion(s, pickA(s.minions).id)) c.recalls++; }
     if (R() < 0.2 && !G.recallFrom(s, pickA(s.nodes).id)) c.recalls++;
+    // 0.35: collect full sites (and try some that aren't full: those must refuse)
+    if (G.collectNode) for (const n of s.nodes) if (R() < 0.7) { const full = G.nodeFull(s, n) && !G.nodeRaided(s, n); const before = s.res[G.NODE_KINDS[n.kind].res]; const r = G.collectNode(s, n.id);
+      if (full !== !r.err) throw new Error('collect: full ' + full + ' but ' + JSON.stringify(r));
+      if (!r.err) { if (s.res[r.res] !== before + r.amt || r.amt <= 0 || n.fill !== 0) throw new Error('collect paid wrong'); c.collects = (c.collects || 0) + 1; } }
     // 0.9.1: orders for a chosen minion
     if (s.minions.length) {
       const m = pickA(s.minions);
@@ -111,6 +115,7 @@ for (let i = 0; i < N; i++) {
     for (const o of s.objects) if (o.kind === 'stack' && (o.lvl || 1) > G.BAND_MAX_LEVEL) throw new Error('band level');
     if (s.dmSeen.length !== G.MW * G.MH) throw new Error('fog size');
     for (const n of s.nodes) if (G.assignedTo(s, n).length > 1) throw new Error('two minions on one site');
+    for (const n of s.nodes) { const f = n.fill || 0; if (f < 0 || f > G.NODE_KINDS[n.kind].days || (!n.dev && f) || (n.stock && f < G.NODE_KINDS[n.kind].days)) throw new Error('site fill out of range ' + JSON.stringify(n)); }
     for (const m of s.minions) { if (m.job && m.job.kind === 'move' && !m.path.length) throw new Error('arrived walker still busy'); if (m.job && m.job.kind === 'work' && !s.nodes.some(n => n.id === m.job.node)) throw new Error('work at nothing'); }
     if (R() < 0.1) G.buildLibrary(s);
     // 0.19: Millbrook

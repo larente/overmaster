@@ -63,7 +63,8 @@ The descriptions and sizes are in the `OBJECTS` list in the script; `objects tow
 
 A lair under construction needs no extra art: the game shows the bottom of the finished lair's picture, as high as the work has got, with the rest as a faint blue plan, a pixel scaffold drawn in code riding the edge, and dust and sparks while minions work. The half-built picture (`building`) is only the stand-in for a lair without its own art, and the Library's building site.
 
-**Later:** PixelLab can animate these same characters (walk, attack, and so on) per direction. The game doesn't play animations yet.
+**Minion animations (alpha 0.35).** `python3 pixellab_gen.py moves` animates the six minion characters with PixelLab's character animation (`/characters/animations`, custom "v3" mode): a **walk** and a **build** for each, 8 frames in all 8 directions, from an action line per minion in the `MOVES` list in the script (the Thrall swings its pickaxe, the Clay Servant pounds its mallet, the Grave Digger digs). `moves thrall` or `moves walk` does part of it; finished ones are skipped, and `--redo` makes them again. The frames land in `out/<minion>/anim-walk/<direction>/00.png` (and `anim-build`). It logs the generations each one used and stops if the balance falls under 120.
+The importer packs each into one sheet, `art/sprites/unit-m-<minion>-walk.webp` (a column per direction, in the strip's order, a row per frame), listed under `"anim"` in `art/manifest.json` with its frame count and speed. In the 3D view a minion plays its walk while it walks at night and its build while it builds a lair or sinks a mine, at the same size as its standing sprite and with its feet in the same place; without the sheets it waddles and swings a drawn tool as before. Other characters could be animated the same way later.
 
 ## The look
 
@@ -234,6 +235,9 @@ Licence: sound effects from a paid ElevenLabs plan can be used commercially. Ele
 - `python3 pixellab_gen.py talk` turns each hero's portrait into 7 mouth shapes (rest, closed, small, medium and wide open, round, teeth) with PixelLab's vocal animation (6 generations a hero), then asks for the free lip-sync plan of every line.
 - `python3 tools/voice_import.py --voice out-voice --talk out` evens out the voices and writes `art/voice/<hero>.mp3` and `art/talk/<hero>.webp`. Since 0.20.1 each hero's 14 lines go in one mono 64 kbps MP3, with 0.4 seconds of silence between lines, and each hero's 7 mouth shapes go in one strip. That keeps the published game under the artifact's limit of 511 files. The `voice` and `talk` lists in `art/manifest.json` say where each line starts (`at`) and how long it runs (`dur`), along with its lip-sync plan. The script replaces the old one-file-per-line layout.
 - To change a line: edit it in `hero_lines.json`, then `elevenlabs_gen.py heroes <hero>` (it re-speaks only the lines whose text changed; `--redo` re-speaks them all) and `pixellab_gen.py talk <hero>` for the new plan (free).
+
+## Minion and villain order lines (alpha 0.35)
+Every minion has five `ack` lines (an answer to any order: "As you command", "I was going there anyway") and every villain four `order` lines (for when you send them somewhere), in `tools/hero_lines.json`. Record them with `python3 elevenlabs_gen.py minions` and `python3 elevenlabs_gen.py villains` (only lines not yet recorded are spoken), then import as for the other voices.
 
 ## The intro cinematic (alpha 0.34)
 The storyteller's intro (script and shot list: the "Overmaster intro cinematic" doc) is made in four steps. Everything it needs is described in `tools/intro/intro.json`: the 16 narration lines, the narrator's voice, the three music cues, 16 new sound effects, the storyteller and the 10 PixelLab scenes, the 19 shots and the five cuts.

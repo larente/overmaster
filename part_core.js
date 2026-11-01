@@ -333,9 +333,9 @@
   const RES_NAME = { gold: 'gold', lumber: 'lumber', ore: 'ore', lore: 'Lore' };
   // places on the map your minions can work, a few of each, fixed per map
   const NODE_KINDS = {
-    gold: { name: 'Gold Mine', raw: 'Gold Deposit', res: 'gold', per: 3, cap: 1, verb: 'digs', sink: 'sink a mine', rawText: 'A seam of gold in the hills.', text: 'A gold mine in the hills.' },
-    lumber: { name: 'Lumber Camp', raw: 'Timber Stand', res: 'lumber', per: 3, cap: 1, verb: 'cuts', sink: 'clear a camp', rawText: 'Old trees ready for the axe.', text: 'A lumber camp in the old trees.' },
-    ore: { name: 'Ore Mine', raw: 'Ore Deposit', res: 'ore', per: 2, cap: 1, verb: 'hauls', sink: 'dig a mine', rawText: 'Black iron under the rock.', text: 'An ore mine cut into the rock.' }
+    gold: { name: 'Gold Mine', raw: 'Gold Deposit', res: 'gold', per: 3, days: 3, cap: 1, verb: 'digs', sink: 'sink a mine', rawText: 'A seam of gold in the hills.', text: 'A gold mine in the hills.' },
+    lumber: { name: 'Lumber Camp', raw: 'Timber Stand', res: 'lumber', per: 3, days: 2, cap: 1, verb: 'cuts', sink: 'clear a camp', rawText: 'Old trees ready for the axe.', text: 'A lumber camp in the old trees.' },
+    ore: { name: 'Ore Mine', raw: 'Ore Deposit', res: 'ore', per: 2, days: 3, cap: 1, verb: 'hauls', sink: 'dig a mine', rawText: 'Black iron under the rock.', text: 'An ore mine cut into the rock.' }
   };
   // a site is a raw deposit until a minion spends a night turning it into a mine or camp
   const nodeName = n => n.dev ? NODE_KINDS[n.kind].name : NODE_KINDS[n.kind].raw;
@@ -685,6 +685,9 @@
     const w0 = myLairs(s)[0]; if (w0) releaseWave(s, w0, 8);
     reveal(s);
     s.dmSeen = new Array(MW * MH).fill(0); dmReveal(s); s.townHint = townHintFor(s);
+    // 0.35: your minions already know the way to the nearest timber stand (the tower stands in the wastes, a walk from the woods)
+    { const tw = siteOf(s, 'tower'); const n = s.nodes.filter(z => z.kind === 'lumber').sort((a, b) => Math.hypot(a.x - tw.x, a.y - tw.y) - Math.hypot(b.x - tw.x, b.y - tw.y))[0];
+      if (n) for (let y = n.y - 2; y <= n.y + 2; y++) for (let x = n.x - 2; x <= n.x + 2; x++) if (x >= 0 && y >= 0 && x < MW && y < MH && Math.hypot(x - n.x, y - n.y) <= 1.8) s.dmSeen[y * MW + x] = 1; }
     if (opts.wilds !== false) populateWilds(s);
     planRoute(s);
     say(s, `Day 1. ${vFull(s)} stirs in the Dark Tower, still weak. In Millbrook, four young heroes sharpen their swords.`, 'sys');
@@ -1201,7 +1204,7 @@
     for (const n of s.nodes || []) {
       if (!n.known || nodeRaided(s, n) || !n.dev) continue;
       const K = NODE_KINDS[n.kind]; const gl = guardOf(s, n);
-      let v = 0.5 + (byDrive('duty') ? 1 : 0) + (n.kind === 'gold' && byDrive('greed') ? 1.5 : 0); let why = `The villain's ${nodeName(n)} feeds the Dark Tower. The heroes want it wrecked.`;
+      let v = 0.5 + (byDrive('duty') ? 1 : 0) + (n.kind === 'gold' && byDrive('greed') ? 1.5 + (nodeFull(s, n) ? 1 : 0) : 0); let why = n.kind === 'gold' && nodeFull(s, n) && byDrive('greed') ? `Gold is piled up at the villain's ${nodeName(n)}. The heroes want it.` : `The villain's ${nodeName(n)} feeds the Dark Tower. The heroes want it wrecked.`;
       if (gl) { const fv = fightValue(pp / garrisonPower(gl), 0, DUNGEONS[gl.dtype].name.toLowerCase() + '\'s guards'); v = fv.v > 0 ? v + fv.v * 0.5 : fv.v; if (fv.v <= 0) why = fv.why; }
       if (weak) v -= 4; if (finale) v *= 0.3;
       add('node:' + n.id, n.x, n.y, v, why, n, nodeName(n));
@@ -1304,7 +1307,8 @@
       if (sitesOf(s).some(z => Math.hypot(z.x - x, z.y - y) < 2.5) || Math.hypot(town.x - x, town.y - y) < 4) continue;
       const t = M.T[tIdx(x, y)]; const m = around(x, y, (a, b) => isT(a, b, 'mount'));
       if (m >= 1 && t !== 'forest' && t !== 'swamp') C.gold.push([x, y]);
-      if (t === 'forest' && around(x, y, (a, b) => isT(a, b, 'forest')) >= 4) C.lumber.push([x, y]);
+      // 0.35: timber stands at the edge of the woods, or in a clearing bitten into them, where you can see them (they used to hide deep in the forest)
+      { const f = around(x, y, (a, b) => isT(a, b, 'forest')); if ((t === 'forest' && f >= 2 && f <= 6) || ((t === 'grass' || t === 'dirt') && f >= 2)) C.lumber.push([x, y]); }
       if (m >= 2) C.ore.push([x, y]);
     }
     const nodes = [];
@@ -1312,12 +1316,18 @@
     const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
     const add = (kind, x, y) => nodes.push({ id: 'n' + (nodes.length + 1), kind, x, y, known: false, raidedUntil: 0, dev: false });
     const k = spread();   // 0.31: the big map has more of everything
-    for (const [kind, want0] of [['gold', 5], ['lumber', 6], ['ore', 5]]) {
+    for (const [kind, want0] of [['gold', 5], ['lumber', 7], ['ore', 5]]) {
       const want = Math.round(want0 * k);
       // one within easy reach of the tower (two on the big map), the rest spread over the land
       const nearT = C[kind].slice().sort((a, b) => Math.hypot(a[0] - tw.x, a[1] - tw.y) - Math.hypot(b[0] - tw.x, b[1] - tw.y));
       for (let i = 0; i < (k > 1.5 ? 2 : 1); i++) { const first = nearT.find(([x, y]) => !taken(x, y, 3)); if (first) add(kind, first[0], first[1]); }
-      for (const [x, y] of shuffle(C[kind])) { if (nodes.filter(n => n.kind === kind).length >= want) break; if (!taken(x, y, 5)) add(kind, x, y); }
+      // 0.35: spread out: each next one goes to the best of a few picks, the one farthest from its own kind
+      const pool = shuffle(C[kind]).filter(([x, y]) => !taken(x, y, 5));
+      while (nodes.filter(n => n.kind === kind).length < want) {
+        const same = nodes.filter(n => n.kind === kind); let best = null, bd = -1;
+        for (let i = 0, seen = 0; i < pool.length && seen < 10; i++) { const [x, y] = pool[i]; if (taken(x, y, 5)) continue; seen++; const d = same.length ? Math.min(...same.map(n => Math.hypot(n.x - x, n.y - y))) : 99; if (d > bd) { bd = d; best = i; } }
+        if (best === null) break; const [x, y] = pool.splice(best, 1)[0]; add(kind, x, y);
+      }
     }
     return nodes;
   }
@@ -2035,6 +2045,23 @@
   const summonDays = s => Math.max(1, SUMMON_DAYS - talentFx(s).summonDays);
   const lairDays = (s, k) => talentFx(s).empire ? 1 : Math.max(1, buildDays(k) - talentFx(s).buildDays);
   const siteYield = (s, n) => { const K = NODE_KINDS[n.kind]; return K.per + (minionType(s).perk === K.res ? 1 : 0) + (talentFx(s).yield[K.res] || 0); };
+  // 0.35: a mine or camp fills over a few nights (a gold mine in three), then waits, full, until you come and collect it
+  const nodeDays = n => NODE_KINDS[n.kind].days;
+  const nodeFull = (s, n) => !!n.dev && (n.fill || 0) >= nodeDays(n);
+  const nodeLoad = (s, n) => siteYield(s, n) * nodeDays(n) + (NODE_KINDS[n.kind].bonus || 0);
+  const nodeStock = (s, n) => nodeFull(s, n) ? (n.stock || nodeLoad(s, n)) : 0;
+  const fullNodes = s => (s.nodes || []).filter(n => nodeFull(s, n) && !nodeRaided(s, n));
+  function collectNode(s, id) {
+    const n = (s.nodes || []).find(z => z.id === id); if (!n) return { err: 'There is no such site.' };
+    if (s.phase !== 'map') return { err: 'Not in the middle of this.' };
+    const K = NODE_KINDS[n.kind];
+    if (!n.dev) return { err: `The ${K.raw} isn't yours yet.` };
+    if (nodeRaided(s, n)) return { err: `The heroes wrecked the ${K.name}.` };
+    if (!nodeFull(s, n)) { const d = nodeDays(n) - (n.fill || 0); return { err: `The ${K.name} isn't full yet: ${d} more night${d > 1 ? 's' : ''}.` }; }
+    const amt = nodeStock(s, n); s.res[K.res] += amt; n.fill = 0; n.stock = 0;
+    s.collected = s.collected || { gold: 0, lumber: 0, ore: 0 }; s.collected[K.res] += amt;
+    return { res: K.res, amt, id: n.id };
+  }
   // a learned talent's monster bonuses, applied to a fighting unit
   function talentPower(s, type) {
     const fx = talentFx(s); const a = fx.modAll, m = fx.mod[type]; const C = CREATURES[type]; if (!C || (!m && !a.hp && !a.ac && !a.hit && !a.dmg)) return 1;
@@ -2268,7 +2295,7 @@
   }
   // the minions' day: walk, then dig, chop, haul and build
   function minionDay(s) {
-    const T = minionType(s); const mp = minionMpOf(s); const out = { res: { gold: 0, lumber: 0, ore: 0 }, built: [], opened: [], yields: [], plot: 0, summoned: [], library: false, researched: null };
+    const T = minionType(s); const mp = minionMpOf(s); const out = { res: { gold: 0, lumber: 0, ore: 0 }, built: [], opened: [], yields: [], fills: [], filled: [], full: [], plot: 0, summoned: [], library: false, researched: null };
     const sm = summonDay(s); if (sm) out.summoned.push(sm);
     out.library = libraryDay(s); out.researched = null;
     // talents that pay every night: vaults and hoards, a tithe per lair, and the Count's cut of Millbrook's purse
@@ -2291,11 +2318,16 @@
       if (!n.dev) {
         // it takes a day's work at the deposit: the minion has to have been there when the night began
         const w = workersAt(s, n).slice(0, K.cap).filter(m => m.from && m.from[0] === n.x && m.from[1] === n.y); if (!w.length) continue;
-        n.dev = true; out.opened.push(n.id); for (const m of w) m.job = null;
-        say(s, `Your ${T.one.toLowerCase()} turns the ${K.raw} near ${regionName(s, n.x, n.y)} into a ${K.name}. It works on its own from now on.`, 'dm'); continue;
+        // 0.35: the first load is quick (one more night), then a full cycle each time
+        n.dev = true; n.fill = nodeDays(n) - 1; n.stock = 0; out.opened.push(n.id); for (const m of w) m.job = null;
+        say(s, `Your ${T.one.toLowerCase()} turns the ${K.raw} near ${regionName(s, n.x, n.y)} into a ${K.name}. It works on its own from now on: when it sparkles, click it to collect.`, 'dm'); continue;
       }
-      const got = siteYield(s, n); s.res[K.res] += got; out.res[K.res] += got; out.yields.push([n.id, got]);
+      // 0.35: it fills a night at a time, then waits for you to collect it before it starts again
+      if (nodeFull(s, n)) { out.full.push(n.id); continue; }
+      const was = n.fill || 0; n.fill = was + 1; out.fills.push([n.id, was, n.fill]);
+      if (n.fill >= nodeDays(n)) { n.stock = nodeLoad(s, n); out.filled.push(n.id); out.full.push(n.id); }
     }
+    if (out.filled.length) say(s, `Full and waiting for you: ${out.filled.map(id => { const n = s.nodes.find(z => z.id === id); return `the ${NODE_KINDS[n.kind].name} near ${regionName(s, n.x, n.y)} (${n.stock} ${NODE_KINDS[n.kind].res})`; }).join(', ')}. Click a full site to collect it.`, 'dm');
     for (const o of myLairs(s).filter(z => z.building > 0)) {
       const bs = s.minions.filter(m => m.job && m.job.kind === 'build' && m.job.lair === o.id && !m.path.length && m.x === o.x && m.y === o.y);
       if (!bs.length) continue;
@@ -2327,7 +2359,10 @@
     n.raidedUntil = dayIndex(s) + 3;
     const K = NODE_KINDS[n.kind]; const h = byDriveLive(s, n.kind === 'gold' ? 'greed' : 'duty');
     const one = minionType(s).one.toLowerCase();
-    const m = w.length ? `The heroes storm the ${nodeName(n)} and drive off your ${one}${lost ? `. It doesn't make it home` : `, which flees back to the tower`}. It yields nothing for three days.` : `The heroes wreck the ${nodeName(n)}. It yields nothing for three days.`;
+    // 0.35: whatever was piled up there goes with them
+    const took = nodeFull(s, n) ? nodeStock(s, n) : 0; n.fill = 0; n.stock = 0;
+    const loot = took ? ` They carry off ${took} ${K.res}.` : '';
+    const m = w.length ? `The heroes storm the ${nodeName(n)} and drive off your ${one}${lost ? `. It doesn't make it home` : `, which flees back to the tower`}.${loot} It stops working for three days.` : `The heroes wreck the ${nodeName(n)}.${loot} It stops working for three days.`;
     say(s, m, 'big'); thrill(s, `Drove the villain's minions from the ${nodeName(n)}`, 2 + db(s, h, 1), h && h.id);
     giveXp(s, lvXp(s, 0.06));
     return m;
@@ -3487,7 +3522,7 @@
       const lp = lairsProduce(s);
       // 0.30: every lair standing (and not wrecked) spreads dread through the countryside
       { const n = builtLairs(s).filter(o => !lairWrecked(s, o)).length; if (n) addInfamy(s, 0.5 * n, 'Your lairs spread dread'); }
-      s.lastDay = { res: md.res, built: md.built, opened: md.opened, yields: md.yields, plot: md.plot, raised: lp, released: lp.released, summoned: md.summoned, library: md.library, researched: md.researched, town: s.townToday || null, sieges: s.nightSieges || [], level: villainLevel(s) > lv0 ? villainLevel(s) : 0 };
+      s.lastDay = { res: md.res, built: md.built, opened: md.opened, yields: md.yields, fills: md.fills, filled: md.filled, full: md.full, plot: md.plot, raised: lp, released: lp.released, summoned: md.summoned, library: md.library, researched: md.researched, town: s.townToday || null, sieges: s.nightSieges || [], level: villainLevel(s) > lv0 ? villainLevel(s) : 0 };
       dmReveal(s);
     }
     townQuests(s);

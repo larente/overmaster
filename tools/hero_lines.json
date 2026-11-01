@@ -553,7 +553,8 @@
   "bounty",
   "heroesgrow",
   "newparty",
-  "dawn"
+  "dawn",
+  "order"
  ],
  "villains": {
   "lich": {
@@ -636,7 +637,11 @@
     "dawn": "Another dawn. How I loathe the sun.",
     "dawn2": "The living wake. Let them enjoy it while it lasts.",
     "dawn3": "Morning. Count the graves.",
-    "dawn4": "Day breaks. My patience does not."
+    "dawn4": "Day breaks. My patience does not.",
+    "order": "It shall be done.",
+    "order2": "The dead walk where I will.",
+    "order3": "Death goes where it pleases.",
+    "order4": "Patience. I am coming."
    }
   },
   "dragon": {
@@ -720,7 +725,11 @@
     "dawn": "The sun rises. It warms my scales.",
     "dawn2": "Another day to grow richer.",
     "dawn3": "Morning. Count the gold. Count it again.",
-    "dawn4": "Dawn. The kingdom wakes beneath my wings."
+    "dawn4": "Dawn. The kingdom wakes beneath my wings.",
+    "order": "Where my shadow falls, I rule.",
+    "order2": "I go where I please.",
+    "order3": "Make way.",
+    "order4": "Hmm. A pleasant flight."
    }
   },
   "demon": {
@@ -804,7 +813,11 @@
     "dawn": "Morning! Who wants to be wicked today?",
     "dawn2": "The sun's up. Ugh. Let's make it smoke.",
     "dawn3": "A new day, full of new sins.",
-    "dawn4": "Rise and burn."
+    "dawn4": "Rise and burn.",
+    "order": "Oh, this will be fun.",
+    "order2": "As I like it. I'm off.",
+    "order3": "Hold my throne.",
+    "order4": "Somewhere to burn? Lovely."
    }
   },
   "archmage": {
@@ -888,7 +901,11 @@
     "dawn": "A new day. A new set of variables.",
     "dawn2": "The stars fade. The work continues.",
     "dawn3": "Morning. Review the plans.",
-    "dawn4": "Dawn. Everything proceeds as designed."
+    "dawn4": "Dawn. Everything proceeds as designed.",
+    "order": "As I intended.",
+    "order2": "I was going there anyway.",
+    "order3": "Very well.",
+    "order4": "A sensible choice."
    }
   },
   "vampire": {
@@ -972,7 +989,11 @@
     "dawn": "The sun rises. Draw the curtains.",
     "dawn2": "Another day. I shall sleep through it.",
     "dawn3": "Dawn. How vulgar.",
-    "dawn4": "Morning. The night will come again soon."
+    "dawn4": "Morning. The night will come again soon.",
+    "order": "As you wish, my dear.",
+    "order2": "A pleasant night for a walk.",
+    "order3": "I was going there anyway.",
+    "order4": "Lead on, moonlight."
    }
   },
   "deathknight": {
@@ -1056,7 +1077,11 @@
     "dawn": "Dawn. Sound the horns.",
     "dawn2": "Another day of war.",
     "dawn3": "Morning muster. Ready the Legion.",
-    "dawn4": "The sun rises over a realm that will kneel."
+    "dawn4": "The sun rises over a realm that will kneel.",
+    "order": "So be it.",
+    "order2": "I march.",
+    "order3": "My blade goes before me.",
+    "order4": "Another road. Another grave."
    }
   }
  },
@@ -1177,7 +1202,8 @@
   "idle",
   "summoned",
   "fled",
-  "dance"
+  "dance",
+  "ack"
  ],
  "minions": {
   "thrall": {
@@ -1213,7 +1239,12 @@
     "fled2": "Heroes! Scatter!",
     "dance": "Dance of the dead!",
     "dance2": "Rattle and roll!",
-    "dance3": "Shake those bones!"
+    "dance3": "Shake those bones!",
+    "ack": "As you command. Clack.",
+    "ack2": "I was going there anyway.",
+    "ack3": "Bones obey.",
+    "ack4": "Yes yes, master!",
+    "ack5": "Rattling off!"
    }
   },
   "kobold": {
@@ -1249,7 +1280,12 @@
     "fled2": "Kobold too small for this!",
     "dance": "Kobold dance!",
     "dance2": "Wiggle for the Wyrm!",
-    "dance3": "Yip yip yip!"
+    "dance3": "Yip yip yip!",
+    "ack": "As you command, great one!",
+    "ack2": "I was going there anyway! Yes!",
+    "ack3": "Kobold goes, kobold goes!",
+    "ack4": "For the hoard!",
+    "ack5": "Right away, right away!"
    }
   },
   "imp": {
@@ -1285,7 +1321,12 @@
     "fled2": "Heroes! Fly!",
     "dance": "Imp jig!",
     "dance2": "Spin, spin, spin!",
-    "dance3": "Heh heh, dance!"
+    "dance3": "Heh heh, dance!",
+    "ack": "As you command. Ugh.",
+    "ack2": "I was going there anyway.",
+    "ack3": "Fine. Fine!",
+    "ack4": "Heh. On it, boss.",
+    "ack5": "Ooh, sounds like trouble."
    }
   },
   "golem": {
@@ -1321,7 +1362,12 @@
     "fled2": "Danger. Withdrawing.",
     "dance": "Dancing. Rhythm calculated.",
     "dance2": "Executing dance.",
-    "dance3": "Left. Right. Left."
+    "dance3": "Left. Right. Left.",
+    "ack": "As. You. Command.",
+    "ack2": "Instruction accepted.",
+    "ack3": "I was going there. Anyway.",
+    "ack4": "Order received.",
+    "ack5": "Complying."
    }
   },
   "ghoul": {
@@ -1357,7 +1403,12 @@
     "fled2": "Not the stakes!",
     "dance": "A waltz for the master!",
     "dance2": "Dance in the moonlight!",
-    "dance3": "One, two, three. One, two, three."
+    "dance3": "One, two, three. One, two, three.",
+    "ack": "As you command, my lord.",
+    "ack2": "I was going there anyway... for you.",
+    "ack3": "Anything for the master.",
+    "ack4": "Yes... yes...",
+    "ack5": "Your will, my lord."
    }
   },
   "digger": {
@@ -1393,7 +1444,12 @@
     "fled2": "Leg it!",
     "dance": "A gravedigger's jig!",
     "dance2": "Dance on the graves!",
-    "dance3": "Ho ho, hup!"
+    "dance3": "Ho ho, hup!",
+    "ack": "As you command.",
+    "ack2": "I was going there anyway.",
+    "ack3": "Right you are, boss.",
+    "ack4": "Aye. Don't wait up.",
+    "ack5": "Another job. Lovely."
    }
   }
  }
