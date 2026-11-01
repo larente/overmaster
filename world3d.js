@@ -830,8 +830,10 @@ const World3D = (() => {
     const out = document.createElement('canvas'); out.width = pot((bw + G * 2) * dirs); out.height = pot((bh + G * 2) * frames); const oc = out.getContext('2d'); oc.imageSmoothingEnabled = false;
     for (let f = 0; f < frames; f++) for (let i = 0; i < dirs; i++) oc.drawImage(src, i * fw + fx0, f * fh + fy0, bw, bh, i * (bw + G * 2) + G, f * (bh + G * 2) + G, bw, bh);
     const tex = new T.CanvasTexture(out); tex.encoding = T.sRGBEncoding; if (pixel) pixelTex(tex); else tex.anisotropy = 2;
-    const k = base && base.fw ? base.fw / fw : 1; const upp = (base && base.upp ? base.upp : 0.6 * 1.12 / (y1 + 1 - y0)) * k;
-    const ground = base && base.ground ? base.ground / k : y1 + 1;
+    // PixelLab draws animation frames at the character's own pixel size on a bigger canvas, padded evenly (96 becomes 124):
+    // same scale, and the standing feet sit half the padding lower
+    const upp = base && base.upp ? base.upp : 0.6 * 1.12 / (y1 + 1 - y0);
+    const ground = base && base.ground ? base.ground + (fh - (base.fh || fh)) / 2 : y1 + 1;
     const w = bw * upp, h = bh * upp, bottom = (ground - (y1 + 1)) * upp;
     return { tex, w, h, left: -w / 2, bottom, painted: true, top: h + bottom, dirs, frames, cell: (bw + G * 2) / out.width, inset: G / out.width, frame: bw / out.width, rowH: (bh + G * 2) / out.height, v0: 1 - (G + bh) / out.height, v1: 1 - G / out.height };
   }

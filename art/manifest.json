@@ -1,4 +1,102 @@
 {
+ "anim": {
+  "unit-m-digger": {
+   "build": {
+    "dirs": 8,
+    "fps": 9,
+    "frames": 8,
+    "pixel": true,
+    "sprite": "sprites/unit-m-digger-build.webp"
+   },
+   "walk": {
+    "dirs": 8,
+    "fps": 10,
+    "frames": 7,
+    "pixel": true,
+    "sprite": "sprites/unit-m-digger-walk.webp"
+   }
+  },
+  "unit-m-ghoul": {
+   "build": {
+    "dirs": 8,
+    "fps": 9,
+    "frames": 8,
+    "pixel": true,
+    "sprite": "sprites/unit-m-ghoul-build.webp"
+   },
+   "walk": {
+    "dirs": 8,
+    "fps": 10,
+    "frames": 8,
+    "pixel": true,
+    "sprite": "sprites/unit-m-ghoul-walk.webp"
+   }
+  },
+  "unit-m-golem": {
+   "build": {
+    "dirs": 8,
+    "fps": 9,
+    "frames": 8,
+    "pixel": true,
+    "sprite": "sprites/unit-m-golem-build.webp"
+   },
+   "walk": {
+    "dirs": 8,
+    "fps": 10,
+    "frames": 8,
+    "pixel": true,
+    "sprite": "sprites/unit-m-golem-walk.webp"
+   }
+  },
+  "unit-m-imp": {
+   "build": {
+    "dirs": 8,
+    "fps": 9,
+    "frames": 8,
+    "pixel": true,
+    "sprite": "sprites/unit-m-imp-build.webp"
+   },
+   "walk": {
+    "dirs": 8,
+    "fps": 10,
+    "frames": 8,
+    "pixel": true,
+    "sprite": "sprites/unit-m-imp-walk.webp"
+   }
+  },
+  "unit-m-kobold": {
+   "build": {
+    "dirs": 8,
+    "fps": 9,
+    "frames": 8,
+    "pixel": true,
+    "sprite": "sprites/unit-m-kobold-build.webp"
+   },
+   "walk": {
+    "dirs": 8,
+    "fps": 10,
+    "frames": 8,
+    "pixel": true,
+    "sprite": "sprites/unit-m-kobold-walk.webp"
+   }
+  },
+  "unit-m-thrall": {
+   "build": {
+    "dirs": 8,
+    "fps": 9,
+    "frames": 8,
+    "pixel": true,
+    "sprite": "sprites/unit-m-thrall-build.webp"
+   },
+   "walk": {
+    "dirs": 8,
+    "fps": 10,
+    "frames": 8,
+    "pixel": true,
+    "sprite": "sprites/unit-m-thrall-walk.webp"
+   }
+  }
+ },
  "art": {
   "obj-abyss": {
    "icon": "objects/obj-abyss.webp",
@@ -1066,6 +1164,12 @@
    "file": "audio/win.mp3",
    "kind": "sfx"
   }
+ },
+ "intro": {
+  "dur": 99.64,
+  "video": "intro/intro.mp4",
+  "vtt": "intro/intro.vtt",
+  "webm": "intro/intro.webm"
  },
  "talk": {
   "aelith": {
@@ -21338,6 +21442,1242 @@
      ]
     ],
     "text": "Victory. And I've learned so much. Strictly for academic reasons."
+   }
+  },
+  "minion-digger": {
+   "ack": {
+    "at": 0.4,
+    "dur": 1.6,
+    "file": "voice/minion-digger.mp3",
+    "text": "As you command."
+   },
+   "ack2": {
+    "at": 2.4,
+    "dur": 1.68,
+    "file": "voice/minion-digger.mp3",
+    "text": "I was going there anyway."
+   },
+   "ack3": {
+    "at": 4.48,
+    "dur": 1.76,
+    "file": "voice/minion-digger.mp3",
+    "text": "Right you are, boss."
+   },
+   "ack4": {
+    "at": 6.64,
+    "dur": 1.92,
+    "file": "voice/minion-digger.mp3",
+    "text": "Aye. Don't wait up."
+   },
+   "ack5": {
+    "at": 8.96,
+    "dur": 2.24,
+    "file": "voice/minion-digger.mp3",
+    "text": "Another job. Lovely."
+   },
+   "build": {
+    "at": 11.6,
+    "dur": 1.6,
+    "file": "voice/minion-digger.mp3",
+    "text": "Dig the foundations."
+   },
+   "build2": {
+    "at": 13.6,
+    "dur": 1.68,
+    "file": "voice/minion-digger.mp3",
+    "text": "Barracks for the Legion."
+   },
+   "build3": {
+    "at": 15.68,
+    "dur": 1.68,
+    "file": "voice/minion-digger.mp3",
+    "text": "Hard work, this."
+   },
+   "build4": {
+    "at": 17.76,
+    "dur": 2.56,
+    "file": "voice/minion-digger.mp3",
+    "text": "Graves and garrisons. Same thing."
+   },
+   "dance": {
+    "at": 20.72,
+    "dur": 1.92,
+    "file": "voice/minion-digger.mp3",
+    "text": "A gravedigger's jig!"
+   },
+   "dance2": {
+    "at": 23.04,
+    "dur": 1.92,
+    "file": "voice/minion-digger.mp3",
+    "text": "Dance on the graves!"
+   },
+   "dance3": {
+    "at": 25.36,
+    "dur": 1.44,
+    "file": "voice/minion-digger.mp3",
+    "text": "Ho ho, hup!"
+   },
+   "done": {
+    "at": 27.2,
+    "dur": 1.84,
+    "file": "voice/minion-digger.mp3",
+    "text": "Done. Back aches."
+   },
+   "done2": {
+    "at": 29.44,
+    "dur": 1.04,
+    "file": "voice/minion-digger.mp3",
+    "text": "Finished, sir."
+   },
+   "done3": {
+    "at": 30.88,
+    "dur": 1.28,
+    "file": "voice/minion-digger.mp3",
+    "text": "All dug."
+   },
+   "fled": {
+    "at": 32.56,
+    "dur": 1.76,
+    "file": "voice/minion-digger.mp3",
+    "text": "Not today, heroes!"
+   },
+   "fled2": {
+    "at": 34.72,
+    "dur": 0.64,
+    "file": "voice/minion-digger.mp3",
+    "text": "Leg it!"
+   },
+   "idle": {
+    "at": 35.76,
+    "dur": 1.36,
+    "file": "voice/minion-digger.mp3",
+    "text": "Nothing to bury?"
+   },
+   "idle2": {
+    "at": 37.52,
+    "dur": 1.12,
+    "file": "voice/minion-digger.mp3",
+    "text": "Quiet day."
+   },
+   "idle3": {
+    "at": 39.04,
+    "dur": 1.68,
+    "file": "voice/minion-digger.mp3",
+    "text": "Shovel's getting rusty."
+   },
+   "mine": {
+    "at": 41.12,
+    "dur": 1.68,
+    "file": "voice/minion-digger.mp3",
+    "text": "Digging. What else."
+   },
+   "mine2": {
+    "at": 43.2,
+    "dur": 1.2,
+    "file": "voice/minion-digger.mp3",
+    "text": "Ore, then."
+   },
+   "mine3": {
+    "at": 44.8,
+    "dur": 1.6,
+    "file": "voice/minion-digger.mp3",
+    "text": "Down we go."
+   },
+   "move": {
+    "at": 46.8,
+    "dur": 1.12,
+    "file": "voice/minion-digger.mp3",
+    "text": "Off I go."
+   },
+   "move2": {
+    "at": 48.32,
+    "dur": 3.68,
+    "file": "voice/minion-digger.mp3",
+    "text": "Long walk. Always a long walk."
+   },
+   "move3": {
+    "at": 52.4,
+    "dur": 0.96,
+    "file": "voice/minion-digger.mp3",
+    "text": "Moving the shovel."
+   },
+   "move4": {
+    "at": 53.76,
+    "dur": 1.36,
+    "file": "voice/minion-digger.mp3",
+    "text": "Aye, aye."
+   },
+   "select": {
+    "at": 55.52,
+    "dur": 0.72,
+    "file": "voice/minion-digger.mp3",
+    "text": "Aye?"
+   },
+   "select2": {
+    "at": 56.64,
+    "dur": 1.2,
+    "file": "voice/minion-digger.mp3",
+    "text": "Shovel's ready."
+   },
+   "select3": {
+    "at": 58.24,
+    "dur": 1.68,
+    "file": "voice/minion-digger.mp3",
+    "text": "Who's dead now?"
+   },
+   "select4": {
+    "at": 60.32,
+    "dur": 1.12,
+    "file": "voice/minion-digger.mp3",
+    "text": "Digger here."
+   },
+   "select5": {
+    "at": 61.84,
+    "dur": 0.64,
+    "file": "voice/minion-digger.mp3",
+    "text": "Speak up."
+   },
+   "summoned": {
+    "at": 62.88,
+    "dur": 1.6,
+    "file": "voice/minion-digger.mp3",
+    "text": "Reporting for digging."
+   },
+   "summoned2": {
+    "at": 64.88,
+    "dur": 1.36,
+    "file": "voice/minion-digger.mp3",
+    "text": "Who needs a hole?"
+   }
+  },
+  "minion-ghoul": {
+   "ack": {
+    "at": 0.4,
+    "dur": 1.92,
+    "file": "voice/minion-ghoul.mp3",
+    "text": "As you command, my lord."
+   },
+   "ack2": {
+    "at": 2.72,
+    "dur": 3.44,
+    "file": "voice/minion-ghoul.mp3",
+    "text": "I was going there anyway... for you."
+   },
+   "ack3": {
+    "at": 6.56,
+    "dur": 1.76,
+    "file": "voice/minion-ghoul.mp3",
+    "text": "Anything for the master."
+   },
+   "ack4": {
+    "at": 8.72,
+    "dur": 2.4,
+    "file": "voice/minion-ghoul.mp3",
+    "text": "Yes... yes..."
+   },
+   "ack5": {
+    "at": 11.52,
+    "dur": 1.84,
+    "file": "voice/minion-ghoul.mp3",
+    "text": "Your will, my lord."
+   },
+   "build": {
+    "at": 13.76,
+    "dur": 1.76,
+    "file": "voice/minion-ghoul.mp3",
+    "text": "A nest for the children."
+   },
+   "build2": {
+    "at": 15.92,
+    "dur": 2.24,
+    "file": "voice/minion-ghoul.mp3",
+    "text": "The master's will be done."
+   },
+   "build3": {
+    "at": 18.56,
+    "dur": 2.08,
+    "file": "voice/minion-ghoul.mp3",
+    "text": "Building, building."
+   },
+   "build4": {
+    "at": 21.04,
+    "dur": 2.24,
+    "file": "voice/minion-ghoul.mp3",
+    "text": "It will be beautiful, master."
+   },
+   "dance": {
+    "at": 23.68,
+    "dur": 2.08,
+    "file": "voice/minion-ghoul.mp3",
+    "text": "A waltz for the master!"
+   },
+   "dance2": {
+    "at": 26.16,
+    "dur": 1.68,
+    "file": "voice/minion-ghoul.mp3",
+    "text": "Dance in the moonlight!"
+   },
+   "dance3": {
+    "at": 28.24,
+    "dur": 5.52,
+    "file": "voice/minion-ghoul.mp3",
+    "text": "One, two, three. One, two, three."
+   },
+   "done": {
+    "at": 34.16,
+    "dur": 1.6,
+    "file": "voice/minion-ghoul.mp3",
+    "text": "It is done, master."
+   },
+   "done2": {
+    "at": 36.16,
+    "dur": 1.6,
+    "file": "voice/minion-ghoul.mp3",
+    "text": "Finished, my lord."
+   },
+   "done3": {
+    "at": 38.16,
+    "dur": 1.28,
+    "file": "voice/minion-ghoul.mp3",
+    "text": "As you commanded."
+   },
+   "fled": {
+    "at": 39.84,
+    "dur": 2.08,
+    "file": "voice/minion-ghoul.mp3",
+    "text": "Hunters! Flee!"
+   },
+   "fled2": {
+    "at": 42.32,
+    "dur": 1.28,
+    "file": "voice/minion-ghoul.mp3",
+    "text": "Not the stakes!"
+   },
+   "idle": {
+    "at": 44.0,
+    "dur": 1.84,
+    "file": "voice/minion-ghoul.mp3",
+    "text": "Does the master need me?"
+   },
+   "idle2": {
+    "at": 46.24,
+    "dur": 2.96,
+    "file": "voice/minion-ghoul.mp3",
+    "text": "Waiting... always waiting..."
+   },
+   "idle3": {
+    "at": 49.6,
+    "dur": 1.04,
+    "file": "voice/minion-ghoul.mp3",
+    "text": "So quiet tonight."
+   },
+   "mine": {
+    "at": 51.04,
+    "dur": 1.68,
+    "file": "voice/minion-ghoul.mp3",
+    "text": "Gold for the Count."
+   },
+   "mine2": {
+    "at": 53.12,
+    "dur": 1.44,
+    "file": "voice/minion-ghoul.mp3",
+    "text": "To the mines, then."
+   },
+   "mine3": {
+    "at": 54.96,
+    "dur": 1.76,
+    "file": "voice/minion-ghoul.mp3",
+    "text": "Digging for the master."
+   },
+   "move": {
+    "at": 57.12,
+    "dur": 1.52,
+    "file": "voice/minion-ghoul.mp3",
+    "text": "At once, master."
+   },
+   "move2": {
+    "at": 59.04,
+    "dur": 1.04,
+    "file": "voice/minion-ghoul.mp3",
+    "text": "Through the night."
+   },
+   "move3": {
+    "at": 60.48,
+    "dur": 1.04,
+    "file": "voice/minion-ghoul.mp3",
+    "text": "I go."
+   },
+   "move4": {
+    "at": 61.92,
+    "dur": 1.76,
+    "file": "voice/minion-ghoul.mp3",
+    "text": "Swiftly, swiftly."
+   },
+   "select": {
+    "at": 64.08,
+    "dur": 1.44,
+    "file": "voice/minion-ghoul.mp3",
+    "text": "Yes, master?"
+   },
+   "select2": {
+    "at": 65.92,
+    "dur": 1.52,
+    "file": "voice/minion-ghoul.mp3",
+    "text": "Your humble servant."
+   },
+   "select3": {
+    "at": 67.84,
+    "dur": 1.76,
+    "file": "voice/minion-ghoul.mp3",
+    "text": "The master calls..."
+   },
+   "select4": {
+    "at": 70.0,
+    "dur": 1.36,
+    "file": "voice/minion-ghoul.mp3",
+    "text": "How may I serve?"
+   },
+   "select5": {
+    "at": 71.76,
+    "dur": 1.84,
+    "file": "voice/minion-ghoul.mp3",
+    "text": "Anything for the Count."
+   },
+   "summoned": {
+    "at": 74.0,
+    "dur": 1.6,
+    "file": "voice/minion-ghoul.mp3",
+    "text": "I live to serve."
+   },
+   "summoned2": {
+    "at": 76.0,
+    "dur": 2.0,
+    "file": "voice/minion-ghoul.mp3",
+    "text": "The master has called me."
+   }
+  },
+  "minion-golem": {
+   "ack": {
+    "at": 0.4,
+    "dur": 2.64,
+    "file": "voice/minion-golem.mp3",
+    "text": "As. You. Command."
+   },
+   "ack2": {
+    "at": 3.44,
+    "dur": 2.24,
+    "file": "voice/minion-golem.mp3",
+    "text": "Instruction accepted."
+   },
+   "ack3": {
+    "at": 6.08,
+    "dur": 3.04,
+    "file": "voice/minion-golem.mp3",
+    "text": "I was going there. Anyway."
+   },
+   "ack4": {
+    "at": 9.52,
+    "dur": 1.68,
+    "file": "voice/minion-golem.mp3",
+    "text": "Order received."
+   },
+   "ack5": {
+    "at": 11.6,
+    "dur": 1.44,
+    "file": "voice/minion-golem.mp3",
+    "text": "Complying."
+   },
+   "build": {
+    "at": 13.44,
+    "dur": 2.16,
+    "file": "voice/minion-golem.mp3",
+    "text": "Construction begins."
+   },
+   "build2": {
+    "at": 16.0,
+    "dur": 2.32,
+    "file": "voice/minion-golem.mp3",
+    "text": "Stone upon stone."
+   },
+   "build3": {
+    "at": 18.72,
+    "dur": 2.24,
+    "file": "voice/minion-golem.mp3",
+    "text": "Building as designed."
+   },
+   "build4": {
+    "at": 21.36,
+    "dur": 1.68,
+    "file": "voice/minion-golem.mp3",
+    "text": "Following the plan."
+   },
+   "dance": {
+    "at": 23.44,
+    "dur": 3.36,
+    "file": "voice/minion-golem.mp3",
+    "text": "Dancing. Rhythm calculated."
+   },
+   "dance2": {
+    "at": 27.2,
+    "dur": 2.08,
+    "file": "voice/minion-golem.mp3",
+    "text": "Executing dance."
+   },
+   "dance3": {
+    "at": 29.68,
+    "dur": 3.2,
+    "file": "voice/minion-golem.mp3",
+    "text": "Left. Right. Left."
+   },
+   "done": {
+    "at": 33.28,
+    "dur": 2.08,
+    "file": "voice/minion-golem.mp3",
+    "text": "Task complete."
+   },
+   "done2": {
+    "at": 35.76,
+    "dur": 1.92,
+    "file": "voice/minion-golem.mp3",
+    "text": "Structure finished."
+   },
+   "done3": {
+    "at": 38.08,
+    "dur": 2.48,
+    "file": "voice/minion-golem.mp3",
+    "text": "Done. Next task?"
+   },
+   "fled": {
+    "at": 40.96,
+    "dur": 1.2,
+    "file": "voice/minion-golem.mp3",
+    "text": "Retreat."
+   },
+   "fled2": {
+    "at": 42.56,
+    "dur": 2.64,
+    "file": "voice/minion-golem.mp3",
+    "text": "Danger. Withdrawing."
+   },
+   "idle": {
+    "at": 45.6,
+    "dur": 1.04,
+    "file": "voice/minion-golem.mp3",
+    "text": "Idle."
+   },
+   "idle2": {
+    "at": 47.04,
+    "dur": 2.08,
+    "file": "voice/minion-golem.mp3",
+    "text": "No task assigned."
+   },
+   "idle3": {
+    "at": 49.52,
+    "dur": 1.28,
+    "file": "voice/minion-golem.mp3",
+    "text": "Waiting."
+   },
+   "mine": {
+    "at": 51.2,
+    "dur": 1.6,
+    "file": "voice/minion-golem.mp3",
+    "text": "Extracting."
+   },
+   "mine2": {
+    "at": 53.2,
+    "dur": 2.16,
+    "file": "voice/minion-golem.mp3",
+    "text": "Gathering resources."
+   },
+   "mine3": {
+    "at": 55.76,
+    "dur": 1.28,
+    "file": "voice/minion-golem.mp3",
+    "text": "Digging."
+   },
+   "move": {
+    "at": 57.44,
+    "dur": 1.2,
+    "file": "voice/minion-golem.mp3",
+    "text": "Moving."
+   },
+   "move2": {
+    "at": 59.04,
+    "dur": 1.68,
+    "file": "voice/minion-golem.mp3",
+    "text": "Relocating."
+   },
+   "move3": {
+    "at": 61.12,
+    "dur": 1.68,
+    "file": "voice/minion-golem.mp3",
+    "text": "Steps counted."
+   },
+   "move4": {
+    "at": 63.2,
+    "dur": 1.6,
+    "file": "voice/minion-golem.mp3",
+    "text": "Proceeding."
+   },
+   "select": {
+    "at": 65.2,
+    "dur": 1.28,
+    "file": "voice/minion-golem.mp3",
+    "text": "Command."
+   },
+   "select2": {
+    "at": 66.88,
+    "dur": 1.84,
+    "file": "voice/minion-golem.mp3",
+    "text": "Awaiting instruction."
+   },
+   "select3": {
+    "at": 69.12,
+    "dur": 1.76,
+    "file": "voice/minion-golem.mp3",
+    "text": "Servant ready."
+   },
+   "select4": {
+    "at": 71.28,
+    "dur": 1.36,
+    "file": "voice/minion-golem.mp3",
+    "text": "I hear."
+   },
+   "select5": {
+    "at": 73.04,
+    "dur": 1.12,
+    "file": "voice/minion-golem.mp3",
+    "text": "Purpose?"
+   },
+   "summoned": {
+    "at": 74.56,
+    "dur": 2.32,
+    "file": "voice/minion-golem.mp3",
+    "text": "Clay awakens."
+   },
+   "summoned2": {
+    "at": 77.28,
+    "dur": 2.56,
+    "file": "voice/minion-golem.mp3",
+    "text": "Servant formed. Ready."
+   }
+  },
+  "minion-imp": {
+   "ack": {
+    "at": 0.4,
+    "dur": 2.32,
+    "file": "voice/minion-imp.mp3",
+    "text": "As you command. Ugh."
+   },
+   "ack2": {
+    "at": 3.12,
+    "dur": 1.76,
+    "file": "voice/minion-imp.mp3",
+    "text": "I was going there anyway."
+   },
+   "ack3": {
+    "at": 5.28,
+    "dur": 1.52,
+    "file": "voice/minion-imp.mp3",
+    "text": "Fine. Fine!"
+   },
+   "ack4": {
+    "at": 7.2,
+    "dur": 1.52,
+    "file": "voice/minion-imp.mp3",
+    "text": "Heh. On it, boss."
+   },
+   "ack5": {
+    "at": 9.12,
+    "dur": 2.08,
+    "file": "voice/minion-imp.mp3",
+    "text": "Ooh, sounds like trouble."
+   },
+   "build": {
+    "at": 11.6,
+    "dur": 1.84,
+    "file": "voice/minion-imp.mp3",
+    "text": "Building a nightmare."
+   },
+   "build2": {
+    "at": 13.84,
+    "dur": 2.8,
+    "file": "voice/minion-imp.mp3",
+    "text": "Hammer, nails, sulphur. Perfect."
+   },
+   "build3": {
+    "at": 17.04,
+    "dur": 1.92,
+    "file": "voice/minion-imp.mp3",
+    "text": "Sloppy work, but fast!"
+   },
+   "build4": {
+    "at": 19.36,
+    "dur": 1.68,
+    "file": "voice/minion-imp.mp3",
+    "text": "Let's make it ugly."
+   },
+   "dance": {
+    "at": 21.44,
+    "dur": 1.04,
+    "file": "voice/minion-imp.mp3",
+    "text": "Imp jig!"
+   },
+   "dance2": {
+    "at": 22.88,
+    "dur": 2.0,
+    "file": "voice/minion-imp.mp3",
+    "text": "Spin, spin, spin!"
+   },
+   "dance3": {
+    "at": 25.28,
+    "dur": 1.84,
+    "file": "voice/minion-imp.mp3",
+    "text": "Heh heh, dance!"
+   },
+   "done": {
+    "at": 27.52,
+    "dur": 2.72,
+    "file": "voice/minion-imp.mp3",
+    "text": "Done! Can I burn something now?"
+   },
+   "done2": {
+    "at": 30.64,
+    "dur": 1.92,
+    "file": "voice/minion-imp.mp3",
+    "text": "Finished. Heh heh."
+   },
+   "done3": {
+    "at": 32.96,
+    "dur": 1.04,
+    "file": "voice/minion-imp.mp3",
+    "text": "Ta-da!"
+   },
+   "fled": {
+    "at": 34.4,
+    "dur": 1.36,
+    "file": "voice/minion-imp.mp3",
+    "text": "Nope! Nope! Nope!"
+   },
+   "fled2": {
+    "at": 36.16,
+    "dur": 1.92,
+    "file": "voice/minion-imp.mp3",
+    "text": "Heroes! Fly!"
+   },
+   "idle": {
+    "at": 38.48,
+    "dur": 1.92,
+    "file": "voice/minion-imp.mp3",
+    "text": "So... bored..."
+   },
+   "idle2": {
+    "at": 40.8,
+    "dur": 2.48,
+    "file": "voice/minion-imp.mp3",
+    "text": "I'm gonna set something on fire."
+   },
+   "idle3": {
+    "at": 43.68,
+    "dur": 1.84,
+    "file": "voice/minion-imp.mp3",
+    "text": "Hello? Anybody?"
+   },
+   "mine": {
+    "at": 45.92,
+    "dur": 1.36,
+    "file": "voice/minion-imp.mp3",
+    "text": "Gold for the Prince."
+   },
+   "mine2": {
+    "at": 47.68,
+    "dur": 1.44,
+    "file": "voice/minion-imp.mp3",
+    "text": "Dig dig, heh."
+   },
+   "mine3": {
+    "at": 49.52,
+    "dur": 3.44,
+    "file": "voice/minion-imp.mp3",
+    "text": "Mining. Boring. Fine."
+   },
+   "move": {
+    "at": 53.36,
+    "dur": 1.92,
+    "file": "voice/minion-imp.mp3",
+    "text": "Flying, flying."
+   },
+   "move2": {
+    "at": 55.68,
+    "dur": 1.2,
+    "file": "voice/minion-imp.mp3",
+    "text": "Wings out!"
+   },
+   "move3": {
+    "at": 57.28,
+    "dur": 1.76,
+    "file": "voice/minion-imp.mp3",
+    "text": "Off I go, heh heh."
+   },
+   "move4": {
+    "at": 59.44,
+    "dur": 0.96,
+    "file": "voice/minion-imp.mp3",
+    "text": "Whoosh!"
+   },
+   "select": {
+    "at": 60.8,
+    "dur": 0.72,
+    "file": "voice/minion-imp.mp3",
+    "text": "Wha'?"
+   },
+   "select2": {
+    "at": 61.92,
+    "dur": 2.32,
+    "file": "voice/minion-imp.mp3",
+    "text": "Imp at your service. Heh."
+   },
+   "select3": {
+    "at": 64.64,
+    "dur": 1.36,
+    "file": "voice/minion-imp.mp3",
+    "text": "Got something to break?"
+   },
+   "select4": {
+    "at": 66.4,
+    "dur": 1.44,
+    "file": "voice/minion-imp.mp3",
+    "text": "Ooh, a job?"
+   },
+   "select5": {
+    "at": 68.24,
+    "dur": 1.2,
+    "file": "voice/minion-imp.mp3",
+    "text": "Make it fun."
+   },
+   "summoned": {
+    "at": 69.84,
+    "dur": 2.0,
+    "file": "voice/minion-imp.mp3",
+    "text": "Out of the Pit and into the work!"
+   },
+   "summoned2": {
+    "at": 72.24,
+    "dur": 2.16,
+    "file": "voice/minion-imp.mp3",
+    "text": "Imp's here. The party can start."
+   }
+  },
+  "minion-kobold": {
+   "ack": {
+    "at": 0.4,
+    "dur": 1.44,
+    "file": "voice/minion-kobold.mp3",
+    "text": "As you command, great one!"
+   },
+   "ack2": {
+    "at": 2.24,
+    "dur": 2.0,
+    "file": "voice/minion-kobold.mp3",
+    "text": "I was going there anyway! Yes!"
+   },
+   "ack3": {
+    "at": 4.64,
+    "dur": 2.16,
+    "file": "voice/minion-kobold.mp3",
+    "text": "Kobold goes, kobold goes!"
+   },
+   "ack4": {
+    "at": 7.2,
+    "dur": 1.12,
+    "file": "voice/minion-kobold.mp3",
+    "text": "For the hoard!"
+   },
+   "ack5": {
+    "at": 8.72,
+    "dur": 1.28,
+    "file": "voice/minion-kobold.mp3",
+    "text": "Right away, right away!"
+   },
+   "build": {
+    "at": 10.4,
+    "dur": 1.6,
+    "file": "voice/minion-kobold.mp3",
+    "text": "Big nest for the Great One!"
+   },
+   "build2": {
+    "at": 12.4,
+    "dur": 1.04,
+    "file": "voice/minion-kobold.mp3",
+    "text": "Hammer hammer!"
+   },
+   "build3": {
+    "at": 13.84,
+    "dur": 1.36,
+    "file": "voice/minion-kobold.mp3",
+    "text": "Kobold builds best!"
+   },
+   "build4": {
+    "at": 15.6,
+    "dur": 1.12,
+    "file": "voice/minion-kobold.mp3",
+    "text": "Big nest, yes!"
+   },
+   "dance": {
+    "at": 17.12,
+    "dur": 1.44,
+    "file": "voice/minion-kobold.mp3",
+    "text": "Kobold dance!"
+   },
+   "dance2": {
+    "at": 18.96,
+    "dur": 1.44,
+    "file": "voice/minion-kobold.mp3",
+    "text": "Wiggle for the Wyrm!"
+   },
+   "dance3": {
+    "at": 20.8,
+    "dur": 0.88,
+    "file": "voice/minion-kobold.mp3",
+    "text": "Yip yip yip!"
+   },
+   "done": {
+    "at": 22.08,
+    "dur": 1.76,
+    "file": "voice/minion-kobold.mp3",
+    "text": "Done! Great One proud?"
+   },
+   "done2": {
+    "at": 24.24,
+    "dur": 0.96,
+    "file": "voice/minion-kobold.mp3",
+    "text": "Finished! Yip yip!"
+   },
+   "done3": {
+    "at": 25.6,
+    "dur": 1.2,
+    "file": "voice/minion-kobold.mp3",
+    "text": "All done, all done!"
+   },
+   "fled": {
+    "at": 27.2,
+    "dur": 1.52,
+    "file": "voice/minion-kobold.mp3",
+    "text": "Heroes! Run away!"
+   },
+   "fled2": {
+    "at": 29.12,
+    "dur": 1.84,
+    "file": "voice/minion-kobold.mp3",
+    "text": "Kobold too small for this!"
+   },
+   "idle": {
+    "at": 31.36,
+    "dur": 1.6,
+    "file": "voice/minion-kobold.mp3",
+    "text": "Kobold bored..."
+   },
+   "idle2": {
+    "at": 33.36,
+    "dur": 1.12,
+    "file": "voice/minion-kobold.mp3",
+    "text": "No shinies here."
+   },
+   "idle3": {
+    "at": 34.88,
+    "dur": 1.2,
+    "file": "voice/minion-kobold.mp3",
+    "text": "Kobold wants work."
+   },
+   "mine": {
+    "at": 36.48,
+    "dur": 2.16,
+    "file": "voice/minion-kobold.mp3",
+    "text": "Gold! Kobold loves gold!"
+   },
+   "mine2": {
+    "at": 39.04,
+    "dur": 1.2,
+    "file": "voice/minion-kobold.mp3",
+    "text": "Dig for shinies!"
+   },
+   "mine3": {
+    "at": 40.64,
+    "dur": 1.36,
+    "file": "voice/minion-kobold.mp3",
+    "text": "Mine mine mine!"
+   },
+   "move": {
+    "at": 42.4,
+    "dur": 1.2,
+    "file": "voice/minion-kobold.mp3",
+    "text": "Going! Going!"
+   },
+   "move2": {
+    "at": 44.0,
+    "dur": 0.72,
+    "file": "voice/minion-kobold.mp3",
+    "text": "Quick quick!"
+   },
+   "move3": {
+    "at": 45.12,
+    "dur": 1.68,
+    "file": "voice/minion-kobold.mp3",
+    "text": "Kobold on the way!"
+   },
+   "move4": {
+    "at": 47.2,
+    "dur": 0.48,
+    "file": "voice/minion-kobold.mp3",
+    "text": "Yip!"
+   },
+   "select": {
+    "at": 48.08,
+    "dur": 0.56,
+    "file": "voice/minion-kobold.mp3",
+    "text": "Yes yes?"
+   },
+   "select2": {
+    "at": 49.04,
+    "dur": 1.12,
+    "file": "voice/minion-kobold.mp3",
+    "text": "Kobold ready!"
+   },
+   "select3": {
+    "at": 50.56,
+    "dur": 1.6,
+    "file": "voice/minion-kobold.mp3",
+    "text": "For the Great Wyrm!"
+   },
+   "select4": {
+    "at": 52.56,
+    "dur": 0.88,
+    "file": "voice/minion-kobold.mp3",
+    "text": "Shiny job?"
+   },
+   "select5": {
+    "at": 53.84,
+    "dur": 1.12,
+    "file": "voice/minion-kobold.mp3",
+    "text": "Kobold listening!"
+   },
+   "summoned": {
+    "at": 55.36,
+    "dur": 1.84,
+    "file": "voice/minion-kobold.mp3",
+    "text": "Kobold hatched! Ready!"
+   },
+   "summoned2": {
+    "at": 57.6,
+    "dur": 1.84,
+    "file": "voice/minion-kobold.mp3",
+    "text": "Fresh from the egg, ready to dig!"
+   }
+  },
+  "minion-thrall": {
+   "ack": {
+    "at": 0.4,
+    "dur": 2.32,
+    "file": "voice/minion-thrall.mp3",
+    "text": "As you command. Clack."
+   },
+   "ack2": {
+    "at": 3.12,
+    "dur": 2.08,
+    "file": "voice/minion-thrall.mp3",
+    "text": "I was going there anyway."
+   },
+   "ack3": {
+    "at": 5.6,
+    "dur": 2.24,
+    "file": "voice/minion-thrall.mp3",
+    "text": "Bones obey."
+   },
+   "ack4": {
+    "at": 8.24,
+    "dur": 1.6,
+    "file": "voice/minion-thrall.mp3",
+    "text": "Yes yes, master!"
+   },
+   "ack5": {
+    "at": 10.24,
+    "dur": 1.28,
+    "file": "voice/minion-thrall.mp3",
+    "text": "Rattling off!"
+   },
+   "build": {
+    "at": 11.92,
+    "dur": 2.08,
+    "file": "voice/minion-thrall.mp3",
+    "text": "Build! Build!"
+   },
+   "build2": {
+    "at": 14.4,
+    "dur": 1.76,
+    "file": "voice/minion-thrall.mp3",
+    "text": "Stack the stones."
+   },
+   "build3": {
+    "at": 16.56,
+    "dur": 2.08,
+    "file": "voice/minion-thrall.mp3",
+    "text": "Bones do the heavy lifting."
+   },
+   "build4": {
+    "at": 19.04,
+    "dur": 1.36,
+    "file": "voice/minion-thrall.mp3",
+    "text": "Crypt coming up."
+   },
+   "dance": {
+    "at": 20.8,
+    "dur": 1.84,
+    "file": "voice/minion-thrall.mp3",
+    "text": "Dance of the dead!"
+   },
+   "dance2": {
+    "at": 23.04,
+    "dur": 1.92,
+    "file": "voice/minion-thrall.mp3",
+    "text": "Rattle and roll!"
+   },
+   "dance3": {
+    "at": 25.36,
+    "dur": 2.16,
+    "file": "voice/minion-thrall.mp3",
+    "text": "Shake those bones!"
+   },
+   "done": {
+    "at": 27.92,
+    "dur": 1.44,
+    "file": "voice/minion-thrall.mp3",
+    "text": "Done, master!"
+   },
+   "done2": {
+    "at": 29.76,
+    "dur": 1.84,
+    "file": "voice/minion-thrall.mp3",
+    "text": "Finished. Clack!"
+   },
+   "done3": {
+    "at": 32.0,
+    "dur": 1.28,
+    "file": "voice/minion-thrall.mp3",
+    "text": "All built."
+   },
+   "fled": {
+    "at": 33.68,
+    "dur": 1.84,
+    "file": "voice/minion-thrall.mp3",
+    "text": "Run, bones, run!"
+   },
+   "fled2": {
+    "at": 35.92,
+    "dur": 2.08,
+    "file": "voice/minion-thrall.mp3",
+    "text": "Heroes! Scatter!"
+   },
+   "idle": {
+    "at": 38.4,
+    "dur": 1.92,
+    "file": "voice/minion-thrall.mp3",
+    "text": "Bones getting cold."
+   },
+   "idle2": {
+    "at": 40.72,
+    "dur": 1.52,
+    "file": "voice/minion-thrall.mp3",
+    "text": "Nothing to do..."
+   },
+   "idle3": {
+    "at": 42.64,
+    "dur": 2.16,
+    "file": "voice/minion-thrall.mp3",
+    "text": "Master? Work?"
+   },
+   "mine": {
+    "at": 45.2,
+    "dur": 2.24,
+    "file": "voice/minion-thrall.mp3",
+    "text": "Dig, dig, dig."
+   },
+   "mine2": {
+    "at": 47.84,
+    "dur": 2.08,
+    "file": "voice/minion-thrall.mp3",
+    "text": "Ore for master."
+   },
+   "mine3": {
+    "at": 50.32,
+    "dur": 1.36,
+    "file": "voice/minion-thrall.mp3",
+    "text": "To the mine."
+   },
+   "move": {
+    "at": 52.08,
+    "dur": 1.84,
+    "file": "voice/minion-thrall.mp3",
+    "text": "Walking. Clack."
+   },
+   "move2": {
+    "at": 54.32,
+    "dur": 1.6,
+    "file": "voice/minion-thrall.mp3",
+    "text": "Going, going."
+   },
+   "move3": {
+    "at": 56.32,
+    "dur": 2.0,
+    "file": "voice/minion-thrall.mp3",
+    "text": "Bones on the move."
+   },
+   "move4": {
+    "at": 58.72,
+    "dur": 1.36,
+    "file": "voice/minion-thrall.mp3",
+    "text": "As you wish."
+   },
+   "select": {
+    "at": 60.48,
+    "dur": 1.04,
+    "file": "voice/minion-thrall.mp3",
+    "text": "Clack?"
+   },
+   "select2": {
+    "at": 61.92,
+    "dur": 1.28,
+    "file": "voice/minion-thrall.mp3",
+    "text": "Bones ready."
+   },
+   "select3": {
+    "at": 63.6,
+    "dur": 1.52,
+    "file": "voice/minion-thrall.mp3",
+    "text": "Master calls?"
+   },
+   "select4": {
+    "at": 65.52,
+    "dur": 1.76,
+    "file": "voice/minion-thrall.mp3",
+    "text": "Rattle rattle."
+   },
+   "select5": {
+    "at": 67.68,
+    "dur": 1.44,
+    "file": "voice/minion-thrall.mp3",
+    "text": "Yes, master."
+   },
+   "summoned": {
+    "at": 69.52,
+    "dur": 1.28,
+    "file": "voice/minion-thrall.mp3",
+    "text": "I rise!"
+   },
+   "summoned2": {
+    "at": 71.2,
+    "dur": 2.08,
+    "file": "voice/minion-thrall.mp3",
+    "text": "Bones together again!"
    }
   },
   "nilsa": {
@@ -42114,6 +43454,1482 @@
     "text": "We saved the realm. Now, who's paying for dinner?"
    }
   },
+  "villain-demon": {
+   "beaten": {
+    "at": 0.4,
+    "dur": 5.12,
+    "file": "voice/villain-demon.mp3",
+    "text": "Ugh. Fine. Back to the tower. This isn't over."
+   },
+   "beaten2": {
+    "at": 5.92,
+    "dur": 3.44,
+    "file": "voice/villain-demon.mp3",
+    "text": "Ouch. Fine. Tower. Now."
+   },
+   "bounty": {
+    "at": 9.76,
+    "dur": 3.44,
+    "file": "voice/villain-demon.mp3",
+    "text": "A bounty? On me? I'm flattered."
+   },
+   "bounty2": {
+    "at": 13.6,
+    "dur": 5.36,
+    "file": "voice/villain-demon.mp3",
+    "text": "They're putting prices on my lairs. I'll put prices on their heads."
+   },
+   "breach": {
+    "at": 19.36,
+    "dur": 2.88,
+    "file": "voice/villain-demon.mp3",
+    "text": "Their walls are down! Burn everything!"
+   },
+   "breach2": {
+    "at": 22.64,
+    "dur": 4.32,
+    "file": "voice/villain-demon.mp3",
+    "text": "The walls are down! Oh, this is the best part!"
+   },
+   "breach3": {
+    "at": 27.36,
+    "dur": 4.32,
+    "file": "voice/villain-demon.mp3",
+    "text": "Burn it! Burn the bakery! Burn everything!"
+   },
+   "dawn": {
+    "at": 32.08,
+    "dur": 4.16,
+    "file": "voice/villain-demon.mp3",
+    "text": "Morning! Who wants to be wicked today?"
+   },
+   "dawn2": {
+    "at": 36.64,
+    "dur": 4.24,
+    "file": "voice/villain-demon.mp3",
+    "text": "The sun's up. Ugh. Let's make it smoke."
+   },
+   "dawn3": {
+    "at": 41.28,
+    "dur": 3.52,
+    "file": "voice/villain-demon.mp3",
+    "text": "A new day, full of new sins."
+   },
+   "dawn4": {
+    "at": 45.2,
+    "dur": 1.92,
+    "file": "voice/villain-demon.mp3",
+    "text": "Rise and burn."
+   },
+   "deceive": {
+    "at": 47.52,
+    "dur": 6.48,
+    "file": "voice/villain-demon.mp3",
+    "text": "Serve me, and you'll walk free once Millbrook falls. You have my word."
+   },
+   "deceive2": {
+    "at": 54.4,
+    "dur": 3.92,
+    "file": "voice/villain-demon.mp3",
+    "text": "No tricks, I promise. Demons never lie."
+   },
+   "deceive3": {
+    "at": 58.72,
+    "dur": 3.04,
+    "file": "voice/villain-demon.mp3",
+    "text": "Just one little job, and you're free."
+   },
+   "fight": {
+    "at": 62.16,
+    "dur": 3.04,
+    "file": "voice/villain-demon.mp3",
+    "text": "Oh, good. I was hoping you'd say no."
+   },
+   "fight2": {
+    "at": 65.6,
+    "dur": 2.72,
+    "file": "voice/villain-demon.mp3",
+    "text": "Yes! Let's play rough."
+   },
+   "fight3": {
+    "at": 68.72,
+    "dur": 1.84,
+    "file": "voice/villain-demon.mp3",
+    "text": "I'll make this hurt."
+   },
+   "heroesgrow": {
+    "at": 70.96,
+    "dur": 4.4,
+    "file": "voice/villain-demon.mp3",
+    "text": "The heroes are getting stronger. Good, more fun to break."
+   },
+   "heroesgrow2": {
+    "at": 75.76,
+    "dur": 2.88,
+    "file": "voice/villain-demon.mp3",
+    "text": "Oh, they've been practising. Cute."
+   },
+   "intimidate": {
+    "at": 79.04,
+    "dur": 4.72,
+    "file": "voice/villain-demon.mp3",
+    "text": "Join me, or I'll show you what the Pit does to the stubborn."
+   },
+   "intimidate2": {
+    "at": 84.16,
+    "dur": 4.56,
+    "file": "voice/villain-demon.mp3",
+    "text": "I have done terrible things to things much bigger than you."
+   },
+   "intimidate3": {
+    "at": 89.12,
+    "dur": 3.84,
+    "file": "voice/villain-demon.mp3",
+    "text": "Say no. Go on. I'd love that."
+   },
+   "intro": {
+    "at": 93.36,
+    "dur": 4.88,
+    "file": "voice/villain-demon.mp3",
+    "text": "Ah, a new world to burn. Let's begin."
+   },
+   "intro2": {
+    "at": 98.64,
+    "dur": 6.4,
+    "file": "voice/villain-demon.mp3",
+    "text": "Fresh air, fresh blood, fresh souls. I love this place already."
+   },
+   "kill": {
+    "at": 105.44,
+    "dur": 3.04,
+    "file": "voice/villain-demon.mp3",
+    "text": "Oh, that one screamed beautifully."
+   },
+   "kill2": {
+    "at": 108.88,
+    "dur": 2.0,
+    "file": "voice/villain-demon.mp3",
+    "text": "Another one for the Pit."
+   },
+   "kill3": {
+    "at": 111.28,
+    "dur": 2.32,
+    "file": "voice/villain-demon.mp3",
+    "text": "Oh, don't look so surprised."
+   },
+   "kill4": {
+    "at": 114.0,
+    "dur": 2.72,
+    "file": "voice/villain-demon.mp3",
+    "text": "Shh. It's over now."
+   },
+   "lair": {
+    "at": 117.12,
+    "dur": 4.88,
+    "file": "voice/villain-demon.mp3",
+    "text": "Another crack in the world. Another door for my children."
+   },
+   "lair2": {
+    "at": 122.4,
+    "dur": 2.96,
+    "file": "voice/villain-demon.mp3",
+    "text": "A new nest for my little horrors."
+   },
+   "lair3": {
+    "at": 125.76,
+    "dur": 4.56,
+    "file": "voice/villain-demon.mp3",
+    "text": "Smell that? Brimstone. Home sweet home."
+   },
+   "lairlost": {
+    "at": 130.72,
+    "dur": 3.92,
+    "file": "voice/villain-demon.mp3",
+    "text": "They broke my toy! Now I'm cross."
+   },
+   "lairlost2": {
+    "at": 135.04,
+    "dur": 3.2,
+    "file": "voice/villain-demon.mp3",
+    "text": "Heroes in my nest? Rude."
+   },
+   "levelup": {
+    "at": 138.64,
+    "dur": 3.92,
+    "file": "voice/villain-demon.mp3",
+    "text": "Yes! More! The Pit is pouring into me!"
+   },
+   "levelup2": {
+    "at": 142.96,
+    "dur": 2.8,
+    "file": "voice/villain-demon.mp3",
+    "text": "Ooh, that tickles. More!"
+   },
+   "levelup3": {
+    "at": 146.16,
+    "dur": 2.88,
+    "file": "voice/villain-demon.mp3",
+    "text": "I can feel the Pit getting closer."
+   },
+   "lose": {
+    "at": 149.44,
+    "dur": 6.24,
+    "file": "voice/villain-demon.mp3",
+    "text": "Back to the Pit... I'll be back... I always come back..."
+   },
+   "lose2": {
+    "at": 156.08,
+    "dur": 4.16,
+    "file": "voice/villain-demon.mp3",
+    "text": "Fine! Keep your little world! I'll be back!"
+   },
+   "march": {
+    "at": 160.64,
+    "dur": 4.48,
+    "file": "voice/villain-demon.mp3",
+    "text": "They're coming here? Oh, I am going to enjoy this."
+   },
+   "march2": {
+    "at": 165.52,
+    "dur": 5.36,
+    "file": "voice/villain-demon.mp3",
+    "text": "They're coming to me? I'll put the kettle on. The boiling kind."
+   },
+   "minelost": {
+    "at": 171.28,
+    "dur": 4.32,
+    "file": "voice/villain-demon.mp3",
+    "text": "They smashed my mine. Petty. I respect it."
+   },
+   "minelost2": {
+    "at": 176.0,
+    "dur": 3.2,
+    "file": "voice/villain-demon.mp3",
+    "text": "Who touched my gold? Who?"
+   },
+   "newparty": {
+    "at": 179.6,
+    "dur": 4.56,
+    "file": "voice/villain-demon.mp3",
+    "text": "New heroes! I hope these ones scream louder."
+   },
+   "newparty2": {
+    "at": 184.56,
+    "dur": 2.72,
+    "file": "voice/villain-demon.mp3",
+    "text": "Fresh toys. Wonderful."
+   },
+   "order": {
+    "at": 187.68,
+    "dur": 2.08,
+    "file": "voice/villain-demon.mp3",
+    "text": "Oh, this will be fun."
+   },
+   "order2": {
+    "at": 190.16,
+    "dur": 2.24,
+    "file": "voice/villain-demon.mp3",
+    "text": "As I like it. I'm off."
+   },
+   "order3": {
+    "at": 192.8,
+    "dur": 1.44,
+    "file": "voice/villain-demon.mp3",
+    "text": "Hold my throne."
+   },
+   "order4": {
+    "at": 194.64,
+    "dur": 2.56,
+    "file": "voice/villain-demon.mp3",
+    "text": "Somewhere to burn? Lovely."
+   },
+   "parley": {
+    "at": 197.6,
+    "dur": 4.32,
+    "file": "voice/villain-demon.mp3",
+    "text": "Well, well. What do we have here? Let's talk."
+   },
+   "parley2": {
+    "at": 202.32,
+    "dur": 3.92,
+    "file": "voice/villain-demon.mp3",
+    "text": "Hello, monsters. Want to cause some trouble?"
+   },
+   "parley3": {
+    "at": 206.64,
+    "dur": 2.32,
+    "file": "voice/villain-demon.mp3",
+    "text": "I have an offer you'll love."
+   },
+   "pay": {
+    "at": 209.36,
+    "dur": 4.72,
+    "file": "voice/villain-demon.mp3",
+    "text": "Here, gold. I hear mortals love this stuff."
+   },
+   "pay2": {
+    "at": 214.48,
+    "dur": 2.96,
+    "file": "voice/villain-demon.mp3",
+    "text": "Shiny things for shiny loyalty."
+   },
+   "pay3": {
+    "at": 217.84,
+    "dur": 3.2,
+    "file": "voice/villain-demon.mp3",
+    "text": "Here. Don't spend it all on one village."
+   },
+   "persuade": {
+    "at": 221.44,
+    "dur": 3.36,
+    "file": "voice/villain-demon.mp3",
+    "text": "Just imagine what we could break together."
+   },
+   "persuade2": {
+    "at": 225.2,
+    "dur": 4.48,
+    "file": "voice/villain-demon.mp3",
+    "text": "Chaos, fire, and all the loot you can carry."
+   },
+   "persuade3": {
+    "at": 230.08,
+    "dur": 3.92,
+    "file": "voice/villain-demon.mp3",
+    "text": "Join me. It's going to be so much fun."
+   },
+   "repelled": {
+    "at": 234.4,
+    "dur": 4.56,
+    "file": "voice/villain-demon.mp3",
+    "text": "Turned back? How embarrassing. For them, I mean."
+   },
+   "repelled2": {
+    "at": 239.36,
+    "dur": 2.96,
+    "file": "voice/villain-demon.mp3",
+    "text": "They held the walls. Adorable."
+   },
+   "ride": {
+    "at": 242.72,
+    "dur": 3.28,
+    "file": "voice/villain-demon.mp3",
+    "text": "I'm going for a walk. Try not to miss me."
+   },
+   "ride2": {
+    "at": 246.4,
+    "dur": 2.72,
+    "file": "voice/villain-demon.mp3",
+    "text": "Let's go and ruin someone's day."
+   },
+   "ride3": {
+    "at": 249.52,
+    "dur": 3.2,
+    "file": "voice/villain-demon.mp3",
+    "text": "Out I go. Somebody hide the children."
+   },
+   "select": {
+    "at": 253.12,
+    "dur": 1.12,
+    "file": "voice/villain-demon.mp3",
+    "text": "Yesss?"
+   },
+   "select2": {
+    "at": 254.64,
+    "dur": 3.84,
+    "file": "voice/villain-demon.mp3",
+    "text": "Oh, you want something. How delightful."
+   },
+   "select3": {
+    "at": 258.88,
+    "dur": 2.08,
+    "file": "voice/villain-demon.mp3",
+    "text": "Make it wicked."
+   },
+   "select4": {
+    "at": 261.36,
+    "dur": 3.36,
+    "file": "voice/villain-demon.mp3",
+    "text": "I'm listening. I'm always listening."
+   },
+   "select5": {
+    "at": 265.12,
+    "dur": 4.64,
+    "file": "voice/villain-demon.mp3",
+    "text": "Bored, bored, bored. Give me something to burn."
+   },
+   "spotted": {
+    "at": 270.16,
+    "dur": 4.72,
+    "file": "voice/villain-demon.mp3",
+    "text": "Found you, little heroes. Run. It's more fun that way."
+   },
+   "spotted2": {
+    "at": 275.28,
+    "dur": 3.2,
+    "file": "voice/villain-demon.mp3",
+    "text": "Ooh, heroes! Let's play."
+   },
+   "spotted3": {
+    "at": 278.88,
+    "dur": 3.6,
+    "file": "voice/villain-demon.mp3",
+    "text": "There you are. I've been looking forward to this."
+   },
+   "summon": {
+    "at": 282.88,
+    "dur": 3.6,
+    "file": "voice/villain-demon.mp3",
+    "text": "Another imp! They grow up so fast."
+   },
+   "summon2": {
+    "at": 286.88,
+    "dur": 3.68,
+    "file": "voice/villain-demon.mp3",
+    "text": "Come out, little one. Mischief awaits."
+   },
+   "talent": {
+    "at": 290.96,
+    "dur": 2.08,
+    "file": "voice/villain-demon.mp3",
+    "text": "Ooh, a new trick."
+   },
+   "talent2": {
+    "at": 293.44,
+    "dur": 3.04,
+    "file": "voice/villain-demon.mp3",
+    "text": "Wicked. Absolutely wicked."
+   },
+   "talent3": {
+    "at": 296.88,
+    "dur": 2.32,
+    "file": "voice/villain-demon.mp3",
+    "text": "I learn so much down here."
+   },
+   "throne": {
+    "at": 299.6,
+    "dur": 5.68,
+    "file": "voice/villain-demon.mp3",
+    "text": "Welcome to my throne room. Please, scream as loud as you like."
+   },
+   "throne2": {
+    "at": 305.68,
+    "dur": 2.72,
+    "file": "voice/villain-demon.mp3",
+    "text": "So you made it. Shall we dance?"
+   },
+   "wave": {
+    "at": 308.8,
+    "dur": 5.04,
+    "file": "voice/villain-demon.mp3",
+    "text": "Go, my darlings. Go and break their pretty little town."
+   },
+   "wave2": {
+    "at": 314.24,
+    "dur": 3.2,
+    "file": "voice/villain-demon.mp3",
+    "text": "Off you go. Bring back screams."
+   },
+   "wave3": {
+    "at": 317.84,
+    "dur": 3.12,
+    "file": "voice/villain-demon.mp3",
+    "text": "Run along and burn something pretty."
+   },
+   "win": {
+    "at": 321.36,
+    "dur": 4.88,
+    "file": "voice/villain-demon.mp3",
+    "text": "The realm burns. Let the rest of the Pit come through."
+   },
+   "win2": {
+    "at": 326.64,
+    "dur": 4.64,
+    "file": "voice/villain-demon.mp3",
+    "text": "And the whole world burned. What a lovely ending."
+   }
+  },
+  "villain-dragon": {
+   "beaten": {
+    "at": 0.4,
+    "dur": 5.92,
+    "file": "voice/villain-dragon.mp3",
+    "text": "Enough. My wounds need the warmth of my tower."
+   },
+   "beaten2": {
+    "at": 6.72,
+    "dur": 6.64,
+    "file": "voice/villain-dragon.mp3",
+    "text": "My wings ache. I will return to the hoard and rest."
+   },
+   "bounty": {
+    "at": 13.76,
+    "dur": 5.92,
+    "file": "voice/villain-dragon.mp3",
+    "text": "A bounty on me? I'll take that gold too."
+   },
+   "bounty2": {
+    "at": 20.08,
+    "dur": 6.08,
+    "file": "voice/villain-dragon.mp3",
+    "text": "They offer coin for my lairs. How cute."
+   },
+   "breach": {
+    "at": 26.56,
+    "dur": 7.28,
+    "file": "voice/villain-dragon.mp3",
+    "text": "Their walls crack like eggshells. Burn the town."
+   },
+   "breach2": {
+    "at": 34.24,
+    "dur": 5.36,
+    "file": "voice/villain-dragon.mp3",
+    "text": "Their gates are open. Bring me their gold!"
+   },
+   "breach3": {
+    "at": 40.0,
+    "dur": 5.68,
+    "file": "voice/villain-dragon.mp3",
+    "text": "Burn it all. Ash makes a fine carpet."
+   },
+   "dawn": {
+    "at": 46.08,
+    "dur": 5.92,
+    "file": "voice/villain-dragon.mp3",
+    "text": "The sun rises. It warms my scales."
+   },
+   "dawn2": {
+    "at": 52.4,
+    "dur": 3.04,
+    "file": "voice/villain-dragon.mp3",
+    "text": "Another day to grow richer."
+   },
+   "dawn3": {
+    "at": 55.84,
+    "dur": 5.52,
+    "file": "voice/villain-dragon.mp3",
+    "text": "Morning. Count the gold. Count it again."
+   },
+   "dawn4": {
+    "at": 61.76,
+    "dur": 5.76,
+    "file": "voice/villain-dragon.mp3",
+    "text": "Dawn. The kingdom wakes beneath my wings."
+   },
+   "deceive": {
+    "at": 67.92,
+    "dur": 7.44,
+    "file": "voice/villain-dragon.mp3",
+    "text": "Join me, and I will share my hoard with you. Of course I will."
+   },
+   "deceive2": {
+    "at": 75.76,
+    "dur": 5.68,
+    "file": "voice/villain-dragon.mp3",
+    "text": "My hoard has room for your share. Truly."
+   },
+   "deceive3": {
+    "at": 81.84,
+    "dur": 6.4,
+    "file": "voice/villain-dragon.mp3",
+    "text": "I only want the town's gold. You may keep the rest."
+   },
+   "fight": {
+    "at": 88.64,
+    "dur": 4.96,
+    "file": "voice/villain-dragon.mp3",
+    "text": "So be it. I was getting hungry anyway."
+   },
+   "fight2": {
+    "at": 94.0,
+    "dur": 4.32,
+    "file": "voice/villain-dragon.mp3",
+    "text": "Good. I prefer my meals to struggle."
+   },
+   "fight3": {
+    "at": 98.72,
+    "dur": 2.0,
+    "file": "voice/villain-dragon.mp3",
+    "text": "Then burn."
+   },
+   "heroesgrow": {
+    "at": 101.12,
+    "dur": 4.56,
+    "file": "voice/villain-dragon.mp3",
+    "text": "The heroes grow. Bigger meals."
+   },
+   "heroesgrow2": {
+    "at": 106.08,
+    "dur": 4.16,
+    "file": "voice/villain-dragon.mp3",
+    "text": "Let them sharpen their little swords."
+   },
+   "intimidate": {
+    "at": 110.64,
+    "dur": 5.92,
+    "file": "voice/villain-dragon.mp3",
+    "text": "Kneel before me, or I'll roast you where you stand."
+   },
+   "intimidate2": {
+    "at": 116.96,
+    "dur": 5.28,
+    "file": "voice/villain-dragon.mp3",
+    "text": "I have eaten armies. You are a snack."
+   },
+   "intimidate3": {
+    "at": 122.64,
+    "dur": 5.36,
+    "file": "voice/villain-dragon.mp3",
+    "text": "Bow, or burn. Those are your choices."
+   },
+   "intro": {
+    "at": 128.4,
+    "dur": 6.8,
+    "file": "voice/villain-dragon.mp3",
+    "text": "Wake, my tower. The age of ash begins again."
+   },
+   "intro2": {
+    "at": 135.6,
+    "dur": 8.24,
+    "file": "voice/villain-dragon.mp3",
+    "text": "I have slept long enough. The world has grown fat. Time to feed."
+   },
+   "kill": {
+    "at": 144.24,
+    "dur": 4.4,
+    "file": "voice/villain-dragon.mp3",
+    "text": "Another little hero, turned to ash."
+   },
+   "kill2": {
+    "at": 149.04,
+    "dur": 2.64,
+    "file": "voice/villain-dragon.mp3",
+    "text": "Crunchy on the outside."
+   },
+   "kill3": {
+    "at": 152.08,
+    "dur": 6.0,
+    "file": "voice/villain-dragon.mp3",
+    "text": "Another hero, another trinket for my hoard."
+   },
+   "kill4": {
+    "at": 158.48,
+    "dur": 4.56,
+    "file": "voice/villain-dragon.mp3",
+    "text": "They always forget I breathe fire."
+   },
+   "lair": {
+    "at": 163.44,
+    "dur": 7.2,
+    "file": "voice/villain-dragon.mp3",
+    "text": "A new den for my brood. All this land is my hoard."
+   },
+   "lair2": {
+    "at": 171.04,
+    "dur": 5.12,
+    "file": "voice/villain-dragon.mp3",
+    "text": "Another nest. My brood grows strong."
+   },
+   "lair3": {
+    "at": 176.56,
+    "dur": 6.16,
+    "file": "voice/villain-dragon.mp3",
+    "text": "A new roost. Let the kingdom see my shadow."
+   },
+   "lairlost": {
+    "at": 183.12,
+    "dur": 6.24,
+    "file": "voice/villain-dragon.mp3",
+    "text": "They burned my nest! I will burn their town for it."
+   },
+   "lairlost2": {
+    "at": 189.76,
+    "dur": 3.92,
+    "file": "voice/villain-dragon.mp3",
+    "text": "Thieves! In my lair!"
+   },
+   "levelup": {
+    "at": 194.08,
+    "dur": 6.88,
+    "file": "voice/villain-dragon.mp3",
+    "text": "My fire burns hotter. The sky remembers me."
+   },
+   "levelup2": {
+    "at": 201.36,
+    "dur": 5.36,
+    "file": "voice/villain-dragon.mp3",
+    "text": "My scales harden. My fire grows."
+   },
+   "levelup3": {
+    "at": 207.12,
+    "dur": 5.28,
+    "file": "voice/villain-dragon.mp3",
+    "text": "I remember now what it is to be feared."
+   },
+   "lose": {
+    "at": 212.8,
+    "dur": 5.92,
+    "file": "voice/villain-dragon.mp3",
+    "text": "Impossible. I am... eternal..."
+   },
+   "lose2": {
+    "at": 219.12,
+    "dur": 4.8,
+    "file": "voice/villain-dragon.mp3",
+    "text": "My hoard... my beautiful hoard..."
+   },
+   "march": {
+    "at": 224.32,
+    "dur": 7.76,
+    "file": "voice/villain-dragon.mp3",
+    "text": "The heroes come to my lair. How generous. They bring their gold with them."
+   },
+   "march2": {
+    "at": 232.48,
+    "dur": 7.12,
+    "file": "voice/villain-dragon.mp3",
+    "text": "They march on my lair with all their gold. How thoughtful."
+   },
+   "minelost": {
+    "at": 240.0,
+    "dur": 6.8,
+    "file": "voice/villain-dragon.mp3",
+    "text": "My mine! My gold! They will pay twice."
+   },
+   "minelost2": {
+    "at": 247.2,
+    "dur": 4.56,
+    "file": "voice/villain-dragon.mp3",
+    "text": "No one steals from the hoard and lives."
+   },
+   "newparty": {
+    "at": 252.16,
+    "dur": 6.08,
+    "file": "voice/villain-dragon.mp3",
+    "text": "More heroes? Excellent. I was getting hungry."
+   },
+   "newparty2": {
+    "at": 258.64,
+    "dur": 8.32,
+    "file": "voice/villain-dragon.mp3",
+    "text": "A fresh batch. With better armour, I hope. For my hoard."
+   },
+   "order": {
+    "at": 267.36,
+    "dur": 4.96,
+    "file": "voice/villain-dragon.mp3",
+    "text": "Where my shadow falls, I rule."
+   },
+   "order2": {
+    "at": 272.72,
+    "dur": 2.64,
+    "file": "voice/villain-dragon.mp3",
+    "text": "I go where I please."
+   },
+   "order3": {
+    "at": 275.76,
+    "dur": 1.52,
+    "file": "voice/villain-dragon.mp3",
+    "text": "Make way."
+   },
+   "order4": {
+    "at": 277.68,
+    "dur": 3.44,
+    "file": "voice/villain-dragon.mp3",
+    "text": "Hmm. A pleasant flight."
+   },
+   "parley": {
+    "at": 281.52,
+    "dur": 5.44,
+    "file": "voice/villain-dragon.mp3",
+    "text": "Small creatures. Look at me when I speak."
+   },
+   "parley2": {
+    "at": 287.36,
+    "dur": 7.36,
+    "file": "voice/villain-dragon.mp3",
+    "text": "You stand before an ancient dragon. Choose your words."
+   },
+   "parley3": {
+    "at": 295.12,
+    "dur": 4.8,
+    "file": "voice/villain-dragon.mp3",
+    "text": "Small creatures. You may grovel now."
+   },
+   "pay": {
+    "at": 300.32,
+    "dur": 6.32,
+    "file": "voice/villain-dragon.mp3",
+    "text": "Take this gold. A few coins from my endless hoard."
+   },
+   "pay2": {
+    "at": 307.04,
+    "dur": 5.36,
+    "file": "voice/villain-dragon.mp3",
+    "text": "Take it. Gold always comes back to me."
+   },
+   "pay3": {
+    "at": 312.8,
+    "dur": 5.52,
+    "file": "voice/villain-dragon.mp3",
+    "text": "A gift from the hoard. Don't get used to it."
+   },
+   "persuade": {
+    "at": 318.72,
+    "dur": 5.76,
+    "file": "voice/villain-dragon.mp3",
+    "text": "Serve me, and you may eat whatever the fire leaves behind."
+   },
+   "persuade2": {
+    "at": 324.88,
+    "dur": 4.72,
+    "file": "voice/villain-dragon.mp3",
+    "text": "Fly with me and share in the plunder."
+   },
+   "persuade3": {
+    "at": 330.0,
+    "dur": 6.56,
+    "file": "voice/villain-dragon.mp3",
+    "text": "There is gold in Millbrook. More than you can carry."
+   },
+   "repelled": {
+    "at": 336.96,
+    "dur": 4.4,
+    "file": "voice/villain-dragon.mp3",
+    "text": "They held? Then hit harder next time."
+   },
+   "repelled2": {
+    "at": 341.76,
+    "dur": 4.88,
+    "file": "voice/villain-dragon.mp3",
+    "text": "A scratch on their wall. Disappointing."
+   },
+   "ride": {
+    "at": 347.04,
+    "dur": 7.36,
+    "file": "voice/villain-dragon.mp3",
+    "text": "I will spread my wings over this land. Let them look up and tremble."
+   },
+   "ride2": {
+    "at": 354.8,
+    "dur": 6.32,
+    "file": "voice/villain-dragon.mp3",
+    "text": "The sky is mine. Let the land beneath it tremble."
+   },
+   "ride3": {
+    "at": 361.52,
+    "dur": 6.32,
+    "file": "voice/villain-dragon.mp3",
+    "text": "I go to see my kingdom. All of it is mine."
+   },
+   "select": {
+    "at": 368.24,
+    "dur": 3.12,
+    "file": "voice/villain-dragon.mp3",
+    "text": "Speak quickly, small one."
+   },
+   "select2": {
+    "at": 371.76,
+    "dur": 2.88,
+    "file": "voice/villain-dragon.mp3",
+    "text": "You dare approach the hoard?"
+   },
+   "select3": {
+    "at": 375.04,
+    "dur": 3.36,
+    "file": "voice/villain-dragon.mp3",
+    "text": "I am listening. Be worth it."
+   },
+   "select4": {
+    "at": 378.8,
+    "dur": 4.4,
+    "file": "voice/villain-dragon.mp3",
+    "text": "Hmm? Has someone brought me gold?"
+   },
+   "select5": {
+    "at": 383.6,
+    "dur": 2.24,
+    "file": "voice/villain-dragon.mp3",
+    "text": "What is it now?"
+   },
+   "spotted": {
+    "at": 386.24,
+    "dur": 8.0,
+    "file": "voice/villain-dragon.mp3",
+    "text": "I smell heroes. Small, warm, and so very afraid."
+   },
+   "spotted2": {
+    "at": 394.64,
+    "dur": 5.12,
+    "file": "voice/villain-dragon.mp3",
+    "text": "There they are. Little morsels in shiny tin."
+   },
+   "spotted3": {
+    "at": 400.16,
+    "dur": 5.6,
+    "file": "voice/villain-dragon.mp3",
+    "text": "I see them. Their armour gleams like coins."
+   },
+   "summon": {
+    "at": 406.16,
+    "dur": 6.4,
+    "file": "voice/villain-dragon.mp3",
+    "text": "More kobolds. They are so eager to serve."
+   },
+   "summon2": {
+    "at": 412.96,
+    "dur": 3.12,
+    "file": "voice/villain-dragon.mp3",
+    "text": "Another servant for the hoard."
+   },
+   "talent": {
+    "at": 416.48,
+    "dur": 4.64,
+    "file": "voice/villain-dragon.mp3",
+    "text": "Ancient secrets. I collect those too."
+   },
+   "talent2": {
+    "at": 421.52,
+    "dur": 4.4,
+    "file": "voice/villain-dragon.mp3",
+    "text": "Ah, a new treasure of the mind."
+   },
+   "talent3": {
+    "at": 426.32,
+    "dur": 5.36,
+    "file": "voice/villain-dragon.mp3",
+    "text": "Yes. I grow ever more magnificent."
+   },
+   "throne": {
+    "at": 432.08,
+    "dur": 8.56,
+    "file": "voice/villain-dragon.mp3",
+    "text": "You came all this way to die in my fire? I admire the effort."
+   },
+   "throne2": {
+    "at": 441.04,
+    "dur": 7.36,
+    "file": "voice/villain-dragon.mp3",
+    "text": "Look upon my hoard, heroes. It is the last thing you will see."
+   },
+   "wave": {
+    "at": 448.8,
+    "dur": 8.32,
+    "file": "voice/villain-dragon.mp3",
+    "text": "Fly, march, crawl. Bring me Millbrook in ashes."
+   },
+   "wave2": {
+    "at": 457.52,
+    "dur": 6.24,
+    "file": "voice/villain-dragon.mp3",
+    "text": "Go, and bring back treasure. Leave nothing standing."
+   },
+   "wave3": {
+    "at": 464.16,
+    "dur": 6.4,
+    "file": "voice/villain-dragon.mp3",
+    "text": "Burn the fields on your way. I like the smell."
+   },
+   "win": {
+    "at": 470.96,
+    "dur": 7.36,
+    "file": "voice/villain-dragon.mp3",
+    "text": "The realm burns, and every coin in it is mine."
+   },
+   "win2": {
+    "at": 478.72,
+    "dur": 7.12,
+    "file": "voice/villain-dragon.mp3",
+    "text": "Every crown, every coin, every kingdom. Mine."
+   }
+  },
+  "villain-lich": {
+   "beaten": {
+    "at": 0.4,
+    "dur": 8.48,
+    "file": "voice/villain-lich.mp3",
+    "text": "Enough. I return to my tower. This is not forgotten."
+   },
+   "beaten2": {
+    "at": 9.28,
+    "dur": 7.84,
+    "file": "voice/villain-lich.mp3",
+    "text": "A setback. I have endured worse. I have endured death."
+   },
+   "bounty": {
+    "at": 17.52,
+    "dur": 4.96,
+    "file": "voice/villain-lich.mp3",
+    "text": "A price on my servants? How touching."
+   },
+   "bounty2": {
+    "at": 22.88,
+    "dur": 7.12,
+    "file": "voice/villain-lich.mp3",
+    "text": "Millbrook offers gold for my lairs. Gold will not save them."
+   },
+   "breach": {
+    "at": 30.4,
+    "dur": 6.08,
+    "file": "voice/villain-lich.mp3",
+    "text": "Their walls are broken. Burn it. Burn all of it."
+   },
+   "breach2": {
+    "at": 36.88,
+    "dur": 5.36,
+    "file": "voice/villain-lich.mp3",
+    "text": "Millbrook bleeds. Let it bleed."
+   },
+   "breach3": {
+    "at": 42.64,
+    "dur": 5.12,
+    "file": "voice/villain-lich.mp3",
+    "text": "The gate falls. The graveyard grows."
+   },
+   "dawn": {
+    "at": 48.16,
+    "dur": 4.96,
+    "file": "voice/villain-lich.mp3",
+    "text": "Another dawn. How I loathe the sun."
+   },
+   "dawn2": {
+    "at": 53.52,
+    "dur": 6.8,
+    "file": "voice/villain-lich.mp3",
+    "text": "The living wake. Let them enjoy it while it lasts."
+   },
+   "dawn3": {
+    "at": 60.72,
+    "dur": 4.4,
+    "file": "voice/villain-lich.mp3",
+    "text": "Morning. Count the graves."
+   },
+   "dawn4": {
+    "at": 65.52,
+    "dur": 4.96,
+    "file": "voice/villain-lich.mp3",
+    "text": "Day breaks. My patience does not."
+   },
+   "deceive": {
+    "at": 70.88,
+    "dur": 8.4,
+    "file": "voice/villain-lich.mp3",
+    "text": "Join me, and you will never die. I promise."
+   },
+   "deceive2": {
+    "at": 79.68,
+    "dur": 5.68,
+    "file": "voice/villain-lich.mp3",
+    "text": "Millbrook is defenceless. An easy feast."
+   },
+   "deceive3": {
+    "at": 85.76,
+    "dur": 6.16,
+    "file": "voice/villain-lich.mp3",
+    "text": "I need only a few days of your help. Then you are free."
+   },
+   "fight": {
+    "at": 92.32,
+    "dur": 3.52,
+    "file": "voice/villain-lich.mp3",
+    "text": "Then I will take your bones instead."
+   },
+   "fight2": {
+    "at": 96.24,
+    "dur": 5.44,
+    "file": "voice/villain-lich.mp3",
+    "text": "Very well. Your corpses will be more obedient."
+   },
+   "fight3": {
+    "at": 102.08,
+    "dur": 4.0,
+    "file": "voice/villain-lich.mp3",
+    "text": "Die, then. It is not so bad."
+   },
+   "heroesgrow": {
+    "at": 106.48,
+    "dur": 9.12,
+    "file": "voice/villain-lich.mp3",
+    "text": "The heroes grow stronger. So do worms, before the crow comes."
+   },
+   "heroesgrow2": {
+    "at": 116.0,
+    "dur": 3.76,
+    "file": "voice/villain-lich.mp3",
+    "text": "Let them train. It changes nothing."
+   },
+   "intimidate": {
+    "at": 120.16,
+    "dur": 8.32,
+    "file": "voice/villain-lich.mp3",
+    "text": "Serve me, or I will raise your corpses and they will serve me instead."
+   },
+   "intimidate2": {
+    "at": 128.88,
+    "dur": 3.68,
+    "file": "voice/villain-lich.mp3",
+    "text": "Kneel, or rot where you stand."
+   },
+   "intimidate3": {
+    "at": 132.96,
+    "dur": 5.84,
+    "file": "voice/villain-lich.mp3",
+    "text": "I have killed better than you. They work for me now."
+   },
+   "intro": {
+    "at": 139.2,
+    "dur": 6.72,
+    "file": "voice/villain-lich.mp3",
+    "text": "The tower is mine again. Let the living count their days."
+   },
+   "intro2": {
+    "at": 146.32,
+    "dur": 9.12,
+    "file": "voice/villain-lich.mp3",
+    "text": "Centuries in the dark, and the world forgot me. It will remember."
+   },
+   "kill": {
+    "at": 155.84,
+    "dur": 3.6,
+    "file": "voice/villain-lich.mp3",
+    "text": "One more soul for my collection."
+   },
+   "kill2": {
+    "at": 159.84,
+    "dur": 4.96,
+    "file": "voice/villain-lich.mp3",
+    "text": "Rise again, hero. You serve me now."
+   },
+   "kill3": {
+    "at": 165.2,
+    "dur": 5.84,
+    "file": "voice/villain-lich.mp3",
+    "text": "Death is not the end. Not for my servants."
+   },
+   "kill4": {
+    "at": 171.44,
+    "dur": 5.12,
+    "file": "voice/villain-lich.mp3",
+    "text": "I will remember your name. No one else will."
+   },
+   "lair": {
+    "at": 176.96,
+    "dur": 5.92,
+    "file": "voice/villain-lich.mp3",
+    "text": "Another pit for my servants. The land grows darker."
+   },
+   "lair2": {
+    "at": 183.28,
+    "dur": 5.84,
+    "file": "voice/villain-lich.mp3",
+    "text": "Dig deeper. The earth is full of soldiers."
+   },
+   "lair3": {
+    "at": 189.52,
+    "dur": 3.04,
+    "file": "voice/villain-lich.mp3",
+    "text": "A new crypt. Fill it."
+   },
+   "lairlost": {
+    "at": 192.96,
+    "dur": 5.76,
+    "file": "voice/villain-lich.mp3",
+    "text": "They burned my crypt. I will build ten more."
+   },
+   "lairlost2": {
+    "at": 199.12,
+    "dur": 6.0,
+    "file": "voice/villain-lich.mp3",
+    "text": "Heroes in my halls. They will pay in bone."
+   },
+   "levelup": {
+    "at": 205.52,
+    "dur": 7.12,
+    "file": "voice/villain-lich.mp3",
+    "text": "My power grows. Death itself bends closer."
+   },
+   "levelup2": {
+    "at": 213.04,
+    "dur": 3.36,
+    "file": "voice/villain-lich.mp3",
+    "text": "I feel the old strength returning."
+   },
+   "levelup3": {
+    "at": 216.8,
+    "dur": 3.92,
+    "file": "voice/villain-lich.mp3",
+    "text": "Another seal on the grave is broken."
+   },
+   "lose": {
+    "at": 221.12,
+    "dur": 8.16,
+    "file": "voice/villain-lich.mp3",
+    "text": "This is not the end. I will return. I always return."
+   },
+   "lose2": {
+    "at": 229.68,
+    "dur": 5.44,
+    "file": "voice/villain-lich.mp3",
+    "text": "My phylactery is hidden. You have not won."
+   },
+   "march": {
+    "at": 235.52,
+    "dur": 7.76,
+    "file": "voice/villain-lich.mp3",
+    "text": "So the heroes come at last. Good. I grew tired of waiting."
+   },
+   "march2": {
+    "at": 243.68,
+    "dur": 6.48,
+    "file": "voice/villain-lich.mp3",
+    "text": "They come to my tower at last. Let them come."
+   },
+   "minelost": {
+    "at": 250.56,
+    "dur": 5.52,
+    "file": "voice/villain-lich.mp3",
+    "text": "They ruined my mine. Petty little thieves."
+   },
+   "minelost2": {
+    "at": 256.48,
+    "dur": 7.04,
+    "file": "voice/villain-lich.mp3",
+    "text": "The ore can wait. I have time. They do not."
+   },
+   "newparty": {
+    "at": 263.92,
+    "dur": 4.56,
+    "file": "voice/villain-lich.mp3",
+    "text": "More heroes? The graveyard has room."
+   },
+   "newparty2": {
+    "at": 268.88,
+    "dur": 5.92,
+    "file": "voice/villain-lich.mp3",
+    "text": "Fresh bodies march out of the tavern. How convenient."
+   },
+   "order": {
+    "at": 275.2,
+    "dur": 2.0,
+    "file": "voice/villain-lich.mp3",
+    "text": "It shall be done."
+   },
+   "order2": {
+    "at": 277.6,
+    "dur": 2.96,
+    "file": "voice/villain-lich.mp3",
+    "text": "The dead walk where I will."
+   },
+   "order3": {
+    "at": 280.96,
+    "dur": 3.76,
+    "file": "voice/villain-lich.mp3",
+    "text": "Death goes where it pleases."
+   },
+   "order4": {
+    "at": 285.12,
+    "dur": 3.6,
+    "file": "voice/villain-lich.mp3",
+    "text": "Patience. I am coming."
+   },
+   "parley": {
+    "at": 289.12,
+    "dur": 4.8,
+    "file": "voice/villain-lich.mp3",
+    "text": "You. Creatures of the wild. Hear me."
+   },
+   "parley2": {
+    "at": 294.32,
+    "dur": 4.08,
+    "file": "voice/villain-lich.mp3",
+    "text": "The living fear you. I do not."
+   },
+   "parley3": {
+    "at": 298.8,
+    "dur": 6.72,
+    "file": "voice/villain-lich.mp3",
+    "text": "Come closer. I will not bite. I have no tongue."
+   },
+   "pay": {
+    "at": 305.92,
+    "dur": 5.04,
+    "file": "voice/villain-lich.mp3",
+    "text": "Gold means nothing to the dead. Take it."
+   },
+   "pay2": {
+    "at": 311.36,
+    "dur": 4.24,
+    "file": "voice/villain-lich.mp3",
+    "text": "Here. Spend it while you still can."
+   },
+   "persuade": {
+    "at": 316.0,
+    "dur": 7.12,
+    "file": "voice/villain-lich.mp3",
+    "text": "The living hunt you. Join me, and you will hunt them."
+   },
+   "persuade2": {
+    "at": 323.52,
+    "dur": 5.84,
+    "file": "voice/villain-lich.mp3",
+    "text": "Serve me, and you need never fear death again."
+   },
+   "persuade3": {
+    "at": 329.76,
+    "dur": 7.6,
+    "file": "voice/villain-lich.mp3",
+    "text": "Millbrook has meat, gold and graves to fill. Come."
+   },
+   "repelled": {
+    "at": 337.76,
+    "dur": 5.68,
+    "file": "voice/villain-lich.mp3",
+    "text": "They hold their walls. For now."
+   },
+   "repelled2": {
+    "at": 343.84,
+    "dur": 7.12,
+    "file": "voice/villain-lich.mp3",
+    "text": "A wave breaks. Another will follow. They always do."
+   },
+   "ride": {
+    "at": 351.36,
+    "dur": 5.92,
+    "file": "voice/villain-lich.mp3",
+    "text": "I will walk among the living. Let them see what they fear."
+   },
+   "ride2": {
+    "at": 357.68,
+    "dur": 4.96,
+    "file": "voice/villain-lich.mp3",
+    "text": "The grave cannot hold me, and neither can this tower."
+   },
+   "ride3": {
+    "at": 363.04,
+    "dur": 4.8,
+    "file": "voice/villain-lich.mp3",
+    "text": "Open the gates. Death goes walking."
+   },
+   "select": {
+    "at": 368.24,
+    "dur": 1.2,
+    "file": "voice/villain-lich.mp3",
+    "text": "Speak."
+   },
+   "select2": {
+    "at": 369.84,
+    "dur": 3.28,
+    "file": "voice/villain-lich.mp3",
+    "text": "You disturb my meditations."
+   },
+   "select3": {
+    "at": 373.52,
+    "dur": 2.48,
+    "file": "voice/villain-lich.mp3",
+    "text": "The dead are listening."
+   },
+   "select4": {
+    "at": 376.4,
+    "dur": 3.44,
+    "file": "voice/villain-lich.mp3",
+    "text": "What would you have of eternity?"
+   },
+   "select5": {
+    "at": 380.24,
+    "dur": 4.0,
+    "file": "voice/villain-lich.mp3",
+    "text": "Be brief. I have outlived kingdoms."
+   },
+   "spotted": {
+    "at": 384.64,
+    "dur": 5.28,
+    "file": "voice/villain-lich.mp3",
+    "text": "There you are, little heroes. I see you now."
+   },
+   "spotted2": {
+    "at": 390.32,
+    "dur": 5.36,
+    "file": "voice/villain-lich.mp3",
+    "text": "Warm blood on the road. I can smell it from here."
+   },
+   "spotted3": {
+    "at": 396.08,
+    "dur": 3.04,
+    "file": "voice/villain-lich.mp3",
+    "text": "Run while your hearts still beat."
+   },
+   "summon": {
+    "at": 399.52,
+    "dur": 3.6,
+    "file": "voice/villain-lich.mp3",
+    "text": "Rise, servant. There is work."
+   },
+   "summon2": {
+    "at": 403.52,
+    "dur": 5.2,
+    "file": "voice/villain-lich.mp3",
+    "text": "Another pair of hands. They need not be warm."
+   },
+   "talent": {
+    "at": 409.12,
+    "dur": 5.04,
+    "file": "voice/villain-lich.mp3",
+    "text": "Forbidden knowledge. My favourite kind."
+   },
+   "talent2": {
+    "at": 414.56,
+    "dur": 3.28,
+    "file": "voice/villain-lich.mp3",
+    "text": "The old rites come back to me."
+   },
+   "talent3": {
+    "at": 418.24,
+    "dur": 5.2,
+    "file": "voice/villain-lich.mp3",
+    "text": "Yes. That was worth a century of study."
+   },
+   "throne": {
+    "at": 423.84,
+    "dur": 6.24,
+    "file": "voice/villain-lich.mp3",
+    "text": "Welcome, heroes. Your bones will serve me well."
+   },
+   "throne2": {
+    "at": 430.48,
+    "dur": 6.48,
+    "file": "voice/villain-lich.mp3",
+    "text": "You walked through my dead to reach me. You will join them."
+   },
+   "wave": {
+    "at": 437.36,
+    "dur": 6.96,
+    "file": "voice/villain-lich.mp3",
+    "text": "Go. March on Millbrook. Fill my graves."
+   },
+   "wave2": {
+    "at": 444.72,
+    "dur": 6.88,
+    "file": "voice/villain-lich.mp3",
+    "text": "March, my dead. You have nothing left to lose."
+   },
+   "wave3": {
+    "at": 452.0,
+    "dur": 4.88,
+    "file": "voice/villain-lich.mp3",
+    "text": "Bring me their bones. All of them."
+   },
+   "win": {
+    "at": 457.28,
+    "dur": 6.08,
+    "file": "voice/villain-lich.mp3",
+    "text": "The realm is a graveyard now. And I am its king."
+   },
+   "win2": {
+    "at": 463.76,
+    "dur": 6.08,
+    "file": "voice/villain-lich.mp3",
+    "text": "Silence at last. A whole realm of silence."
+   }
+  },
   "wren": {
    "boss": {
     "at": 0.4,
@@ -47138,11 +49954,5 @@
     "text": "So that's how it ends. I always wanted to know."
    }
   }
- },
- "intro": {
-  "video": "intro/intro.mp4",
-  "webm": "intro/intro.webm",
-  "vtt": "intro/intro.vtt",
-  "dur": 99.64
  }
 }
