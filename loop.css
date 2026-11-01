@@ -359,6 +359,7 @@ ul.dpw li.off { opacity: .5; }
 .bar .purse b { font-size: 16px; }
 .bar .purse .busy { position: absolute; top: -4px; right: -4px; width: 10px; height: 10px; border-radius: 50%; background: #6fbf4f; box-shadow: 0 0 0 2px #17110b, 0 0 8px rgba(120,220,90,.6); }
 @media (max-width: 1320px) { .bar .purse .pn, .bar .gauge .k, .bar .lvl .k { display: none; } }
+@media (max-width: 1480px) { .bar .purse .pn { display: none; } }
 @media (max-width: 760px) { .bar .purse .pic { display: none; } .bar .purse { padding: 3px 6px; gap: 6px; } }
 .scpurse { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 3px; background: var(--inset); box-shadow: 0 0 0 1px #3a2c1c; }
 .scpurse .pic { width: 26px; height: 26px; object-fit: contain; image-rendering: pixelated; }
@@ -567,8 +568,8 @@ ul.log small { color: #8a7a60; margin-right: 4px; }
 .qrow .est { margin-left: auto; white-space: nowrap; }
 /* 0.30: the week's name gives way before anything else wraps to a second row */
 .bar .week { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-@media (max-width: 1560px) { .bar .week { max-width: 150px; } }
-@media (max-width: 1380px) { .bar .week { display: none; } }
+@media (max-width: 1700px) { .bar .week { max-width: 150px; } }
+@media (max-width: 1540px) { .bar .week { display: none; } }   /* 0.36: room for the screens' shortcuts */
 /* 0.31: Millbrook's rough whereabouts, before you've seen the town */
 .l3.l-site.hint .lc { color: #e6c46c; font-style: italic; opacity: .9; }
 /* 0.31: monster levels, your villain on the map, and an audience with a band of the wilds */
@@ -721,3 +722,47 @@ ul.log small { color: #8a7a60; margin-right: 4px; }
   .abin { width: 100%; justify-content: space-between; overflow-x: auto; }
   .mapwrap.hasbar .minimap { bottom: 104px; }
 }
+
+/* ===== 0.36: the screens' shortcuts in the bottom bar ===== */
+.navs { display: inline-flex; gap: 2px; margin-right: 6px; padding-right: 8px; border-right: 1px solid rgba(255,230,170,.15); }
+.navbtn svg { width: 19px; height: 19px; }
+@media (max-width: 1080px) { .navs { display: none; } }
+
+/* ===== 0.36: relics and attributes on the Villain tab ===== */
+.tcard.wide { grid-column: 1 / -1; }
+.alist { display: grid; gap: 4px; margin: 0; }
+.alist li { display: flex; justify-content: space-between; gap: 10px; padding: 5px 8px; border-radius: 3px; background: rgba(0,0,0,.22); border: 1px solid rgba(255,230,170,.08); }
+.alist li span { font: 700 12px/1.2 var(--font-display, Georgia), serif; letter-spacing: .05em; text-transform: uppercase; color: #d8c8a0; }
+.alist li b { color: #f6e3b0; font-weight: 700; }
+.rwrap { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 760px) { .rwrap { grid-template-columns: minmax(0, 1fr); } }
+.rsub { margin: 4px 0 6px; font: 700 11px/1 var(--font-display, Georgia), serif; letter-spacing: .08em; text-transform: uppercase; color: #b8a888; }
+.rslots, .rbag { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin-bottom: 10px; }
+.relic { position: relative; display: grid; justify-items: center; align-content: start; gap: 4px; min-height: 96px; padding: 8px 6px 6px; border-radius: 5px; cursor: pointer;
+  color: #ead7a0; font: 600 11px/1.15 var(--font-body, Georgia), serif; text-align: center;
+  background: radial-gradient(ellipse at 50% 30%, rgba(255,255,255,.07), transparent 70%), linear-gradient(180deg, #2a2230, #17121b); border: 1px solid #07090b; box-shadow: 0 0 0 1px #5a4e6a; }
+.relic .rsvg { width: 44px; height: 44px; filter: drop-shadow(0 2px 2px rgba(0,0,0,.6)); }
+.relic span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.relic.t1 { box-shadow: 0 0 0 1px #6f86a8; } .relic.t2 { box-shadow: 0 0 0 1px #9a6ad8; } .relic.t3 { box-shadow: 0 0 0 1px #e0b040, 0 0 10px rgba(255,200,80,.25); }
+.relic.cursed { box-shadow: 0 0 0 1px #c84040, 0 0 8px rgba(220,60,60,.25); }
+.relic:hover { filter: brightness(1.15); }
+.relic.on { outline: 2px solid #ffd36a; outline-offset: 1px; }
+.relic.empty { cursor: default; place-content: center; color: #8a7a68; font-style: italic; border: 1px dashed rgba(255,230,170,.18); background: rgba(0,0,0,.18); box-shadow: none; }
+.relic .wtag { position: absolute; top: 4px; right: 5px; font: 700 8px/1 var(--font-display, Georgia), serif; letter-spacing: .06em; text-transform: uppercase; color: #9cf08a; font-style: normal; }
+.rdetail { display: grid; grid-template-columns: 56px 1fr; gap: 12px; padding: 10px 12px; border-radius: 5px; background: rgba(0,0,0,.25); border: 1px solid rgba(255,230,170,.1); }
+.rdetail .rsvg, .rfound .rsvg { width: 56px; height: 56px; }
+.rdetail h3 { margin: 0; font: 700 15px/1.2 var(--font-display, Georgia), serif; color: #f6e3b0; }
+.rtier { margin: 2px 0 6px; font: 700 11px/1 var(--font-display, Georgia), serif; letter-spacing: .06em; text-transform: uppercase; }
+.rtier.t1 { color: #8fb4e0; } .rtier.t2 { color: #c99cff; } .rtier.t3 { color: #ffd56a; } .rtier.cursed { color: #ff7a6a; }
+.rfx { margin: 6px 0 8px; display: grid; gap: 2px; }
+.rfx li { padding-left: 14px; position: relative; color: #e8dcc0; font-size: 13px; }
+.rfx li::before { content: '✦'; position: absolute; left: 0; top: 0; color: #c99cff; font-size: 10px; }
+.vrel { display: flex; gap: 2px; margin-top: 3px; }
+.vrel .rsvg { width: 18px; height: 18px; }
+.rfound { display: grid; grid-template-columns: 64px 1fr; gap: 14px; align-items: start; margin: 8px 0 12px; }
+.rfound .rsvg { width: 64px; height: 64px; filter: drop-shadow(0 0 8px rgba(190,140,255,.45)); }
+.rfound h2 { margin: 0; }
+.l3.l-relic { font: 700 10px/1 var(--font-display, Georgia), serif; letter-spacing: .05em; text-transform: uppercase; padding: 2px 5px; border-radius: 3px; background: rgba(12,8,18,.72); }
+.l3.l-relic.t1 { color: #a8c8f0; } .l3.l-relic.t2 { color: #d0aaff; } .l3.l-relic.t3 { color: #ffd56a; box-shadow: 0 0 6px rgba(255,200,80,.35); }
+
+.rfx { list-style: none; padding: 0; }

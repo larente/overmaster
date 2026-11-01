@@ -1393,32 +1393,4 @@
   function simulateStacks(s, stacks, n, lvl) { const runs = []; for (let i = 0; i < (n || 12); i++) runs.push(simAttackRun(s, stacks, i, lvl)); return simAttackSum(runs); }
   // "find a fair fight": nudges the size of your war party until a handful of practice runs come out tense.
   // Call step() until done; each step plays one practice battle, so a page can spread the work over frames.
-  const FAIR = { target: 0.3, lo: 0.18, hi: 0.38, per: 8, iters: 5 };
-  function fairSearch(s) {
-    const S0 = { k: 1, iter: 0, runs: [], comp: fairAttack(s, 1), done: false, tried: [], best: null };
-    const score = r => Math.abs(r.avg - FAIR.target) + r.tpk * 3 + r.death * 0.6;
-    const key = c => c.map(x => x.join(':')).join(',');
-    if (!S0.comp.length) S0.done = true;
-    S0.step = function () {
-      if (S0.done) return S0;
-      S0.runs.push(simAttackRun(s, S0.comp, S0.iter * 31 + S0.runs.length));
-      if (S0.runs.length < FAIR.per) return S0;
-      const r = simAttackSum(S0.runs); S0.runs = [];
-      const entry = { comp: S0.comp, r, sc: r ? score(r) : 99 };
-      S0.tried.push(entry);
-      if (!S0.best || entry.sc < S0.best.sc) S0.best = entry;
-      S0.iter++;
-      if (!r || (r.label === 'Tense' && r.avg >= 0.22 && r.tpk === 0 && r.death <= 0.2) || S0.iter >= FAIR.iters) { S0.done = true; return S0; }
-      const all = garrisonList(s); const maxed = S0.comp.every(([t, n]) => { const a = all.find(x => x[0] === t); return a && n >= a[1]; });
-      if (r.avg < FAIR.lo && maxed) { S0.done = true; return S0; }
-      const want = r.tpk > 0.1 || r.death > 0.25 ? 0.6 : Math.pow(FAIR.target / Math.max(0.03, r.avg), r.avg > FAIR.target ? 0.75 : 0.6);
-      S0.k *= clamp(want, 0.45, 2.2);
-      const next = fairAttack(s, S0.k);
-      if (key(next) === key(S0.comp) || S0.tried.some(t => key(t.comp) === key(next))) { S0.done = true; return S0; }
-      S0.comp = next;
-      return S0;
-    };
-    return S0;
-  }
-  function fairAttackSync(s) { const f = fairSearch(s); let g = 0; while (!f.done && g++ < 200) f.step(); return f.best; }
-  function simulate(s, type, count, n) { return simulateStacks(s, [[type, count]], n || 20); }
+

@@ -1,9 +1,9 @@
 // random play (0.31: your villain walks the map and recruits the wilds; 0.30, the villain edition: waves, sieges, Millbrook runs itself) through the 0.9 loop (0.24: talents instead of research): minions, sites, lairs on the map, war parties from lairs in reach, command-mode turns
 const G = require(process.env.GAME || __dirname + '/game.js'); // 0.19: two purses, Millbrook, no Lore
 const N = +process.argv[2] || 30;
-const R = () => Math.random();
+const R = () => Math.random(); const R0 = R;
 const pickA = a => a[Math.floor(R() * a.length)];
-const res = {}; const c = { trains: 0, works: 0, builds: 0, expands: 0, cancels: 0, recalls: 0, attacks: 0, battles: 0, acts: 0, bonus: 0, spells: 0, enc: 0, gifts: 0 };
+const res = {}; const c = { trains: 0, works: 0, builds: 0, expands: 0, cancels: 0, recalls: 0, attacks: 0, battles: 0, acts: 0, bonus: 0, spells: 0, gifts: 0 };
 function check(s) {
   for (const k of G.RES_KEYS) if (!(s.res[k] >= 0)) throw new Error('res ' + k + ' ' + s.res[k]);
   for (const k of G.RES_KEYS) if (!(s.town.res[k] >= 0)) throw new Error('town res ' + k + ' ' + s.town.res[k]);
@@ -68,18 +68,12 @@ function battle(s) {
   const r = G.finishBattle(s); s.pendingLevelUps = [];
   return r;
 }
-function encounter(s) {
-  c.enc++;
-  const e = s.enc; G.encChoose(s, pickA(e.choices).k);
-  let g = 0; while (s.enc.stage === 'rolling' && g++ < 10) { G.encRoll(s); G.encSettle(s); }
-  G.encFinish(s); if (G.encClose(s) === 'battle') battle(s);
-}
 for (let i = 0; i < N; i++) {
   const s = G.newGame((+process.env.BASE || 10300) + i, { party: G.rollParty(R() < 0.5 ? 'random' : 'balanced', R), villain: { type: pickA(G.BOSS_ORDER), name: 'Fuzz' + i } }); let guard = 0;
   if (R() < 0.4) { s.res.gold += 200; s.res.lumber += 150; s.res.ore += 150; s.town.res.gold += 300; s.town.res.lumber += 150; s.town.res.ore += 100; }
   while (s.phase !== 'over' && guard++ < 900 && s.week < 16) {
     if (s.phase === 'battle') { battle(s); continue; }
-    if (s.phase === 'encounter') { encounter(s); continue; }
+    if (s.phase === 'encounter') throw new Error('0.36: no more encounters');
     if (s.phase === 'week') { G.startNextWeek(s); if (s.phase !== 'over') check(s); continue; }
     if (R() < 0.4 && !G.trainMinion(s)) c.trains++;
     for (let t = 0; t < 3; t++) { const k = pickA(G.TALENT_ORDER); if (!G.learnTalent(s, k)) c.talents = (c.talents || 0) + 1; }
@@ -91,6 +85,12 @@ for (let i = 0; i < N; i++) {
     for (const o of G.myLairs(s)) { if (R() < 0.15 && !G.expandLair(s, o.id)) c.expands++; if (o.building && R() < 0.05 && !G.cancelBuild(s, o.id)) c.cancels++; }
     if (R() < 0.2 && s.minions.length) { if (!G.recallMinion(s, pickA(s.minions).id)) c.recalls++; }
     if (R() < 0.2 && !G.recallFrom(s, pickA(s.nodes).id)) c.recalls++;
+    // 0.36: relics: send the villain after one now and then, wear and take off what's in the bag
+    if (G.relicsOf) { const R = G.relicsOf(s);
+      if (R.worn.length < G.RELIC_SLOTS && R.bag[0] && !G.wearRelic(s, R.bag[0])) c.wears = (c.wears || 0) + 1;
+      if (R.worn.length && R0() < 0.2 && !G.removeRelic(s, R.worn[0])) c.offs = (c.offs || 0) + 1;
+      const rel = s.objects.filter(o => o.kind === 'relic' || o.kind === 'artifact'); if (rel.length && R0() < 0.3 && !G.villainOrder(s, rel[0].x, rel[0].y)) c.relicGo = (c.relicGo || 0) + 1;
+      if (R.worn.length > G.RELIC_SLOTS || new Set(R.worn.concat(R.bag)).size !== R.worn.length + R.bag.length) throw new Error('relics: ' + JSON.stringify(R)); }
     // 0.35: collect full sites (and try some that aren't full: those must refuse)
     if (G.collectNode) for (const n of s.nodes) if (R() < 0.7) { const full = G.nodeFull(s, n) && !G.nodeRaided(s, n); const before = s.res[G.NODE_KINDS[n.kind].res]; const r = G.collectNode(s, n.id);
       if (full !== !r.err) throw new Error('collect: full ' + full + ' but ' + JSON.stringify(r));
@@ -115,7 +115,7 @@ for (let i = 0; i < N; i++) {
     for (const o of s.objects) if (o.kind === 'stack' && (o.lvl || 1) > G.BAND_MAX_LEVEL) throw new Error('band level');
     if (s.dmSeen.length !== G.MW * G.MH) throw new Error('fog size');
     for (const n of s.nodes) if (G.assignedTo(s, n).length > 1) throw new Error('two minions on one site');
-    for (const n of s.nodes) { const f = n.fill || 0; if (f < 0 || f > G.NODE_KINDS[n.kind].days || (!n.dev && f) || (n.stock && f < G.NODE_KINDS[n.kind].days)) throw new Error('site fill out of range ' + JSON.stringify(n)); }
+    for (const n of s.nodes) { const f = n.fill || 0; if (f < 0 || f > G.NODE_KINDS[n.kind].days || (!n.dev && f) || (n.stock && !n.dev)) throw new Error('site fill out of range ' + JSON.stringify(n)); }
     for (const m of s.minions) { if (m.job && m.job.kind === 'move' && !m.path.length) throw new Error('arrived walker still busy'); if (m.job && m.job.kind === 'work' && !s.nodes.some(n => n.id === m.job.node)) throw new Error('work at nothing'); }
     if (R() < 0.1) G.buildLibrary(s);
     // 0.19: Millbrook
@@ -140,19 +140,11 @@ for (let i = 0; i < N; i++) {
     for (const o of s.objects) if (o.kind === 'stack' && o.yours && o.wild) throw new Error('recruit still wild');
     for (const o of s.objects) if (o.kind === 'stack' && o.yours && !o.wave && !(o.healUntil > 0) && o.joined && !o.patrol) throw new Error('idle recruit');
     { const V = s.villain; if (!(V.x >= 0 && V.y >= 0 && V.x < G.MW && V.y < G.MH)) throw new Error('villain off the map'); }
-    if (!G.attackCheck(s) && R() < 0.85) {
-      const g = G.garrisonList(s);
-      const comp = R() < 0.5 ? ((G.fairAttackSync(s) || { comp: [] }).comp) : g.filter(() => R() < 0.6).map(([t, n]) => [t, 1 + Math.floor(R() * n * 1.3)]);
-      const before = G.myLairs(s).reduce((a, o) => a + G.lairCount(o), 0);
-      const err = G.sendAttack(s, comp);
-      if (!err) { c.attacks++; const r = battle(s); if (!r.attack) throw new Error('attack flag lost'); }
-      if (s.phase !== 'map') continue;
-    }
     let steps = 0;
     for (;;) {
       const ev = G.partyStep(s);
       if (ev.t === 'battle') { battle(s); if (s.phase !== 'map') break; continue; }
-      if (ev.t === 'encounter') { encounter(s); if (s.phase !== 'map') break; continue; }
+      if (ev.t === 'encounter') throw new Error('0.36: no more encounters');
       if (ev.t === 'stop' || ev.t === 'none' || steps++ > 300) break;
     }
     if (s.phase === 'map') { G.endDay(s); if (s.phase === 'map') check(s); }

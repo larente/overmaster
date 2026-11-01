@@ -138,11 +138,6 @@
    "pixel": true,
    "sprite": "objects/obj-camp.webp"
   },
-  "obj-captive": {
-   "icon": "objects/obj-captive.webp",
-   "pixel": true,
-   "sprite": "objects/obj-captive.webp"
-  },
   "obj-chest": {
    "icon": "objects/obj-chest.webp",
    "pixel": true,
@@ -253,11 +248,6 @@
    "pixel": true,
    "sprite": "objects/obj-omen.webp"
   },
-  "obj-pass": {
-   "icon": "objects/obj-pass.webp",
-   "pixel": true,
-   "sprite": "objects/obj-pass.webp"
-  },
   "obj-peaks": {
    "icon": "objects/obj-peaks.webp",
    "pixel": true,
@@ -293,11 +283,6 @@
    "pixel": true,
    "sprite": "objects/obj-res-ore.webp"
   },
-  "obj-riddle": {
-   "icon": "objects/obj-riddle.webp",
-   "pixel": true,
-   "sprite": "objects/obj-riddle.webp"
-  },
   "obj-roost": {
    "icon": "objects/obj-roost.webp",
    "pixel": true,
@@ -317,11 +302,6 @@
    "icon": "objects/obj-snare.webp",
    "pixel": true,
    "sprite": "objects/obj-snare.webp"
-  },
-  "obj-stranger": {
-   "icon": "objects/obj-stranger.webp",
-   "pixel": true,
-   "sprite": "objects/obj-stranger.webp"
   },
   "obj-t-arcane": {
    "icon": "objects/obj-t-arcane.webp",

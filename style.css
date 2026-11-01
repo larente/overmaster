@@ -317,13 +317,6 @@ h3.sub { margin: 10px 0 6px; font-family: var(--font-display); font-size: 11px; 
 .choice:hover { border-color: var(--gold); box-shadow: 0 0 10px rgba(230,196,108,.25); }
 .choice b { font-family: var(--font-display); color: var(--gold); font-size: 15px; letter-spacing: .03em; }
 .choice small { color: var(--muted); font-size: 13.5px; }
-.enc-narr p { margin: 0 0 6px; font-style: italic; }
-.enc-narr .outcome { font-style: normal; font-weight: 700; font-size: 16px; margin-top: 10px; }
-.enc-narr .ledger { margin-top: 6px; }
-.enc-rolls { display: grid; gap: 6px; margin: 8px 0; }
-.enc-rolls .chip .rollcard { transform: none; box-shadow: none; padding: 6px 10px; }
-.enc-rolls .chip .rollcard .die20 { width: 30px; height: 33px; }
-.enc-rolls .chip .rollcard .die20 .n { font-size: 13px; }
 
 /* ---------- dice ---------- */
 .tray { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); width: min(560px, calc(100% - 24px)); z-index: 6; pointer-events: none; }

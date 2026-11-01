@@ -548,8 +548,7 @@
   const RESEARCH_ORDER = Object.keys(RESEARCH);
   const MAX_RESEARCH = 3;
   const LOOT = { tense: 0.55, harrowing: 0.8 };
-  const LAIR_UP = { growth: 1.5, cap: [0, 2, 3] };
-  const lairUpCost = k => Math.ceil(DUNGEONS[k].cost * 0.6);
+  const LAIR_UP = { growth: 1.5, cap: [0, 2, 3] };   // an expanded lair breeds faster and sends more bands
   const MAX_STACKS = 30, MAX_CONJURED = 24;
   // the DM's citadel at the Dark Tower: one building a day, each unlocks monsters, lairs, traps or dark powers
   const TECH = {
@@ -602,11 +601,6 @@
     shrine: { cat: 'place', name: 'Healing Shrine', cost: 3, drives: ['duty'], text: 'Heals the party by half and restores spells.' },
     refugees: { cat: 'place', name: 'Refugee Camp', cost: 2, drives: ['duty'], text: 'People who need help. Heroes driven by duty live for this.' },
     omen: { cat: 'place', name: 'Omen Stone', cost: 2, drives: ['curiosity', 'duty'], text: 'Foreshadows your villain. Each omen adds +5 thrill to the finale (up to three).' },
-    stranger: { cat: 'encounter', name: 'Hooded Stranger', cost: 2, drives: ['curiosity', 'duty'], text: 'A social encounter. You decide who the stranger really is; the party has to talk their way through.' },
-    pass: { cat: 'encounter', name: 'Rope Bridge', cost: 2, drives: ['glory'], text: 'A skill challenge: three checks to cross a gorge. You set how deadly it is.' },
-    captive: { cat: 'encounter', name: 'Wounded Captive', cost: 2, drives: ['duty'], text: 'A moral dilemma. The players argue over mercy; you decide the truth behind it.' },
-    riddle: { cat: 'encounter', name: 'Riddle Stone', cost: 2, drives: ['curiosity'], text: 'A puzzle. You pick how hard the riddle is; failure stings.' },
-    tourney: { cat: 'encounter', name: 'Tournament', cost: 3, drives: ['glory'], town: true, text: 'Announce a tournament in Millbrook. The party\'s champion jousts against a challenger you pick.' },
     pit: { cat: 'trap', name: 'Hidden Pit', cost: 2, dc: 13, drives: [], text: 'One hero falls in: 2d6 + 2 per week, save for half. A rogue may spot it.' },
     rune: { cat: 'trap', name: 'Fire Rune', cost: 3, dc: 15, drives: [], text: 'Explodes under the whole party: 2d6 + 2 per week each, save for half.' },
     snare: { cat: 'trap', name: 'Snare', cost: 2, dc: 14, drives: [], text: 'Hurts one hero and stops the party for the rest of the day.' }
@@ -631,6 +625,36 @@
     { id: 'regen', tier: 3, name: 'Ring of Regeneration', text: '+70 max HP', for: ['wizard', 'rogue', 'cleric', 'barbarian'], gear: { hp: 70 } }
   ];
   const artTier = s => avgLevel(s) >= 14 ? 3 : avgLevel(s) >= 7 ? 2 : 1;
+  // 0.36: relics, dark treasures only your villain can sense. Found on the map (or seized from the heroes' artifacts), carried in
+  // a bag, worn three at a time. Each speaks the talents' language (fx, merged by talentFx), plus two powers of their own:
+  // vheal (more of the villain's health back each night) and fill (mines and camps fill a night sooner). Cursed ones bite back.
+  const RELICS = {
+    bonecrown: { tier: 1, icon: 'crown', name: 'Bone Crown of the Barrow-King', text: 'A crown of yellowed knucklebones. It remembers being feared.', fx: { villain: { hp: 0.1, hit: 1 } } },
+    tongue: { tier: 1, icon: 'jar', name: 'The Whispering Tongue', text: 'It lives in a jar and tells you what people want to hear.', fx: { social: 2 } },
+    hollowboots: { tier: 1, icon: 'boots', name: 'Boots of the Hollow Road', text: 'They walk faster than you do. Try to keep up.', fx: { stride: 0.35 } },
+    watcher: { tier: 1, icon: 'eye', name: "The Watcher's Eye", text: 'A glass eye that never closes. Your servants see what it sees.', fx: { sight: 2 } },
+    warhorn: { tier: 1, icon: 'horn', name: 'War-Horn of Gul', text: 'One blast and the wild things fall in line.', fx: { banner: 1 } },
+    idol: { tier: 1, icon: 'idol', name: 'Gilded Idol', text: 'Gold gathers around it, the way flies do.', fx: { nightly: { gold: 2 } } },
+    firstpick: { tier: 1, icon: 'pick', name: 'Pick of the First Mine', text: 'Every mine you hold remembers the first one.', fx: { yield: { gold: 1 } } },
+    ledger: { tier: 1, icon: 'book', name: 'The Tithe Ledger', text: 'Every debt in the land, written in a tidy hand.', fx: { loot: 0.5, payCost: 0.15 } },
+    blackthorn: { tier: 2, icon: 'crown', name: 'Blackthorn Crown', text: 'It draws blood every morning. Worth it.', fx: { villain: { hp: 0.15, hit: 2 }, social: 1 } },
+    thousandlies: { tier: 2, icon: 'mask', name: 'Mask of a Thousand Lies', text: 'Whoever looks at it sees a friend.', fx: { social: 3, kneel: 0.5 } },
+    hourglass: { tier: 2, icon: 'hourglass', name: 'Hourglass of Dust', text: 'Time runs faster around anything you own.', fx: { fill: 1 } },
+    legion: { tier: 2, icon: 'banner', name: 'Banner of the Fallen Legion', text: 'Ten thousand dead marched under it. They still do.', fx: { banner: 1, recruitLv: 1 } },
+    siegebell: { tier: 2, icon: 'bell', name: 'Siege Bell of Corvane', text: 'Walls crack when it rings. So do nerves.', fx: { wallDmg: 0.25, hallDmg: 0.25 } },
+    broodchalice: { tier: 2, icon: 'chalice', name: 'Brood Chalice', text: 'Whatever drinks from it multiplies.', fx: { rate: { all: true, pct: 0.12 } } },
+    blackiron: { tier: 2, icon: 'ring', name: 'Ring of Black Iron', text: 'Your monsters feel it on your finger and fight harder.', fx: { mod: { units: 'all', hit: 1 } } },
+    wyrmcloak: { tier: 2, icon: 'cloak', name: 'Wyrmscale Cloak', text: 'Cut from a dragon that lost an argument.', fx: { villain: { hp: 0.1 }, duel: { hp: 0.25, hit: 1 } } },
+    grief: { tier: 2, icon: 'sword', name: 'Grief, the Weeping Blade', cursed: true, text: 'It cuts deep and never stops crying. Nobody wants to talk to you.', fx: { villain: { hit: 4 }, duel: { hit: 2 }, social: -2 } },
+    hunger: { tier: 2, icon: 'idol', name: 'Idol of Hunger', cursed: true, text: 'Your lairs breed like never before. The idol eats gold every night.', fx: { rate: { all: true, pct: 0.22 }, nightly: { gold: -2 } } },
+    sunless: { tier: 3, icon: 'orb', name: 'The Sunless Orb', text: 'Light goes into it and does not come out. Neither does fear.', fx: { infamy: 0.3, sight: 2 } },
+    drowned: { tier: 3, icon: 'crown', name: 'Crown of the Drowned King', text: 'Seawater still drips from it. So does power.', fx: { villain: { hp: 0.25, hit: 3 }, vheal: 0.25 } },
+    mountainheart: { tier: 3, icon: 'gem', name: 'Heart of the Mountain', text: 'It beats once a day, and the ground gives up its treasure.', fx: { yield: { gold: 1, lumber: 1, ore: 1 }, nightly: { gold: 3 } } },
+    warlord: { tier: 3, icon: 'banner', name: "Warlord's Standard", text: 'Under it, every horde is bigger than it looks.', fx: { banner: 2, waveSize: 0.25 } },
+    shroud: { tier: 3, icon: 'cloak', name: 'Shroud of the Unquiet', text: 'Whatever you send to war comes back harder to kill.', fx: { mod: { units: 'all', hp: 0.15, ac: 1 } } },
+    vanity: { tier: 3, icon: 'mirror', name: 'Mirror of Vanity', cursed: true, text: 'The whole land talks about you. You look a little paler every day.', fx: { infamy: 0.5, villain: { hp: -0.15 } } }
+  };
+  const RELIC_SLOTS = 3;
   const DM_SPELLS = {
     // 0.30: you only play the villain now, so the spells that helped the heroes are gone
     reinforce: { name: 'Reinforcements', cost: 10, purse: 'tower', rail: 0, mood: 0, text: 'A fresh stack joins the fight on your side. Once a fight.' },
@@ -675,7 +699,7 @@
       party: { x: town.x, y: town.y, prev: { x: town.x, y: town.y }, mp: MP_PER_DAY, path: [], target: null, intent: [] },
       objects: [], uid: 1, explored: new Array(MW * MH).fill(0), visited: {}, weekFx: 'party', omens: 0, crown: false, boots: false,
       wk: newWeekLog(), todayActive: false, battle: null, enc: null, recap: null, log: [], history: [], deaths: 0, totalThrill: 0, pendingLevelUps: [], lastBattle: null,
-      quests: [], townEvent: null,
+      quests: [],
       villain: { type: vil.type, name: vil.name, title: vil.title, pron: vil.pron, state: 'lair', x: tower.x, y: tower.y, mp: VILLAIN_MP, banish: 0, army: [], up: { vigor: 0, dread: 0, raise: 0, traps: 0, ritual: 0 }, known: false, glimpsed: 0, movedDay: 0, level: 1, xp: 0 }
     };
     s.town.hall = hallMax(s);
@@ -688,7 +712,7 @@
     // 0.35: your minions already know the way to the nearest timber stand (the tower stands in the wastes, a walk from the woods)
     { const tw = siteOf(s, 'tower'); const n = s.nodes.filter(z => z.kind === 'lumber').sort((a, b) => Math.hypot(a.x - tw.x, a.y - tw.y) - Math.hypot(b.x - tw.x, b.y - tw.y))[0];
       if (n) for (let y = n.y - 2; y <= n.y + 2; y++) for (let x = n.x - 2; x <= n.x + 2; x++) if (x >= 0 && y >= 0 && x < MW && y < MH && Math.hypot(x - n.x, y - n.y) <= 1.8) s.dmSeen[y * MW + x] = 1; }
-    if (opts.wilds !== false) populateWilds(s);
+    if (opts.wilds !== false) { populateWilds(s); placeRelics(s, Math.round(3 * Math.sqrt(spread()) + (spread() > 1.5 ? 1 : 0))); }
     planRoute(s);
     say(s, `Day 1. ${vFull(s)} stirs in the Dark Tower, still weak. In Millbrook, four young heroes sharpen their swords.`, 'sys');
     return s;
@@ -709,7 +733,17 @@
   const newTalents = () => ({ r: {}, n: [], earned: 1, lv: 1, inf: 0, resetWeek: 0 });
   // bring an older save up to date (v5 had a fixed party and Malgrith the lich)
   // v11 (0.14): every campaign has its own map layout. Older saves keep the classic one they were played on.
-  function migrate(s) { const out = migrate0(s); return out ? webTalents(out) : out; }   // 0.31: and the talent web
+  function migrate(s) { const out = migrate0(s); return out ? since36(webTalents(out)) : out; }   // 0.31: and the talent web
+  // 0.36: the heroes' scheme events are gone (stranger, riddle, captive, rope bridge, tournament), and the villain carries relics
+  const GONE_KINDS = ['stranger', 'riddle', 'captive', 'pass', 'tourney'];
+  function since36(s) {
+    const gone = new Set((s.objects || []).filter(o => GONE_KINDS.indexOf(o.kind) >= 0).map(o => o.id));
+    if (gone.size) { s.objects = s.objects.filter(o => !gone.has(o.id)); for (const q of s.quests || []) if (q.status === 'open' && q.ref && q.ref.kind === 'obj' && gone.has(q.ref.id)) q.status = 'void'; }
+    if (s.phase === 'encounter') s.phase = 'map';
+    delete s.enc; delete s.townEvent;
+    relicInit(s);
+    return s;
+  }
   function migrate0(s) {
     if (!s || typeof s !== 'object' || !Array.isArray(s.heroes)) return null;
     useSize(s.mw, s.mh);   // 0.31: everything after this works on this campaign's map
@@ -858,7 +892,7 @@
   /* ================= the wilds: monsters and finds the world makes on its own ================= */
   // low-level wanderers the DM didn't have to pay for: the party always has something to do early on
   const WILD_TYPES = ['goblin', 'wolf', 'bandit'];
-  const WILD_FINDS = ['chest', 'chest', 'chest', 'shrine', 'refugees', 'omen', 'stranger', 'riddle', 'captive', 'pass', 'pit', 'snare'];
+  const WILD_FINDS = ['chest', 'chest', 'chest', 'shrine', 'refugees', 'omen', 'pit', 'snare'];   // 0.36: no more stranger, riddle, captive or rope bridge
   function wildSpot(s, r, minTown, minGap) {
     const M = mapOf(s); const town = siteOf(s, 'town'), tw = siteOf(s, 'tower');
     for (let g = 0; g < 400; g++) {
@@ -898,8 +932,8 @@
     });
     const town = siteOf(s, 'town'); const near = s.objects.filter(o => o.wild && o.kind === 'stack').sort((a, b) => Math.hypot(a.x - town.x, a.y - town.y) - Math.hypot(b.x - town.x, b.y - town.y)).slice(0, 3);
     for (const o of near) { o.known = true; o.rumored = true; }
-    const F0 = ['chest', 'chest', 'artifact', 'shrine', 'omen', 'stranger', 'riddle', 'captive', 'pit'];
-    for (const k of spread() > 1.5 ? F0.concat(F0, ['chest', 'refugees', 'pass']) : F0) { const at = wildSpot(s, r, 4, 2); if (at) addWild(s, { kind: k }, at[0], at[1]); }
+    const F0 = ['chest', 'chest', 'artifact', 'shrine', 'omen', 'refugees', 'pit'];
+    for (const k of spread() > 1.5 ? F0.concat(F0, ['chest', 'shrine']) : F0) { const at = wildSpot(s, r, 4, 2); if (at) addWild(s, { kind: k }, at[0], at[1]); }
   }
   // each new week a few fresh bands wander in while the heroes are still low level, and a find or two turns up
   function weeklyWilds(s) {
@@ -941,7 +975,7 @@
       if (Math.hypot(x - P.x, y - P.y) <= R) s.explored[tIdx(x, y)] = 1;
     }
     for (const o of s.objects) {
-      if (o.known || ITEMS[o.kind] && ITEMS[o.kind].cat === 'trap') continue;
+      if (o.known || o.kind === 'relic' || ITEMS[o.kind] && ITEMS[o.kind].cat === 'trap') continue;   // 0.36: the heroes can't sense relics
       if (Math.hypot(o.x - P.x, o.y - P.y) <= R) { o.known = true; spotted.push(o); }
     }
     for (const n of s.nodes || []) if (!n.known && Math.hypot(n.x - P.x, n.y - P.y) <= R) n.known = true;
@@ -957,7 +991,6 @@
   const objAt = (s, x, y) => s.objects.find(o => o.x === x && o.y === y);
   const siteAt = (s, x, y) => sitesOf(s).find(S => S.x === x && S.y === y);
   const isTrap = o => ITEMS[o.kind] && ITEMS[o.kind].cat === 'trap';
-  const isEnc = o => ITEMS[o.kind] && ITEMS[o.kind].cat === 'encounter';
   function stackGuarding(s, x, y) {
     return s.objects.find(o => o.kind === 'stack' && Math.abs(o.x - x) <= 1 && Math.abs(o.y - y) <= 1 && !(o.x === x && o.y === y));
   }
@@ -1187,14 +1220,13 @@
         add(o.id, o.x, o.y, (fv.v > 0 ? (o.mine ? fv.v * 0.5 + (byDrive('duty') ? 1.5 : 0) : fv.v + 3 + (byDrive('duty') ? 2 : 0)) : fv.v) * rum + rb + (fv.v > 0 ? qb : 0) + hb, fv.v > 0 ? (hb > 1 ? `Millbrook wants the ${name} gone: its waves keep hitting the town.` : `They want to ${o.mine ? 'wreck' : 'destroy'} the ${name} before it spawns more monsters.`) : fv.why, o, name);
         continue;
       }
+      if (!ITEMS[o.kind]) continue;   // 0.36: relics are for your villain alone
       const it = ITEMS[o.kind]; const h = it.drives.map(byDrive).find(Boolean);
       let v = 2;
       if (o.kind === 'chest') v = 3 + (h ? 6 : 0);
       if (o.kind === 'artifact') v = 5 + (h ? 4 : 0);
       if (o.kind === 'shrine') v = 2 + (byDrive('duty') ? 3 : 0) + (1 - frac) * 14 + (live.some(x => x.maxMana && x.mana < x.maxMana / 2) ? 3 : 0);
-      if (o.kind === 'refugees' || o.kind === 'captive') v = 2 + (h ? 6 : 0);
-      if (o.kind === 'riddle' || o.kind === 'stranger') v = 2 + (h ? 6 : 0);
-      if (o.kind === 'pass') v = 2 + (h ? 5 : 0) - (weak ? 3 : 0);
+      if (o.kind === 'refugees') v = 2 + (h ? 6 : 0);
       if (o.kind === 'omen') v = 1 + (byDrive('curiosity') ? 3 : 0) + (byDrive('duty') ? 2 : 0);
       if (finale) v *= 0.4;
       const why = q ? `The quest board offers a reward: "${q.name}."` : o.rumored ? `A tavern rumor about a ${it.name} has everyone curious.` : h ? `${h.name} spotted a ${it.name} and wants to see it.` : `The party heads for the ${it.name}.`;
@@ -1228,11 +1260,10 @@
         const anyDead = s.heroes.some(h => h.status !== 'ok');
         const manaLow = live.some(x => x.maxMana && x.mana < x.maxMana * 0.35);
         const fear = villainOnMap(s) && V.known && judge(pp / villainPower(s), 0) === 'avoid' && Math.hypot(V.x - P.x, V.y - P.y) < 7 ? 8 : 0;
-        const fest = s.townEvent ? 5 + (g ? 5 : 0) : 0;
-        const need = (1 - frac) * 26 + (anyDead ? 12 : 0) + (manaLow ? 3 : 0) + fear + fest;
+        const need = (1 - frac) * 26 + (anyDead ? 12 : 0) + (manaLow ? 3 : 0) + fear;
         if (need > 6 && !(P.x === S.x && P.y === S.y)) {
           const cl = byDrive('duty') || live[0];
-          add(S.id, S.x, S.y, need, fest && need - fest < 6 ? `Millbrook is holding a tournament. ${g ? g.name + ' wants to compete.' : 'Everyone wants to watch.'}` : fear ? `${vName(s)} is too close. The party falls back to Millbrook.` : anyDead ? 'They need to recruit at the Millbrook tavern.' : `${cl.name}: "We need rest. Back to Millbrook."`, S, S.name);
+          add(S.id, S.x, S.y, need, fear ? `${vName(s)} is too close. The party falls back to Millbrook.` : anyDead ? 'They need to recruit at the Millbrook tavern.' : `${cl.name}: "We need rest. Back to Millbrook."`, S, S.name);
         }
       }
       if (S.kind === 'tower' && finale) add(S.id, S.x, S.y, 100, s.march === 'bored' ? 'The players are done with side quests. "Let\'s just go fight the boss." The party marches on the Dark Tower.' : `The heroes feel ready. The whole table agrees: storm the Dark Tower and face ${vName(s)}.`, S, S.name);
@@ -1421,8 +1452,7 @@
     m.job = { kind: 'work', node: n.id }; m.path = path; m.trip = path.length; return null;
   }
   function recallMinion(s, id) { const m = (s.minions || []).find(z => z.id === id); if (!m) return 'No such minion.'; m.job = null; m.path = []; return null; }
-  // plot: stay put and scheme, +1 Lore every night; dance: stay put and dance
-  function orderPlot(s, id) { const m = (s.minions || []).find(z => z.id === id); if (!m) return 'No such minion.'; m.job = { kind: 'plot' }; m.path = []; m.trip = 0; return null; }
+
   function orderDance(s, id) { const m = (s.minions || []).find(z => z.id === id); if (!m) return 'No such minion.'; m.job = { kind: 'dance' }; m.path = []; m.trip = 0; return null; }
   // walk somewhere and wait there (busy until it arrives)
   function moveCheck(s, x, y) {
@@ -1932,14 +1962,13 @@
   // what all the learned talents add up to (recomputed only when the ranks change)
   const FX_MEMO = { key: null, fx: null };
   function talentFx(s) {
-    const r = (s.talents && s.talents.r) || {}; const key = JSON.stringify(r);
+    const r = (s.talents && s.talents.r) || {}; const worn = (s.villain && s.villain.relics && s.villain.relics.worn) || []; const key = JSON.stringify(r) + '|' + worn.join(',');
     if (FX_MEMO.key === key) return FX_MEMO.fx;
     const fx = { mod: {}, modAll: { hp: 0, ac: 0, hit: 0, dmg: 0 }, rate: {}, rateAll: 0, yield: { gold: 0, lumber: 0, ore: 0 }, nightly: 0, perLair: 0, townTithe: 0, bandCost: 0, summonCost: 0, minions: 0,
       reach: 0, sight: 0, buildDays: 0, summonDays: 0, empire: false, warded: false, cap: 0, bands: 0, vets: 0, guards: 0, infamy: 0, villain: { hp: 0, hit: 0 }, points: 0,
-      minionMp: 0, wallDmg: 0, hallDmg: 0, plunder: 0, waveSize: 0, towers: 0, social: 0, payCost: 0, stride: 0, banner: 0, kneel: 0, surgeons: false, duel: { hp: 0, hit: 0 }, loot: 0, renown: false, recruitLv: 0 };
+      minionMp: 0, wallDmg: 0, hallDmg: 0, plunder: 0, waveSize: 0, towers: 0, social: 0, payCost: 0, stride: 0, banner: 0, kneel: 0, surgeons: false, duel: { hp: 0, hit: 0 }, loot: 0, renown: false, recruitLv: 0, vheal: 0, fill: 0 };
     const addMod = (u, m, n) => { const t = u === 'all' ? fx.modAll : (fx.mod[u] = fx.mod[u] || { hp: 0, ac: 0, hit: 0, dmg: 0 }); for (const f of ['hp', 'ac', 'hit', 'dmg']) if (m[f]) t[f] += m[f] * n; if (m.regen) t.regen = true; if (m.drain) t.drain = true; };
-    for (const k of Object.keys(r)) {
-      const n = r[k] || 0; const F = TALENTS[k] && TALENTS[k].fx; if (!n || !F) continue;
+    const add = (F, n) => {
       if (F.mod) for (const u of (F.mod.units === 'all' ? ['all'] : F.mod.units)) addMod(u, F.mod, n);
       if (F.rate) { if (F.rate.all) fx.rateAll += F.rate.pct * n; else for (const u of F.rate.units) fx.rate[u] = (fx.rate[u] || 0) + F.rate.pct * n; }
       if (F.yield) for (const y of Object.keys(F.yield)) fx.yield[y] += F.yield[y] * n;
@@ -1950,7 +1979,10 @@
         'minionMp', 'wallDmg', 'hallDmg', 'plunder', 'waveSize', 'towers', 'social', 'payCost', 'stride', 'banner', 'kneel', 'loot', 'recruitLv']) if (F[f]) fx[f] += F[f] * n;
       if (F.duel) { fx.duel.hp += (F.duel.hp || 0) * n; fx.duel.hit += (F.duel.hit || 0) * n; }
       if (F.empire) fx.empire = true; if (F.warded) fx.warded = true; if (F.surgeons) fx.surgeons = true; if (F.renown) fx.renown = true;
-    }
+      if (F.vheal) fx.vheal += F.vheal * n; if (F.fill) fx.fill += F.fill * n;
+    };
+    for (const k of Object.keys(r)) { const n = r[k] || 0; const F = TALENTS[k] && TALENTS[k].fx; if (n && F) add(F, n); }
+    for (const id of worn) if (RELICS[id]) add(RELICS[id].fx, 1);   // 0.36: the relics your villain wears
     fx.bandCost = Math.min(0.7, fx.bandCost); fx.summonCost = Math.min(0.7, fx.summonCost); fx.towers = Math.min(0.6, fx.towers); fx.payCost = Math.min(0.6, fx.payCost);
     FX_MEMO.key = key; FX_MEMO.fx = fx; return fx;
   }
@@ -2046,9 +2078,9 @@
   const lairDays = (s, k) => talentFx(s).empire ? 1 : Math.max(1, buildDays(k) - talentFx(s).buildDays);
   const siteYield = (s, n) => { const K = NODE_KINDS[n.kind]; return K.per + (minionType(s).perk === K.res ? 1 : 0) + (talentFx(s).yield[K.res] || 0); };
   // 0.35: a mine or camp fills over a few nights (a gold mine in three), then waits, full, until you come and collect it
-  const nodeDays = n => NODE_KINDS[n.kind].days;
-  const nodeFull = (s, n) => !!n.dev && (n.fill || 0) >= nodeDays(n);
-  const nodeLoad = (s, n) => siteYield(s, n) * nodeDays(n) + (NODE_KINDS[n.kind].bonus || 0);
+  const nodeDays = (n, s) => Math.max(1, NODE_KINDS[n.kind].days - (s ? talentFx(s).fill : 0));   // 0.36: the Hourglass of Dust saves a night
+  const nodeFull = (s, n) => !!n.dev && ((n.stock || 0) > 0 || (n.fill || 0) >= nodeDays(n, s));   // once full, it stays full until collected
+  const nodeLoad = (s, n) => siteYield(s, n) * NODE_KINDS[n.kind].days + (NODE_KINDS[n.kind].bonus || 0);
   const nodeStock = (s, n) => nodeFull(s, n) ? (n.stock || nodeLoad(s, n)) : 0;
   const fullNodes = s => (s.nodes || []).filter(n => nodeFull(s, n) && !nodeRaided(s, n));
   function collectNode(s, id) {
@@ -2057,7 +2089,7 @@
     const K = NODE_KINDS[n.kind];
     if (!n.dev) return { err: `The ${K.raw} isn't yours yet.` };
     if (nodeRaided(s, n)) return { err: `The heroes wrecked the ${K.name}.` };
-    if (!nodeFull(s, n)) { const d = nodeDays(n) - (n.fill || 0); return { err: `The ${K.name} isn't full yet: ${d} more night${d > 1 ? 's' : ''}.` }; }
+    if (!nodeFull(s, n)) { const d = nodeDays(n, s) - (n.fill || 0); return { err: `The ${K.name} isn't full yet: ${d} more night${d > 1 ? 's' : ''}.` }; }
     const amt = nodeStock(s, n); s.res[K.res] += amt; n.fill = 0; n.stock = 0;
     s.collected = s.collected || { gold: 0, lumber: 0, ore: 0 }; s.collected[K.res] += amt;
     return { res: K.res, amt, id: n.id };
@@ -2253,13 +2285,7 @@
   // what you can send today: everything raised by lairs within reach of the heroes
   function garrisonCount(s, t) { return sum(lairsInReach(s).filter(o => DUNGEONS[o.dtype].unit === t), lairCount); }
   function garrisonList(s) { return CREATURE_ORDER.filter(t => garrisonCount(s, t) >= 1).map(t => [t, garrisonCount(s, t)]); }
-  function attackCheck(s) {
-    if (s.phase !== 'map') return 'Not now.';
-    if (!living(s).length) return 'Nobody to attack.';
-    if (s.attackDay === dayKey(s)) return 'You already attacked today. End the day to send another.';
-    if (!lairsInReach(s).some(o => lairCount(o) >= 1)) return builtLairs(s).length ? 'None of your lairs can reach the heroes today.' : 'You have no lairs yet. Build one near the heroes.';
-    return null;
-  }
+
   function cleanStacks(s, stacks) {
     const out = [];
     for (const [t, n0] of stacks || []) {
@@ -2268,22 +2294,7 @@
     }
     return out.slice(0, MAX_ATTACK_STACKS);
   }
-  function sendAttack(s, stacks) {
-    const err = attackCheck(s); if (err) return err;
-    const st = cleanStacks(s, stacks); if (!st.length) return 'Pick some monsters from the lairs in reach first.';
-    // take from the nearest lairs first, and remember who came from where so the survivors go home
-    const from = [];
-    for (const [t, n] of st) {
-      let left = n;
-      for (const o of lairsInReach(s).filter(z => DUNGEONS[z.dtype].unit === t)) { const k = Math.min(left, lairCount(o)); if (k < 1) continue; o.pool[t] -= k; from.push([o.id, t, k]); left -= k; if (!left) break; }
-    }
-    s.attackDay = dayKey(s);
-    s.party.path = []; s.party.pending = null;
-    say(s, `You send a war party against the heroes: ${st.map(([t, n]) => `${n} ${CREATURES[t].name}`).join(', ')}.`, 'dm');
-    startBattle(s, null, { stacks: st, attack: true });
-    s.battle.sentFrom = from;
-    return null;
-  }
+
   function returnSurvivors(s, b, byKind) {
     const home = [];
     for (const k of byKind) {
@@ -2301,7 +2312,7 @@
     // talents that pay every night: vaults and hoards, a tithe per lair, and the Count's cut of Millbrook's purse
     { const fx = talentFx(s); let g = fx.nightly + fx.perLair * builtLairs(s).length;
       if (fx.townTithe && s.town) { const t = Math.min(fx.townTithe, Math.floor(s.town.res.gold || 0)); s.town.res.gold -= t; g += t; }
-      if (g) { s.res.gold += g; out.res.gold += g; } }
+      if (g) { const d = Math.max(-Math.floor(s.res.gold), g); s.res.gold += d; out.res.gold += d; } }   // 0.36: a hungry relic can't take what isn't there
     for (const m of s.minions || []) {
       m.from = [m.x, m.y]; let left = mp; let px = m.x, py = m.y;
       while (m.path.length) { const [nx, ny] = m.path[0]; const c = stepCost(s, px, py, nx, ny); if (c > left) break; left -= c; m.path.shift(); px = nx; py = ny; }
@@ -2319,13 +2330,13 @@
         // it takes a day's work at the deposit: the minion has to have been there when the night began
         const w = workersAt(s, n).slice(0, K.cap).filter(m => m.from && m.from[0] === n.x && m.from[1] === n.y); if (!w.length) continue;
         // 0.35: the first load is quick (one more night), then a full cycle each time
-        n.dev = true; n.fill = nodeDays(n) - 1; n.stock = 0; out.opened.push(n.id); for (const m of w) m.job = null;
+        n.dev = true; n.fill = nodeDays(n, s) - 1; n.stock = 0; out.opened.push(n.id); for (const m of w) m.job = null;
         say(s, `Your ${T.one.toLowerCase()} turns the ${K.raw} near ${regionName(s, n.x, n.y)} into a ${K.name}. It works on its own from now on: when it sparkles, click it to collect.`, 'dm'); continue;
       }
       // 0.35: it fills a night at a time, then waits for you to collect it before it starts again
       if (nodeFull(s, n)) { out.full.push(n.id); continue; }
       const was = n.fill || 0; n.fill = was + 1; out.fills.push([n.id, was, n.fill]);
-      if (n.fill >= nodeDays(n)) { n.stock = nodeLoad(s, n); out.filled.push(n.id); out.full.push(n.id); }
+      if (n.fill >= nodeDays(n, s)) { n.fill = nodeDays(n, s); n.stock = nodeLoad(s, n); out.filled.push(n.id); out.full.push(n.id); }
     }
     if (out.filled.length) say(s, `Full and waiting for you: ${out.filled.map(id => { const n = s.nodes.find(z => z.id === id); return `the ${NODE_KINDS[n.kind].name} near ${regionName(s, n.x, n.y)} (${n.stock} ${NODE_KINDS[n.kind].res})`; }).join(', ')}. Click a full site to collect it.`, 'dm');
     for (const o of myLairs(s).filter(z => z.building > 0)) {
@@ -2382,56 +2393,19 @@
     return out.sort((a, b) => b.sc - a.sc).slice(0, n || 5);
   }
 
-  // a magic item left on the heroes' road: the surest way to get them ready for the showdown
-  const giftCost = s => 8 + 4 * (s.gifts || 0);
-  function giftCheck(s) {
-    if (s.phase !== 'map') return 'Not now.';
-    if (s.giftDay === dayKey(s)) return 'One treasure a day.';
-    if (s.lore < giftCost(s)) return `Needs ${giftCost(s)} Lore.`;
-    return null;
-  }
-  function gift(s) {
-    const err = giftCheck(s); if (err) return err;
-    s.lore -= giftCost(s); s.gifts = (s.gifts || 0) + 1; s.giftDay = dayKey(s);
-    const t = grantArtifact(s, randomArtifact(s));
-    say(s, `By the roadside the heroes find ${t}`, 'good'); thrill(s, 'They found a magic item', 2);
-    return null;
-  }
-  // a quick first pick for the composer: the strongest kinds you have, sized for a close fight on paper
-  function fairAttack(s, scale) {
-    const pp = partyPower(s); const target = pp / 1.9 * (scale || 1);
-    const avail = garrisonList(s).filter(([t]) => stackPower(t, 1) <= target * 0.95);
-    if (!avail.length) return [];
-    avail.sort((a, b) => stackPower(b[0], b[1]) - stackPower(a[0], a[1]));
-    const use = avail.slice(0, 3); const tot = sum(use, ([t, n]) => stackPower(t, n));
-    if (tot <= target) return use.map(([t, n]) => [t, n]);
-    return use.map(([t, n]) => [t, Math.max(1, Math.min(n, Math.round(n * target / tot)))]);
-  }
+
+
+
 
   /* ================= the citadel (tech tree) ================= */
   const hasTech = (s, k) => !k || k === 'throne' || (s.unlocked ? (k === 'library' || k === 'forge' || k === 'spire' ? libraryLevel(s) > 0 : unlocked(s, TECH_LAIR[k])) : !!(s.base && s.base.b ? s.base.b[k] : s.citadel && s.citadel.built[k]));
-  function techCheck(s, k) {
-    const T = TECH[k]; if (!T) return 'Unknown building.';
-    if (hasTech(s, k)) return 'Already built.';
-    if (s.phase !== 'map') return 'Build between days.';
-    const miss = T.req.filter(r => !hasTech(s, r));
-    if (miss.length) return `Needs ${miss.map(r => TECH[r].name).join(' and ')}.`;
-    if (s.citadel.day === dayKey(s)) return 'You already built something today. One building a day.';
-    if (s.lore < T.cost) return `You need ${T.cost} Lore.`;
-    return null;
-  }
-  function buildTech(s, k) {
-    const err = techCheck(s, k); if (err) return err;
-    s.lore -= TECH[k].cost; s.citadel.built[k] = dayKey(s); s.citadel.day = dayKey(s);
-    say(s, `Your minions raise the ${TECH[k].name} at the Dark Tower. ${TECH[k].gives}`, 'dm');
-    return null;
-  }
+
+
   // what a building, monster, lair, trap or dark power still needs (null when unlocked)
   function lockedBy(s, kind) {
     const k = CREATURE_TECH[kind] || (DUNGEONS[kind] && DUNGEONS[kind].tech) || TRAP_TECH[kind] || POWER_TECH[kind];
     return k && !hasTech(s, k) ? k : null;
   }
-  const loreIncome = s => 2 + Math.min(2, Math.floor((s.week - 1) / 2)) + 2 * libraryLevel(s);
   const rumorCost = s => hasTech(s, 'spire') ? 0 : 1;
 
   /* ================= DM placement ================= */
@@ -2447,11 +2421,6 @@
   }
   function placeCheck(s, kind, x, y, size) {
     if (s.phase !== 'map') return 'You can only place things between days.';
-    if (kind === 'tourney') {
-      if (s.townEvent) return 'A tournament is already announced.';
-      if (s.march) return 'No tournaments while the party marches on the Dark Tower.';
-      return s.lore >= itemCost(s, kind) ? null : `You need ${itemCost(s, kind)} Lore.`;
-    }
     const lock = lockedBy(s, kind);
     if (lock) return `Build the ${TECH[lock].name} in your citadel first.`;
     if (CREATURES[kind] && CREATURES[kind].hidden) return `Only ${vName(s)} can lead them.`;
@@ -2476,7 +2445,6 @@
     const err = placeCheck(s, kind, x, y, size); if (err) return err;
     const cost = itemCost(s, kind, size);
     s.lore -= cost;
-    if (kind === 'tourney') { s.townEvent = 'tourney'; say(s, 'Heralds ride out: Millbrook will hold a tournament! Champions are welcome.', 'dm'); planRoute(s); return null; }
     let o;
     if (CREATURES[kind]) o = { kind: 'stack', type: kind, count: CREATURES[kind].base * (size || 1), size: size || 1 };
     else if (DUNGEONS[kind]) { o = { kind: 'dungeon', dtype: kind, pool: {}, level: 1, mode: 'roam' }; for (const t of Object.keys(DUNGEONS[kind].grow)) o.pool[t] = DUNGEONS[kind].grow[t] * 2; }
@@ -2490,17 +2458,7 @@
     planRoute(s);
     return null;
   }
-  function removeObject(s, id) {
-    const o = s.objects.find(z => z.id === id);
-    if (!o || s.phase !== 'map') return 'Nothing to remove.';
-    if (o.known) return 'The party already knows about it.';
-    const fresh = o.placed === dayKey(s) && o.kind !== 'stack' || (o.kind === 'stack' && o.placed === dayKey(s) && !o.fromDungeon);
-    if (fresh) s.lore += o.paid;
-    s.objects = s.objects.filter(z => z !== o);
-    for (const q of s.quests) if (q.status === 'open' && refEq(q.ref, { kind: 'obj', id })) q.status = 'void';
-    planRoute(s);
-    return fresh ? `Refunded ${o.paid} Lore.` : 'Removed. Things placed on earlier days have no refund.';
-  }
+
   function rumor(s, id) {
     const o = s.objects.find(z => z.id === id);
     if (!o || s.phase !== 'map') return 'Nothing to whisper about.';
@@ -2515,7 +2473,8 @@
   }
 
   /* ================= dungeons and moving monsters ================= */
-  function releaseCost() { return 0; }
+
+
   function freeAdjacent(s, x, y) {
     const out = [];
     for (const [dx, dy] of [[0, 1], [1, 0], [-1, 0], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]]) {
@@ -2527,20 +2486,6 @@
       out.push([nx, ny]);
     }
     return out;
-  }
-  function release(s, id, type, count) {
-    const o = s.objects.find(z => z.id === id && z.kind === 'dungeon');
-    if (!o || s.phase !== 'map') return 'No dungeon there.';
-    count = Math.floor(count);
-    if (!(count >= 1) || count > Math.floor(o.pool[type] || 0)) return 'Not that many creatures in the pool.';
-    if (s.objects.filter(z => z.kind === 'stack').length >= MAX_STACKS) return `The land can only hold ${MAX_STACKS} monster stacks at once.`;
-    const spots = freeAdjacent(s, o.x, o.y); if (!spots.length) return 'No room around the lair.';
-    const [x, y] = spots[0];
-    o.pool[type] -= count;
-    spawnStack(s, o, type, count, x, y);
-    say(s, `${count} ${CREATURES[type].name} crawl out of the ${DUNGEONS[o.dtype].name}.`, 'dm');
-    planRoute(s);
-    return null;
   }
   function spawnStack(s, lair, type, count, x, y) {
     const st = { id: 'o' + (s.uid++), kind: 'stack', type, count, size: 1, x, y, known: inSight(s, x, y), rumored: false, paid: 0, placed: dayKey(s), movedDay: 0, fromDungeon: true, lair: lair.id, home: { x: lair.x, y: lair.y } };
@@ -2605,19 +2550,8 @@
     }
     return moved;
   }
-  function upgradeLair(s, id) {
-    const o = s.objects.find(z => z.id === id && z.kind === 'dungeon');
-    if (!o || s.phase !== 'map') return 'No lair there.';
-    if ((o.level || 1) >= 2) return 'Already fully upgraded.';
-    const c = lairUpCost(o.dtype); if (s.lore < c) return `You need ${c} Lore.`;
-    s.lore -= c; o.level = 2;
-    say(s, `The ${DUNGEONS[o.dtype].name} grows deeper. It breeds faster and sends out bigger bands.`, 'dm');
-    return null;
-  }
-  function setLairMode(s, id, mode) {
-    const o = s.objects.find(z => z.id === id && z.kind === 'dungeon'); if (!o) return 'No lair there.';
-    o.mode = mode === 'hold' ? 'hold' : 'roam'; return null;
-  }
+
+
   // reachable tiles for a DM unit; returns Map tileIndex -> {d, prev}
   function unitReach(s, sx, sy, mp, selfId) {
     const P = s.party;
@@ -2635,70 +2569,17 @@
     return { tiles: out, prev: D.prev };
   }
   const stackMP = o => CREATURES[o.type].mspd * 10;
-  function stackReach(s, id) {
-    const o = s.objects.find(z => z.id === id && z.kind === 'stack'); if (!o) return null;
-    if (o.movedDay === dayKey(s)) return { tiles: new Map(), prev: null, moved: true };
-    return unitReach(s, o.x, o.y, stackMP(o), o.id);
-  }
+
   function afterDmMove(s, unitKnownBefore, x, y) {
     const P = s.party;
     return Math.abs(x - P.x) <= 1 && Math.abs(y - P.y) <= 1;
   }
-  function moveStack(s, id, x, y) {
-    if (s.phase !== 'map') return { err: 'Monsters move between days.' };
-    const o = s.objects.find(z => z.id === id && z.kind === 'stack'); if (!o) return { err: 'No monsters there.' };
-    if (o.movedDay === dayKey(s)) return { err: 'That stack already moved today.' };
-    const R = unitReach(s, o.x, o.y, stackMP(o), o.id);
-    const e = R.tiles.get(tIdx(x, y)); if (!e) return { err: 'They can\'t get there today.' };
-    const path = tracePath(R.prev, tIdx(o.x, o.y), tIdx(x, y)) || [[x, y]];
-    const from = { x: o.x, y: o.y };
-    o.x = x; o.y = y; o.movedDay = dayKey(s);
-    const q = questOn(s, { kind: 'obj', id: o.id });
-    o.known = inSight(s, x, y) || o.rumored || !!q;
-    if (Math.abs(x - s.party.x) <= 1 && Math.abs(y - s.party.y) <= 1) {
-      say(s, `${quantityWord(o.count)} ${CREATURES[o.type].name} charge the party!`, 'big');
-      startBattle(s, o);
-      return { battle: true, path, from };
-    }
-    planRoute(s);
-    return { path, from };
-  }
+
 
   /* ================= the villain ================= */
-  function villainReach(s) {
-    const V = s.villain; if (!villainOnMap(s)) return null;
-    return unitReach(s, V.x, V.y, V.mp, 'villain');
-  }
-  function rideOut(s) {
-    const V = s.villain;
-    if (s.phase !== 'map') return `${vName(s)} moves between days.`;
-    if (V.state !== 'lair') return V.state === 'banished' ? `${vName(s)} is still recovering for ${V.banish} more day${V.banish > 1 ? 's' : ''}.` : `${vName(s)} is already out.`;
-    if (s.march) return `${vName(s)} awaits the heroes on the throne.`;
-    const tower = siteOf(s, 'tower');
-    V.state = 'map'; V.x = tower.x; V.y = tower.y; V.known = inSight(s, V.x, V.y);
-    say(s, `${vName(s)} rides out from the Dark Tower.`, 'dm');
-    return null;
-  }
-  function moveVillain(s, x, y) {
-    const V = s.villain;
-    if (s.phase !== 'map' || !villainOnMap(s)) return { err: `${vName(s)} isn't out on the map.` };
-    const R = villainReach(s); const e = R.tiles.get(tIdx(x, y));
-    if (!e) return { err: 'He can\'t get there today.' };
-    const path = tracePath(R.prev, tIdx(V.x, V.y), tIdx(x, y)) || [[x, y]];
-    const from = { x: V.x, y: V.y };
-    V.mp -= e.d; V.x = x; V.y = y;
-    const site = siteAt(s, x, y);
-    if (site && site.id === 'tower') { V.state = 'lair'; V.known = false; say(s, `${vName(s)} returns to the Dark Tower.`, 'dm'); planRoute(s); return { path, from, home: true }; }
-    V.known = inSight(s, x, y) || !!questOn(s, { kind: 'villain' });
-    if (inSight(s, x, y)) reveal(s);
-    if (Math.abs(x - s.party.x) <= 1 && Math.abs(y - s.party.y) <= 1) {
-      say(s, `${vName(s)} and ${vP(s).his} army fall upon the party!`, 'boss');
-      startVillainBattle(s);
-      return { battle: true, path, from };
-    }
-    planRoute(s);
-    return { path, from };
-  }
+
+
+
   function recruit(s, type, size) {
     const V = s.villain;
     if (s.phase !== 'map') return 'Recruit between days.';
@@ -2713,11 +2594,7 @@
     say(s, `${n} ${CREATURES[type].name} swear themselves to ${vName(s)}.`, 'dm');
     return null;
   }
-  function dismiss(s, type) { const V = s.villain; if (s.phase !== 'map' || V.state !== 'lair') return 'Only at the Dark Tower.'; V.army = V.army.filter(a => a.type !== type); return null; }
-  /* ================= 0.31: your villain on the map, and the monsters of the wilds =================
-     Send your villain out to a band of the wilds and win it over: fight it, pay it, or talk (Intimidate, Persuade,
-     Deceive, a d20 each). Bands that join you march on Millbrook; a band you beat may kneel, and marches once it has
-     healed; one that won't yield fights to the last and leaves its hoard behind. */
+
   // a band's level: the level at which your villain, alone, would be an even match for it
   const MON_MEMO = new Map();
   function monsterLevel(s, o) {
@@ -2819,7 +2696,8 @@
     const tw = siteOf(s, 'tower'); const home = x === tw.x && y === tw.y;
     if (home && !villainOnMap(s)) return `${vName(s)} is already home.`;
     const o = objAt(s, x, y); const tgt = o && o.kind === 'stack' && o.wild ? o : null;
-    if (!tgt && !home && (!isFinite(tileCost(s, x, y)) || objAt(s, x, y) || siteAt(s, x, y))) return `${capFirst(vP(s).he)} can't go there.`;
+    const loot = o && (o.kind === 'relic' || o.kind === 'artifact') ? o : null;   // 0.36: a relic or the heroes' artifact: walk onto it
+    if (!tgt && !home && !loot && (!isFinite(tileCost(s, x, y)) || objAt(s, x, y) || siteAt(s, x, y))) return `${capFirst(vP(s).he)} can't go there.`;
     const path = villainPathTo(s, x, y, tgt);
     if (!path) return `${capFirst(vP(s).he)} can't find a way there.`;
     if (!villainOnMap(s)) { V.state = 'map'; V.x = tw.x; V.y = tw.y; V.known = false; if (V.hpFrac === undefined) V.hpFrac = 1; say(s, `${vName(s)} rides out from the Dark Tower.`, 'dm'); }
@@ -2827,11 +2705,87 @@
     if (tgt && !path.length) V.meet = tgt.id;   // already beside them: an audience now
     return null;
   }
+  /* ---- 0.36: relics ---- */
+  function relicInit(s) { const V = s.villain; if (V && !V.relics) V.relics = { worn: [], bag: [], found: [] }; if (V && V.relics && !V.relics.found) V.relics.found = V.relics.worn.concat(V.relics.bag); return s; }
+  const relicsOf = s => (relicInit(s), s.villain.relics);
+  const relicOwned = (s, id) => relicsOf(s).worn.indexOf(id) >= 0 || relicsOf(s).bag.indexOf(id) >= 0;
+  // a relic not yet in the world or in your bag, of about this tier
+  function pickRelic(s, tier, r) {
+    r = r || Math.random; const used = new Set(relicsOf(s).found.concat(s.objects.filter(o => o.kind === 'relic').map(o => o.relic)));
+    for (const t of [tier, tier - 1, tier + 1, tier - 2, tier + 2]) {
+      let pool = Object.keys(RELICS).filter(k => RELICS[k].tier === t && !used.has(k)); if (!pool.length) continue;
+      const clean = pool.filter(k => !RELICS[k].cursed); if (clean.length && r() < 0.7) pool = clean;   // cursed ones are rarer
+      return pool[Math.floor(r() * pool.length)];
+    }
+    return null;
+  }
+  // far from the tower, the rarer: a third of the way across the map is greater, two thirds legendary (later weeks reach further)
+  function relicTierAt(s, x, y) {
+    const tw = siteOf(s, 'tower'); const f = Math.hypot(x - tw.x, y - tw.y) / Math.hypot(MW, MH) + (s.week - 1) * 0.03;
+    return f > 0.55 ? 3 : f > 0.3 ? 2 : 1;
+  }
+  function placeRelics(s, n) {
+    const r = mulberry((s.seed * 53 + s.week * 7 + (s.relicsPlaced || 0) * 13) | 0); const town = siteOf(s, 'town'); let made = 0;
+    for (let i = 0; i < n; i++) {
+      let at = null;
+      for (let g = 0; g < 300 && !at; g++) {
+        const x = Math.floor(r() * MW), y = Math.floor(r() * MH);
+        if (!isFinite(tileCost(s, x, y)) || objAt(s, x, y) || siteAt(s, x, y) || nodeAt(s, x, y) || mapOf(s).road[tIdx(x, y)]) continue;
+        if (Math.hypot(x - town.x, y - town.y) < 6 || sitesOf(s).some(z => Math.hypot(z.x - x, z.y - y) < 2.5) || s.objects.some(o => o.kind === 'relic' && Math.hypot(o.x - x, o.y - y) < 8)) continue;
+        if (s.party && s.party.x === x && s.party.y === y) continue;
+        at = [x, y];
+      }
+      if (!at) break;
+      const id = pickRelic(s, relicTierAt(s, at[0], at[1]), r); if (!id) break;
+      s.objects.push({ id: 'o' + (s.uid++), kind: 'relic', relic: id, tier: RELICS[id].tier, x: at[0], y: at[1], known: false, placed: dayKey(s), movedDay: 0 });
+      s.relicsPlaced = (s.relicsPlaced || 0) + 1; made++;
+    }
+    return made;
+  }
+  // a new one turns up most weeks, until the land runs out of them
+  function weeklyRelics(s) {
+    const lying = s.objects.filter(o => o.kind === 'relic').length; const cap = Math.round(4 * spread());
+    if (lying >= cap || (s.relicsPlaced || 0) >= Object.keys(RELICS).length) return 0;
+    return placeRelics(s, spread() > 1.5 ? 2 : 1);
+  }
+  // your villain reaches it: into the bag (or straight onto an empty slot). One of the heroes' artifacts is seized and twisted into a relic.
+  function claimRelic(s, o) {
+    const R = relicsOf(s); let id = o.relic, msg;
+    if (o.kind === 'artifact') {
+      const A = ARTIFACTS.find(a => a.id === o.art); id = pickRelic(s, A ? A.tier : artTier(s));
+      msg = id ? `${vName(s)} seizes the ${A ? A.name : 'artifact'} before the heroes can reach it, and twists it into the ${RELICS[id].name}.` : `${vName(s)} smashes the ${A ? A.name : 'artifact'} before the heroes can reach it.`;
+      for (const q of s.quests || []) if (q.status === 'open' && q.ref && q.ref.kind === 'obj' && q.ref.id === o.id) q.status = 'void';
+      addInfamy(s, 1, `Robbed the heroes of the ${A ? A.name : 'artifact'}`);
+    } else msg = `${vName(s)} unearths a relic near ${regionName(s, o.x, o.y)}: the ${RELICS[id].name}.`;
+    s.objects = s.objects.filter(z => z !== o);
+    if (!id || relicOwned(s, id)) { say(s, msg, 'big'); return null; }
+    R.found.push(id);
+    if (R.worn.length < RELIC_SLOTS && !RELICS[id].cursed) { R.worn.push(id); syncTalents(s); msg += ' It is worn at once.'; } else R.bag.push(id);
+    s.relicNews = (s.relicNews || []).concat([id]);
+    say(s, msg, 'big');
+    return id;
+  }
+  function wearRelic(s, id) {
+    const R = relicsOf(s); if (s.phase !== 'map') return 'Not in the middle of this.';
+    if (R.bag.indexOf(id) < 0) return R.worn.indexOf(id) >= 0 ? 'Already worn.' : 'Not in the bag.';
+    if (R.worn.length >= RELIC_SLOTS) return `${capFirst(vP(s).he)} can wear ${RELIC_SLOTS} relics at once. Take one off first.`;
+    R.bag = R.bag.filter(k => k !== id); R.worn.push(id); syncTalents(s); return null;
+  }
+  function removeRelic(s, id) {
+    const R = relicsOf(s); if (s.phase !== 'map') return 'Not in the middle of this.';
+    if (R.worn.indexOf(id) < 0) return 'Not worn.';
+    R.worn = R.worn.filter(k => k !== id); R.bag.push(id); syncTalents(s); return null;
+  }
+  // what the relics (and talents) add to your villain, as the five numbers the villain's card shows
+  function villainAttrs(s) {
+    const fx = talentFx(s);
+    return { hp: fx.villain.hp, hit: fx.villain.hit, menace: fx.social, stride: fx.stride, sight: fx.sight, command: commandCap(s) };
+  }
   // the night: your villain walks a day's march along the way, round the heroes, and heals a little
   function villainNight(s) {
     const V = s.villain; V.trail = null;
     if (!villainOnMap(s)) { if (V.hpFrac !== undefined) V.hpFrac = 1; return; }
-    V.hpFrac = Math.min(1, (V.hpFrac === undefined ? 1 : V.hpFrac) + 0.25);
+    V.hpFrac = Math.min(1, (V.hpFrac === undefined ? 1 : V.hpFrac) + 0.25 + talentFx(s).vheal);
     if (!V.path || !V.path.length) return;
     const P = s.party; const near = (x, y) => living(s).length && Math.abs(x - P.x) <= 1 && Math.abs(y - P.y) <= 1;
     let left = VILLAIN_DAY_MP * (1 + talentFx(s).stride), px = V.x, py = V.y; const trail = [[px, py]]; let n = 0;
@@ -2841,6 +2795,8 @@
       left -= c; px = nx; py = ny; trail.push([px, py]); n++;
     }
     V.path = V.path.slice(n); V.x = px; V.y = py; if (trail.length > 1) V.trail = trail;
+    // 0.36: any relic or artifact on the way is picked up as the villain passes
+    for (const [tx, ty] of trail.slice(1)) { const o = s.objects.find(z => z.x === tx && z.y === ty && (z.kind === 'relic' || z.kind === 'artifact')); if (o) claimRelic(s, o); }
     const tw = siteOf(s, 'tower');
     if (V.goHome && px === tw.x && py === tw.y) { V.state = 'lair'; V.path = []; V.goHome = false; V.hpFrac = 1; V.known = false; say(s, `${vName(s)} returns to the Dark Tower.`, 'dm'); return; }
     if (V.target) {
@@ -2934,16 +2890,7 @@
     }
   }
 
-  function lairUpgrade(s, key) {
-    const V = s.villain; const U = LAIR[key];
-    if (s.phase !== 'map') return 'Upgrade between days.';
-    if ((V.up[key] || 0) >= U.max) return 'Already at its peak.';
-    const lock = lockedBy(s, key); if (lock) return `Build the ${TECH[lock].name} first.`;
-    if (s.lore < U.cost) return `You need ${U.cost} Lore.`;
-    s.lore -= U.cost; V.up[key] = (V.up[key] || 0) + 1;
-    say(s, `${vName(s)} gains ${U.name}.`, 'dm');
-    return null;
-  }
+
 
   /* ================= thrill bookkeeping ================= */
   function thrill(s, label, v, heroId) {
@@ -3052,12 +2999,6 @@
     const site = siteAt(s, x, y);
     if (site) {
       P.path = [];
-      if (site.kind === 'town' && s.townEvent && living(s).length) {
-        s.townEvent = null;
-        visitSite(s, site);
-        s.phase = 'encounter'; s.enc = makeEncounter(s, { id: 'tourney', kind: 'tourney' });
-        return { t: 'encounter', from, x, y };
-      }
       const r = visitSite(s, site);
       if (r && r.battle) return { t: 'battle', from, x, y };
       return { t: 'event', from, x, y, msgs: r ? r.msgs : [] };
@@ -3068,7 +3009,7 @@
       if (gl) { say(s, `The ${DUNGEONS[gl.dtype].name} nearby sends its brood to defend the ${nodeName(node)}!`, 'big'); startBattle(s, null, { stacks: garrisonOf(gl), guardLair: gl.id, raidNode: node.id }); return { t: 'battle', from, x, y }; }
       return { t: 'event', from, x, y, msgs: [raidNode(s, node)] };
     }
-    const o = s.objects.find(z => z.x === x && z.y === y && z.kind !== 'stack' && !isTrap(z));
+    const o = s.objects.find(z => z.x === x && z.y === y && z.kind !== 'stack' && z.kind !== 'relic' && !isTrap(z));   // 0.36: they walk past relics
     if (!o) return null;
     P.path = [];
     if (o.kind === 'dungeon' && o.mine && o.building) {
@@ -3091,10 +3032,6 @@
       say(s, `The party storms the ${DUNGEONS[o.dtype].name}!`, 'big');
       startBattle(s, null, { dungeonId: o.id, stacks: garrisonOf(o) });
       return { t: 'battle', from, x, y };
-    }
-    if (isEnc(o)) {
-      s.phase = 'encounter'; s.enc = makeEncounter(s, o);
-      return { t: 'encounter', from, x, y };
     }
     const msgs = interact(s, o);
     return { t: 'event', from, x, y, msgs };
@@ -3279,228 +3216,6 @@
     return out;
   }
 
-  /* ================= encounters ================= */
-  function bestFor(s, skill, exclude) {
-    const ok = s.heroes.filter(h => h.status === 'ok' && (!exclude || exclude.indexOf(h.id) < 0));
-    return ok.sort((a, b) => skillBonus(b, skill) - skillBonus(a, skill))[0] || null;
-  }
-  const ENC = {
-    stranger: {
-      art: 'stranger', intro: 'A hooded stranger waits by the road, watching the party approach. Who is it really?',
-      choices: [
-        { k: 'informant', label: 'A helpful informant', dc: 10, text: 'Easy to win over. Shares what she knows about your villain.' },
-        { k: 'smuggler', label: 'A cagey smuggler', dc: 14, text: 'Has a magic item to trade, if they can talk him into it.' },
-        { k: 'agent', label: 'An agent of your villain', dc: 16, text: 'Unmasking him is a big moment. If they fail, he curses them and pays your tower 8 gold.' }
-      ],
-      plan(s, e) {
-        let who = bestFor(s, 'charm'); const bb = s.heroes.find(h => h.status === 'ok' && h.cls === 'barbarian');
-        e.narr.push(`${who.name} steps forward to do the talking.`);
-        if (bb && bb !== who && chance(0.2)) { who = bb; e.narr.push(`...but ${bb.name} shoves in front. "I'll handle this."`); }
-        return [{ type: 'check', hero: who.id, skill: 'charm', dc: e.dc, label: 'talks with the stranger' }];
-      },
-      resolve(s, e, ok) {
-        const h = s.heroes.find(x => x.id === e.steps[0].hero); const w = byDriveLive(s, 'curiosity');
-        if (e.choice === 'informant') {
-          if (ok) { s.omens++; giveXp(s, lvXp(s, 0.14)); return { text: `She leans close and whispers how ${vName(s)} ${vType(s).origin}. (+1 omen)`, th: [['The stranger shared secrets', 2 + db(s, w, 2), w]] }; }
-          return { text: 'She shrugs, pulls up her hood and walks away.', th: [['The stranger wasn\'t interested', 1]] };
-        }
-        if (e.choice === 'smuggler') {
-          if (ok) { const a = randomArtifact(s); const t = grantArtifact(s, a); return { text: `He grins and opens his coat. They trade for ${t}`, th: [['Haggled a magic item from a smuggler', 3 + db(s, byDriveLive(s, 'greed'), 2), h]] }; }
-          return { text: 'He sells them a "magic" ring that turns their fingers green. Worthless.', th: [['Swindled by a smuggler', 1]] };
-        }
-        if (ok) { const xp = lvXp(s, 0.3); s.omens++; giveXp(s, xp); return { text: `${h.name} catches the lie. The stranger is an agent of ${vName(s)}! He flees, dropping coded orders. (+1 omen, +${xp} XP)`, th: [[`Unmasked an agent of ${vName(s)}`, 5 + db(s, w, 2), h]] }; }
-        for (const x of living(s)) x.hp = Math.max(1, Math.round(x.hp * 0.75));
-        s.res.gold += 8;
-        return { text: `The stranger smiles, mutters a curse, and vanishes in black smoke. Everyone feels drained, and ${vName(s)} now knows their faces. (Your tower gains 8 gold.)`, th: [[`Cursed by ${vName(s)}'s agent`, 3]] };
-      }
-    },
-    pass: {
-      art: 'pass', intro: 'The road crosses a deep gorge on a rotten rope bridge. Three things have to go right.',
-      choices: [
-        { k: 'easy', label: 'Sturdy enough', dc: 10, text: 'DC 10 checks. Small reward.' },
-        { k: 'hard', label: 'Swaying and frayed', dc: 13, text: 'DC 13 checks. Falls hurt.' },
-        { k: 'deadly', label: 'Snapping as they cross', dc: 16, text: 'DC 16 checks. Big reward; falls hurt a lot.' }
-      ],
-      plan(s, e) {
-        const used = []; const steps = [];
-        for (const [sk, lab] of [['might', 'holds the ropes steady'], ['finesse', 'crosses the slick planks first'], ['lore', 'picks the safest route']]) {
-          const h = bestFor(s, sk, used) || bestFor(s, sk); used.push(h.id);
-          steps.push({ type: 'check', hero: h.id, skill: sk, dc: e.dc, label: lab });
-        }
-        return steps;
-      },
-      onFail(s, e, step) {
-        const h = s.heroes.find(x => x.id === step.hero); const m = { easy: 1, hard: 1.5, deadly: 2 }[e.choice];
-        const r = dmgRecord(`${h.name} slips`, 1, 10, Math.round((1 + avgLevel(s)) * m));
-        h.hp = Math.max(1, h.hp - r.dmg.total);
-        e.narr.push(`${h.name} slips and slams into the cliff (${r.dmg.total} damage).`);
-        return r;
-      },
-      resolve(s, e, ok, wins) {
-        const xp = lvXp(s, { easy: 0.12, hard: 0.22, deadly: 0.35 }[e.choice]);
-        const g = byDriveLive(s, 'glory');
-        if (wins >= 2) { giveXp(s, xp); return { text: `They make it across, ${wins === 3 ? 'barely breaking a sweat' : 'hearts pounding'}. (+${xp} XP)`, th: [['Crossed the rope bridge', 2 + (e.choice === 'deadly' ? 3 : e.choice === 'hard' ? 1 : 0) + db(s, g, 2), g]] }; }
-        s.party.mp = 0;
-        return { text: 'The bridge gives way behind the first hero. The rest turn back and lose the day finding another route.', th: [['Turned back at the rope bridge', 1]] };
-      }
-    },
-    captive: {
-      art: 'captive', intro: 'A wounded orc scout lies by the road, begging for mercy. What is really going on?',
-      choices: [
-        { k: 'honest', label: 'He\'s an honest deserter', dc: 13, text: 'Mercy is rewarded. Killing him just feels bad.' },
-        { k: 'liar', label: 'It\'s an ambush', dc: 13, text: 'His friends hide nearby. Trusting him starts a fight.' },
-        { k: 'secrets', label: 'He knows your villain\'s plans', dc: 13, text: 'Spared or questioned, he reveals an omen. Killed, the secret dies.' }
-      ],
-      plan(s, e) {
-        const votes = { spare: 0, kill: 0, question: 0 };
-        for (const h of s.heroes.filter(x => x.status === 'ok')) {
-          const v = { cleric: ['spare', 2, '"We show mercy. That\'s who we are."'], barbarian: ['kill', 1.6, '"An orc is an orc. End it."'], rogue: ['spare', 1, '"Let him go. After I check his pockets."'], wizard: ['question', 1.6, '"Wait. He might know something."'] }[h.cls];
-          votes[v[0]] += v[1] + rng() * 0.6; e.narr.push(`${h.name}: ${v[2]}`);
-        }
-        e.decision = Object.keys(votes).sort((a, b) => votes[b] - votes[a])[0];
-        e.narr.push({ spare: 'The table votes to spare him.', kill: 'The table votes to finish him.', question: 'The table votes to question him first.' }[e.decision]);
-        if (e.decision === 'question') { const w = bestFor(s, 'lore'); return [{ type: 'check', hero: w.id, skill: 'lore', dc: 13, label: 'questions the captive' }]; }
-        return [];
-      },
-      resolve(s, e, ok) {
-        const c = byDriveLive(s, 'duty'), w = byDriveLive(s, 'curiosity'), g = byDriveLive(s, 'glory');
-        const debate = ['The players argued about it for ten minutes', 2];
-        const ambush = () => { const t = ambushStack(s); e.ambush = t; };
-        const T = e.choice, D = e.decision;
-        if (D === 'spare') {
-          if (T === 'honest') { const xp = lvXp(s, 0.1); giveXp(s, xp); return { text: `He thanks them through tears and limps away toward Millbrook. (+${xp} XP)`, th: [debate, ['Showed mercy to a deserter', 1 + db(s, c, 3), c]] }; }
-          if (T === 'liar') { ambush(); return { text: 'As they turn their backs, he whistles. His friends burst from the brush!', th: [debate, ['The captive was bait. Ambush!', 3]] }; }
-          const xp = lvXp(s, 0.16); s.omens++; giveXp(s, xp); return { text: `Grateful, he tells them how ${vName(s)} ${vType(s).origin}. (+1 omen, +${xp} XP)`, th: [debate, ['Mercy paid off with secrets', 2 + db(s, c, 2), c]] };
-        }
-        if (D === 'kill') {
-          if (T === 'liar') { ambush(); return { text: 'His hidden friends see him fall and charge out for revenge!', th: [debate, ['The captive\'s friends wanted revenge', 3, g]] }; }
-          return { text: T === 'secrets' ? 'It\'s quick. Whatever he knew dies with him.' : 'It\'s quick. The cleric looks away.', th: [debate, ['Finished the captive', 1 + db(s, g, 1), g]] };
-        }
-        if (ok) {
-          if (T === 'liar') { const xp = lvXp(s, 0.22); giveXp(s, xp); return { text: `They see through the act, sneak up on his hidden friends, and send them running. (+${xp} XP)`, th: [debate, ['Saw through an ambush', 3 + db(s, w, 2), w]] }; }
-          if (T === 'secrets') { const xp = lvXp(s, 0.25); s.omens++; giveXp(s, xp); return { text: `Careful questions pull it out of him: ${vName(s)} ${vType(s).plan}. (+1 omen, +${xp} XP)`, th: [debate, ['Interrogated a captive', 3 + db(s, w, 2), w]] }; }
-          const xp = lvXp(s, 0.12); giveXp(s, xp); return { text: `He's telling the truth. They let him go. (+${xp} XP)`, th: [debate, ['Got the truth from a captive', 2 + db(s, w, 2), w]] };
-        }
-        if (T === 'liar') { ambush(); return { text: 'He stalls until his friends arrive. Ambush!', th: [debate, ['The captive stalled for an ambush', 3]] }; }
-        return { text: 'He slips his bonds in the night and escapes.', th: [debate, ['The captive escaped', 1]] };
-      }
-    },
-    riddle: {
-      art: 'riddle', intro: 'A standing stone carved with a riddle. The answer opens a hidden cache.',
-      choices: [
-        { k: 'simple', label: 'A simple riddle', dc: 10, text: 'DC 10. Small reward, mild sting.' },
-        { k: 'cryptic', label: 'A cryptic riddle', dc: 14, text: 'DC 14. Good reward.' },
-        { k: 'maddening', label: 'A maddening riddle', dc: 18, text: 'DC 18. Big reward; failure curses everyone.' }
-      ],
-      plan(s, e) { const w = bestFor(s, 'lore'); return [{ type: 'check', hero: w.id, skill: 'lore', dc: e.dc, label: 'works out the riddle' }]; },
-      resolve(s, e, ok) {
-        const w = byDriveLive(s, 'curiosity'); const h = s.heroes.find(x => x.id === e.steps[0].hero);
-        const xp = lvXp(s, { simple: 0.1, cryptic: 0.2, maddening: 0.32 }[e.choice]);
-        if (ok) { giveXp(s, xp); return { text: `${h.name} speaks the answer. The stone slides aside. (+${xp} XP)`, th: [[`${h.name} solved a ${e.choice} riddle`, 2 + (e.choice === 'maddening' ? 2 : 0) + db(s, w, 3), h]] }; }
-        const n = { simple: 1, cryptic: 2, maddening: 3 }[e.choice];
-        const r = dmgRecord('The stone\'s curse', n, 6, n * Math.floor(avgLevel(s) / 2)); e.extraRolls.push(r);
-        for (const x of living(s)) x.hp = Math.max(1, x.hp - r.dmg.total);
-        return { text: `Wrong answer. The carvings flare and a curse stings everyone (${r.dmg.total} damage each).`, th: [['Argued over a riddle and lost', 1]] };
-      }
-    },
-    tourney: {
-      art: 'tourney', intro: 'Millbrook holds its tournament. The party\'s champion rides into the lists. Who waits at the other end?',
-      choices: [
-        { k: 'local', label: 'The village favorite', bonus: 3, text: '+3 to their rolls. Small reward.' },
-        { k: 'knight', label: 'A knight errant', bonus: 6, text: '+6 to their rolls. Good reward.' },
-        { k: 'grand', label: 'The grand champion', bonus: 9, text: '+9 to their rolls. Win an artifact.' }
-      ],
-      plan(s, e) {
-        const h = bestFor(s, 'might'); e.narr.push(`${h.name} rides out as the party's champion.`);
-        const name = { local: 'the village favorite', knight: 'the knight errant', grand: 'the grand champion' }[e.choice];
-        return [1, 2, 3].map(i => ({ type: 'opposed', hero: h.id, skill: 'might', foe: name, foeBonus: e.bonus, label: `Joust ${i}` }));
-      },
-      resolve(s, e, ok, wins) {
-        const h = s.heroes.find(x => x.id === e.steps[0].hero); const g = byDriveLive(s, 'glory');
-        const xp = lvXp(s, { local: 0.12, knight: 0.22, grand: 0.32 }[e.choice]);
-        if (wins >= 2) {
-          giveXp(s, xp); let extra = '';
-          if (e.choice === 'grand') extra = ' The prize: ' + grantArtifact(s, randomArtifact(s));
-          return { text: `${h.name} wins the tournament! The crowd roars. (+${xp} XP)${extra}`, th: [['Won the Millbrook tournament', 3 + (e.choice === 'grand' ? 3 : e.choice === 'knight' ? 2 : 0) + db(s, g, 3), h]] };
-        }
-        h.hp = Math.max(1, Math.round(h.hp * 0.85));
-        return { text: `${h.name} is unhorsed and limps off to polite applause.`, th: [['Lost the tournament, but what a show', 1]] };
-      }
-    }
-  };
-  function ambushStack(s) {
-    const pp = partyPower(s); let best = ['goblin', 12];
-    for (const t of ['goblin', 'orc', 'wolf']) for (const k of [1, 1.5, 2, 3, 4]) { const n = Math.round(CREATURES[t].base * k); const j = judge(pp / stackPower(t, n), 0); if (j === 'worthy') best = [t, n]; }
-    return best;
-  }
-  function makeEncounter(s, o) {
-    const E = ENC[o.kind];
-    const tier = Math.floor((avgLevel(s) - 1) / 2);
-    const choices = E.choices.map(c => { const x = Object.assign({}, c); if (x.dc) { x.dc += tier; x.text = x.text.replace(/DC \d+/, 'DC ' + x.dc); } if (x.bonus) { x.bonus += tier; x.text = x.text.replace(/\+\d+ to their rolls/, `+${x.bonus} to their rolls`); } return x; });
-    return { id: o.id, kind: o.kind, name: ITEMS[o.kind].name, art: E.art, stage: 'setup', intro: E.intro, choices, choice: null, steps: [], idx: 0, rolls: [], extraRolls: [], narr: [], fudged: false, canFudge: false, wins: 0, outcome: null };
-  }
-  function encChoose(s, k) {
-    const e = s.enc; if (!e || e.stage !== 'setup') return 'No encounter to set up.';
-    const E = ENC[e.kind]; const ch = e.choices.find(c => c.k === k); if (!ch) return 'Unknown choice.';
-    e.choice = k; e.dc = ch.dc; e.bonus = ch.bonus; e.stage = 'rolling';
-    e.steps = E.plan(s, e);
-    if (!e.steps.length) e.stage = 'ready';
-    return null;
-  }
-  function encRoll(s) {
-    const e = s.enc; if (!e || e.stage !== 'rolling') return null;
-    const st = e.steps[e.idx]; const h = s.heroes.find(x => x.id === st.hero);
-    let rec;
-    if (st.type === 'opposed') {
-      const a = d20(), b = d20(); const ab = skillBonus(h, st.skill);
-      rec = { t: 'roll', kind: 'opposed', title: `${st.label}: ${h.name} vs ${st.foe}`, who: h.name, a: { name: h.name.split(' ')[0], d20: [a], bonus: ab, total: a + ab }, b: { name: st.foe.replace(/^the /, ''), d20: [b], bonus: st.foeBonus, total: b + st.foeBonus } };
-      rec.result = rec.a.total >= rec.b.total ? 'success' : 'fail';
-    } else rec = check(h, st.skill, st.dc, `${h.name} ${st.label}`);
-    e.rolls.push(rec); e.idx++;
-    if (rec.result === 'success') e.wins++;
-    e.canFudge = false; // 0.19: no more fudging encounter rolls (it cost Lore)
-    e.pendingFail = rec.result === 'fail' ? st : null;
-    if (e.idx >= e.steps.length) e.stage = 'ready';
-    return rec;
-  }
-  function encFudge(s) {
-    const e = s.enc; if (!e || !e.canFudge) return 'Nothing to fudge.';
-    const rec = e.rolls[e.rolls.length - 1];
-    s.engagement = clamp(s.engagement - 3, 0, 100);
-    rec.result = 'success'; rec.fudged = true; e.fudged = true; e.canFudge = false; e.wins++; e.pendingFail = null;
-    return null;
-  }
-  // apply consequences of a failed step that wasn't fudged (called before the next roll or the finish)
-  function encSettle(s) {
-    const e = s.enc; if (!e || !e.pendingFail) return null;
-    const E = ENC[e.kind]; const st = e.pendingFail; e.pendingFail = null; e.canFudge = false;
-    return E.onFail ? E.onFail(s, e, st) : null;
-  }
-  function encFinish(s) {
-    const e = s.enc; if (!e || e.stage !== 'ready') return null;
-    const fr = encSettle(s); if (fr) e.extraRolls.push(fr);
-    const E = ENC[e.kind];
-    const ok = e.steps.length ? e.wins >= Math.ceil(e.steps.length / 2) : true;
-    const out = E.resolve(s, e, ok, e.wins);
-    const lines = [];
-    for (const [label, v, h] of out.th) { thrill(s, label, v, h && h.id); lines.push({ label, v }); }
-    s.todayActive = true;
-    e.outcome = { text: out.text, lines, ok };
-    if (!ok) e.outcome.infamy = addInfamy(s, 2, `The heroes stumbled at the ${e.name}`);   // 0.30: their failures are your fame
-    e.stage = 'done';
-    say(s, `${e.name}: ${out.text}`, ok ? 'good' : 'note');
-    return e.outcome;
-  }
-  function encClose(s) {
-    const e = s.enc; if (!e || e.stage !== 'done') return null;
-    s.objects = s.objects.filter(o => o.id !== e.id);
-    questCheck(s, { kind: 'obj', id: e.id });
-    s.enc = null;
-    if (e.ambush) { s.phase = 'map'; startBattle(s, null, { stacks: [e.ambush] }); return 'battle'; }
-    s.phase = 'map'; planRoute(s);
-    return 'map';
-  }
-
   /* ================= days and weeks ================= */
   function endDay(s) {
     if (s.phase !== 'map') return;
@@ -3563,12 +3278,10 @@
     const march = s.recap.march;
     s.recap = null; s.phase = 'map';
     reveal(s);
-    weeklyWilds(s);
+    weeklyWilds(s); weeklyRelics(s);
     if (march) startMarch(s, 'bored');
     planRoute(s);
   }
-  // expectations rise for the first two months, then hold
-  const weeklyDrain = s => 18 + 2 * Math.min(s.week, 8);
   // the party sets out for the final showdown: because they feel ready, or because they are bored of waiting
   function startMarch(s, why) {
     if (s.march) return;
@@ -3576,7 +3289,6 @@
     const V = s.villain;
     if (V.state !== 'lair') { V.state = 'lair'; V.banish = 0; V.known = false; }
     V.path = []; V.target = null; V.meet = null; V.goHome = false; V.hpFrac = 1;   // 0.31: home for the showdown
-    s.townEvent = null;
     for (const q of s.quests) if (q.status === 'open' && !(q.ref.kind === 'site' && q.ref.id === 'tower')) q.status = 'void';
     say(s, why === 'bored' ? 'The players have had enough of waiting around. "Let\'s just go fight the boss!" The party marches on the Dark Tower, ready or not.' : why === 'maxed' ? `The heroes can't grow any stronger. Ready or not, they march on the Dark Tower to face ${vName(s)}.` : `The heroes feel ready. They march on the Dark Tower to end ${vName(s)}'s reign. ${vName(s)} returns to the throne to meet them.`, 'boss');
     planRoute(s);

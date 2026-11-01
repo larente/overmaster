@@ -1224,12 +1224,31 @@ const World3D = (() => {
       if ((o.level || 1) >= 2 && !g.userData.sprite) { const b = new M.Builder(4); for (const [x, z] of [[-0.42, -0.35], [0.45, -0.3]]) { b.seg([x, 0, z], [x, 0.62, z], 0.012, 0.012, '#3a2a1a'); b.add(new T.BoxGeometry(0.14, 0.18, 0.005), '#8a1a1a', { x: x + 0.075, y: 0.52, z }); b.add(new T.ConeGeometry(0.02, 0.05, 4), '#d8b040', { x, y: 0.64, z }); } const m = new T.Mesh(b.build(), M.MAT.body); m.castShadow = true; g.add(m); }
       return g;
     }
+    // 0.36: a relic: the artifact's picture (or its own art, once there is some), wrapped in its tier's glow and winking stars
+    if (o.kind === 'relic') {
+      const g = prop(SPR.art.has('obj-relic') ? 'relic' : 'artifact', null, 'artifact'); g.scale.setScalar(0.85); const col = RELIC_GLOW[o.tier] || RELIC_GLOW[1];
+      const ring = M.circleMesh(col, 0.9, 0.55); ring.position.y = 0.03; if (g.userData.prop) ring.renderOrder = 0; g.add(ring); g.userData.ring = ring;
+      const fx = new T.Group(); const mk = (tex, c, ro) => { const sp = new T.Sprite(new T.SpriteMaterial({ map: tex.tex, color: new T.Color(c), transparent: true, depthWrite: false, toneMapped: false, blending: T.AdditiveBlending })); sp.renderOrder = ro; fx.add(sp); return sp; };
+      const aura = mk(glowTex(), col, 0.45); const stars = []; for (let i = 0; i < 7; i++) stars.push(mk(starTex(), '#ffffff', 0.7));
+      g.add(fx); g.userData.relic = { fx, aura, stars, W: (g.userData.w || 0.7), H: (g.userData.top || 0.7) };
+      return g;
+    }
     const g = prop(o.kind);
     if (G.ITEMS[o.kind] && G.ITEMS[o.kind].cat === 'trap') { const ring = M.circleMesh('#ff3a2a', 0.8, 0.55); ring.position.y = 0.03; if (g.userData.prop) ring.renderOrder = 0; g.add(ring); g.userData.ring = ring; g.userData.trap = true; }
     if (o.kind === 'artifact') g.userData.spin = g.userData.glow;
     return g;
   }
-  const objKey = o => o.kind === 'stack' ? 'st:' + o.type + ':' + stackFigs(o.type, o.count) : o.kind === 'dungeon' ? 'lr:' + o.dtype + ':' + (o.level || 1) : 'it:' + o.kind;
+  const RELIC_GLOW = ['', '#8fb4e0', '#b07aff', '#ffc040'];
+  // a relic glows and twinkles on its own clock
+  function runRelicFx(R, t, seed) {
+    const b = 0.75 + 0.25 * Math.sin(t * 2.2 + seed); R.aura.position.set(0, R.H * 0.45, -0.02); R.aura.scale.set(R.W * 1.9 * b, R.H * 1.7 * b, 1); R.aura.material.opacity = 0.55 * b;
+    R.stars.forEach((sp, i) => {
+      const P = 1.4, ph = t / P + i / R.stars.length + seed * 0.31, a = ph % 1, c = Math.floor(ph); const k = Math.sin(Math.PI * a);
+      const sz = (0.06 + 0.08 * fxHash(c, i + 1)) * k; sp.scale.set(sz, sz, 1); sp.material.opacity = k; sp.material.rotation = a;
+      sp.position.set((fxHash(c, i + 3) - 0.5) * R.W * 1.2, R.H * (0.1 + 1.0 * fxHash(c + 2, i + 7)) + a * 0.06, 0.08);
+    });
+  }
+  const objKey = o => o.kind === 'relic' ? 'rl:' + o.tier : o.kind === 'stack' ? 'st:' + o.type + ':' + stackFigs(o.type, o.count) : o.kind === 'dungeon' ? 'lr:' + o.dtype + ':' + (o.level || 1) : 'it:' + o.kind;
 
   /* --- per-frame map update --- */
   const spec = { tiles: null, sight: null, ghost: null, path: null, pathColor: '#9cc4ff', pathColors: null, sel: null, minSel: null, minHover: null };
@@ -1281,6 +1300,7 @@ const World3D = (() => {
         if (ap) u.figs.forEach((f, i) => { f.position.y += Math.abs(Math.sin(t * 14 + i)) * 0.05; });
       }
       if (u.spin) { u.spin.rotation.y = t * 1.5; u.spin.position.y = Math.sin(t * 2) * 0.04; }
+      if (u.relic) { if (u.quad) fxOnQuad(u.relic.fx, u.quad); runRelicFx(u.relic, t, o.x * 1.3 + o.y * 0.7); if (u.ring) u.ring.material.opacity = 0.4 + 0.2 * Math.sin(t * 2.2 + o.x); }
       if (u.fx) {
         const crew = hooks.lairCrew ? hooks.lairCrew(o) : 0; const work = crew ? Math.min(1, 0.45 + crew * 0.3) : 0;
         if (u.rise) {
@@ -1435,6 +1455,7 @@ const World3D = (() => {
       return { cls: 'l-stack' + (o.patrol ? ' patrol' : ''), html: `<b>${o.count}</b>${ml ? `<span class="mlv c-${ml.cls}">Lv ${ml.L}</span>` : (o.lvl || 1) > 1 ? `<span class="lv">★${o.lvl}</span>` : ''}${known}${qt}` }; }
     if (o.kind === 'dungeon') return { cls: 'l-lair' + (o.mine ? ' mine' : ''), below: true, html: `${esc(G.DUNGEONS[o.dtype].name)}${(o.level || 1) > 1 ? ' <span class="lv">II</span>' : ''}${o.mine && hooks.lairLabel ? ' ' + hooks.lairLabel(o) : ''}${known}${qt}` };
     if (G.ITEMS[o.kind] && G.ITEMS[o.kind].cat === 'trap') return null;
+    if (o.kind === 'relic') return { cls: 'l-relic t' + o.tier, below: true, html: ['', 'Lesser relic', 'Greater relic', 'Legendary relic'][o.tier] || 'Relic' };
     if (known || qt) return { cls: 'l-item', html: known + qt };
     return null;
   }
@@ -1487,7 +1508,7 @@ const World3D = (() => {
     if (W.lib) { at(W.lib, LIB_AT); const u = W.lib.userData; if (u.fx) { if (u.quad) fxOnQuad(u.fx, u.quad); runFx(u.fx, t, lb.crew ? 1 : 0.6, (u.top || 0.5) * 0.35, 0.8, 1); } }
   }
   function syncFlags(S, t) {
-    // visited landmarks get a red flag; a tournament puts banners by town
+    // visited landmarks get a red flag
     for (const s of G.sitesOf(S)) {
       if (s.kind !== 'landmark') continue;
       const g = MAP.sites[s.id]; if (!g) continue;
@@ -1495,11 +1516,6 @@ const World3D = (() => {
         const b = new M.Builder(3); b.seg([0, 0, 0], [0, 0.6, 0], 0.01, 0.01, '#4a2a12'); b.add(new T.BoxGeometry(0.18, 0.11, 0.005), '#c8302a', { x: 0.09, y: 0.53 });
         const m = new T.Mesh(b.build(), M.MAT.body); m.position.set(0.45, 0, 0.35); m.castShadow = true; g.add(m); g.userData.flag = m;
       }
-    }
-    const town = MAP.sites.town;
-    if (town) {
-      if (S.townEvent && !town.userData.tourney) { const tg = prop('tourney'); tg.position.set(-0.7, 0, 0.75); tg.scale.setScalar(1.3); town.add(tg); town.userData.tourney = tg; }
-      if (!S.townEvent && town.userData.tourney) { town.remove(town.userData.tourney); town.userData.tourney = null; }
     }
   }
 

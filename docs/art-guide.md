@@ -236,6 +236,9 @@ Licence: sound effects from a paid ElevenLabs plan can be used commercially. Ele
 - `python3 tools/voice_import.py --voice out-voice --talk out` evens out the voices and writes `art/voice/<hero>.mp3` and `art/talk/<hero>.webp`. Since 0.20.1 each hero's 14 lines go in one mono 64 kbps MP3, with 0.4 seconds of silence between lines, and each hero's 7 mouth shapes go in one strip. That keeps the published game under the artifact's limit of 511 files. The `voice` and `talk` lists in `art/manifest.json` say where each line starts (`at`) and how long it runs (`dur`), along with its lip-sync plan. The script replaces the old one-file-per-line layout.
 - To change a line: edit it in `hero_lines.json`, then `elevenlabs_gen.py heroes <hero>` (it re-speaks only the lines whose text changed; `--redo` re-speaks them all) and `pixellab_gen.py talk <hero>` for the new plan (free).
 
+## Relics (alpha 0.36)
+Relics on the map borrow the artifact's picture until `python3 pixellab_gen.py objects relic` makes their own (a cracked black altar with a glowing violet crystal skull); import as for any map object, and the game uses `obj-relic` from then on. The relics themselves are drawn in code: 19 small SVG pictures (crown, jar, boots, eye, horn, idol, pick, book, mask, hourglass, banner, bell, chalice, ring, cloak, sword, orb, gem, mirror) in their tier's colours, red for cursed ones.
+
 ## Minion and villain order lines (alpha 0.35)
 Every minion has five `ack` lines (an answer to any order: "As you command", "I was going there anyway") and every villain four `order` lines (for when you send them somewhere), in `tools/hero_lines.json`. Record them with `python3 elevenlabs_gen.py minions` and `python3 elevenlabs_gen.py villains` (only lines not yet recorded are spoken), then import as for the other voices.
 

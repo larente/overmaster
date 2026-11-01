@@ -20,6 +20,7 @@ Run it in Terminal:
     python3 ~/Documents/bts-art/pixellab_gen.py intro scenes    # just the scenes (or: intro storyteller, intro A G)
     python3 ~/Documents/bts-art/pixellab_gen.py moves           # 0.35: the six minions walking and building, in all 8 directions
     python3 ~/Documents/bts-art/pixellab_gen.py moves thrall    # just these (or: moves walk, moves build)
+    python3 ~/Documents/bts-art/pixellab_gen.py objects relic   # 0.36: the relics' spot on the map
 
 It reads your PixelLab token from pixellab-token.txt (or the .rtf TextEdit makes) in this folder and
 never prints it. Each character's 8 directions are saved in out/<name>/. Progress goes to log.txt.
@@ -690,6 +691,8 @@ OBJECTS = {
     # things on the map
     'chest': ('wooden treasure chest with iron bands, lid open, gold coins and gems inside', 96),
     'artifact': ('magic artifact: an ornate golden amulet floating above a small stone pedestal, magical glow', 96),
+    # 0.36: a relic only the villain can sense, half buried where it lies on the map
+    'relic': ('dark relic: a cracked black stone altar half sunk in the earth, a small glowing violet crystal skull resting on it, thin purple wisps rising', 96),
     'shrine': ('small healing shrine: a stone altar with a glowing blue crystal and candles', 112),
     'refugees': ('refugee camp: two patched tents, a campfire and bundles of belongings', 128),
     'omen': ('omen stone: a tall standing stone carved with a glowing purple sigil', 112),
