@@ -620,6 +620,11 @@
    "pixel": true,
    "sprite": "objects/obj-g-farm-2.webp"
   },
+  "obj-g-farm-3": {
+   "icon": "objects/obj-g-farm-3.webp",
+   "pixel": true,
+   "sprite": "objects/obj-g-farm-3.webp"
+  },
   "obj-g-muster": {
    "icon": "objects/obj-g-muster.webp",
    "pixel": true,
