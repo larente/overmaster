@@ -1475,7 +1475,7 @@
     return `<div class="squeue">${q.map((it, i) => `<div class="prow">${img(minionIcon(), 'ticon')}${pbar(i ? 0 : 1 - it.days / it.total, 'summon')}<small>${i ? 'waiting' : `${it.days} day${it.days > 1 ? 's' : ''} left`}</small><button class="lnk" data-act="unsummon" data-i="${i}" title="Cancel and get the gold back">cancel</button></div>`).join('')}</div>`;
   }
   function dawn() {
-    ui.moving = false;
+    ui.moving = false; track('day');
     const n = S.lastDay;
     if (n) {
       const got = G.RES_KEYS.filter(k => n.res[k]).map(k => `+${n.res[k]} ${k}`).join(', ');
@@ -2283,6 +2283,7 @@
   }
   function showOver() {
     const res = S.result; const won = res === 'razed' || res === 'wiped';
+    if (!S.trackedOver) { S.trackedOver = true; track('over'); }
     save(true); syncAudio(); sfx(won ? 'win' : 'lose');
     if (!won && res === 'defeat') setTimeout(() => { if (vsay('lose', { prio: 3, force: true })) bark('win', null, { queue: true, force: true }); else bark('win', null, { force: true }); }, 1500);
     if (won) setTimeout(() => vsay('win', { prio: 3, force: true }), 1500);
@@ -3144,6 +3145,14 @@
     Object.assign(ui, { mode: null, fog: null, threat: null, broute: null, place: null, mbuild: false, hoverMin: null, miniCam: '', sel: null, moving: false, anim: null, manim: null, est: null, estKey: '', finaleEst: null, screen: null, playing: false, view: {}, floats: [], fx: [], deploySel: null, trapMode: false, reach: null, reachKey: '', comp: {}, meter: null, fair: null, autoBattle: true });
     terrainKey = null; miniBase = null;
   }
+  // 0.36: anonymous progress for the alpha (how far campaigns get); play time only counts while someone is actually playing
+  function track(ev) { if (typeof Store !== 'undefined' && Store.track && S && !S.title) Store.track(S, ev); }
+  ui.lastInput = Date.now();
+  for (const ev of ['pointerdown', 'keydown', 'wheel']) addEventListener(ev, () => { ui.lastInput = Date.now(); }, { passive: true, capture: true });
+  setInterval(() => {
+    if (!ui.active || !S || S.title || S.phase === 'over' || document.hidden || Date.now() - ui.lastInput > 120000) return;
+    S.playSec = (S.playSec || 0) + 15;
+  }, 15000);
   function open(state, opts) {
     opts = opts || {};
     ensureBoot();
@@ -3168,6 +3177,7 @@
       else if (S.phase === 'over') showOver();
       else if (opts.fresh) setTimeout(() => { if (ui.active && S && !ui.modal) vsay('intro', { prio: 3, force: true }); }, 1400);   // 0.35: no rules popup; the villain just speaks
       morning();
+      track(opts.fresh ? 'start' : 'resume');
     });
   }
   function close() {

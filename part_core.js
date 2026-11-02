@@ -2662,6 +2662,7 @@
   // a band comes over to your side: it marches on Millbrook (once it has healed, if you beat it)
   function joinYou(s, o, how) {
     Object.assign(o, { wild: false, yours: true, lair: null, known: true, patrol: null, sulk: 0, home: null, joined: how });
+    s.recruitedTotal = (s.recruitedTotal || 0) + 1;   // 0.36: for the progress tracker
     o.wave = !(o.healUntil > dayIndex(s));
     const C = CREATURES[o.type]; const nm = (o.count > 1 ? C.name : C.one).toLowerCase();
     say(s, how === 'surrender' ? `The ${nm} kneel to ${vName(s)}. Once their wounds have closed, they will march on Millbrook.` : how === 'gold' ? `${vName(s)} pays the ${nm}. They march on Millbrook.` : `The ${nm} swear themselves to ${vName(s)} and march on Millbrook.`, 'dm');

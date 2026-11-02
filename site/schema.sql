@@ -57,6 +57,70 @@ create or replace view public.feedback_inbox with (security_invoker = true) as
   order by f.created_at desc;
 revoke all on public.feedback_inbox from anon, authenticated;
 
+-- How far each campaign gets (0.36): one row per campaign, kept up to date as it's played (when a campaign
+-- starts, after every day, and when it ends). Anonymous unless the player is signed in. Only track_progress()
+-- writes it, and only the device that started a campaign can update it; nobody can read it through the game.
+-- Read it in Supabase: Table Editor -> progress_report (the funnel) and progress_recent (each campaign).
+create table if not exists public.progress (
+  campaign text primary key check (char_length(campaign) <= 100),
+  device text not null check (char_length(device) <= 60),
+  user_id uuid references auth.users (id) on delete set null,
+  game_version text, villain text, map text,
+  started_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  week int, day int, days int, villain_level int, hero_level int,
+  lairs int, mines int, collected int, relics int, recruits int, sieges int,
+  play_minutes int, result text, last_event text, context jsonb
+);
+create index if not exists progress_updated on public.progress (updated_at desc);
+alter table public.progress enable row level security;   -- no policies on purpose: only track_progress() writes
+create or replace function public.safe_int(t text) returns int language sql immutable as $$
+  select case when t ~ '^-?[0-9]{1,7}$' then t::int end $$;
+create or replace function public.track_progress(p jsonb) returns void
+language plpgsql security definer set search_path = public as $$
+declare c text := left(coalesce(p->>'campaign', ''), 100); d text := left(coalesce(p->>'device', ''), 60);
+begin
+  if c = '' or d = '' then return; end if;
+  insert into public.progress as t (campaign, device, user_id, game_version, villain, map, week, day, days, villain_level, hero_level,
+      lairs, mines, collected, relics, recruits, sieges, play_minutes, result, last_event, context)
+    values (c, d, auth.uid(), left(p->>'version', 30), left(p->>'villain', 30), left(p->>'map', 12),
+      safe_int(p->>'week'), safe_int(p->>'day'), safe_int(p->>'days'), safe_int(p->>'villain_level'), safe_int(p->>'hero_level'),
+      safe_int(p->>'lairs'), safe_int(p->>'mines'), safe_int(p->>'collected'), safe_int(p->>'relics'), safe_int(p->>'recruits'), safe_int(p->>'sieges'),
+      safe_int(p->>'play_minutes'), left(p->>'result', 20), left(p->>'event', 20), case when pg_column_size(p->'context') < 4000 then p->'context' end)
+  on conflict (campaign) do update set
+      updated_at = now(), user_id = coalesce(excluded.user_id, t.user_id), game_version = excluded.game_version,
+      week = excluded.week, day = excluded.day, days = excluded.days, villain_level = excluded.villain_level, hero_level = excluded.hero_level,
+      lairs = excluded.lairs, mines = excluded.mines, collected = excluded.collected, relics = excluded.relics, recruits = excluded.recruits,
+      sieges = excluded.sieges, play_minutes = excluded.play_minutes, result = coalesce(excluded.result, t.result), last_event = excluded.last_event,
+      context = coalesce(excluded.context, t.context)
+    where t.device = excluded.device;
+end $$;
+revoke all on function public.track_progress(jsonb) from public;
+grant execute on function public.track_progress(jsonb) to anon, authenticated;
+-- The funnel, by version: how many campaigns got how far (every campaign starts with one lair, so "built" means a second)
+drop view if exists public.progress_report;
+create view public.progress_report with (security_invoker = true) as
+  select game_version, count(*) as campaigns, count(distinct device) as players,
+         count(*) filter (where days >= 3) as played_3_days, count(*) filter (where mines > 0) as opened_a_mine,
+         count(*) filter (where collected > 0) as collected, count(*) filter (where lairs > 1) as built_a_lair,
+         count(*) filter (where relics > 0) as found_a_relic, count(*) filter (where recruits > 0) as recruited,
+         count(*) filter (where week >= 2) as reached_week_2, count(*) filter (where week >= 4) as reached_week_4,
+         count(*) filter (where result is not null) as finished, count(*) filter (where result in ('razed', 'wiped')) as won,
+         round(percentile_cont(0.5) within group (order by days)::numeric, 1) as median_days,
+         round(percentile_cont(0.5) within group (order by play_minutes)::numeric, 0) as median_minutes,
+         max(updated_at) as last_played
+  from public.progress group by game_version order by max(updated_at) desc;
+revoke all on public.progress_report from anon, authenticated;
+-- Each campaign, most recently played first
+drop view if exists public.progress_recent;
+create view public.progress_recent with (security_invoker = true) as
+  select p.updated_at, p.started_at, u.email as account_email, p.device, p.game_version, p.villain, p.map,
+         p.week, p.day, p.days, p.play_minutes, p.villain_level, p.hero_level, p.mines, p.collected, p.lairs, p.relics,
+         p.recruits, p.sieges, p.result, p.last_event, p.context ->> 'screen' as screen
+  from public.progress p left join auth.users u on u.id = p.user_id
+  order by p.updated_at desc;
+revoke all on public.progress_recent from anon, authenticated;
+
 -- Unlocks (0.22): what each player owns. Players can read their own; only the server writes them
 -- (the stripe-webhook function, or you in the SQL Editor). There are no insert, update or delete
 -- policies on purpose: the game can never grant itself anything.

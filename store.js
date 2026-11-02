@@ -291,8 +291,27 @@ const Store = (() => {
     sb.from('feedback').insert(row).then(() => {}, () => {});
   }
 
+  /* ---------- 0.36: how far each campaign gets (one anonymous row per campaign, see progress in schema.sql) ---------- */
+  function deviceId() {
+    try { let d = localStorage.getItem('om-device'); if (!d) { d = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)); localStorage.setItem('om-device', d); } return d; }
+    catch (e) { return 'nostore-' + Math.random().toString(36).slice(2, 10); }
+  }
+  function track(s, event) {
+    if (!sb || !s || s.title) return;
+    try {
+      const dev = deviceId(); const col = s.collected || {};
+      const p = { campaign: (dev + ':' + (s.created || s.seed)).slice(0, 100), device: dev, version: VERSION, event, villain: s.villain && s.villain.type, map: G.sizeKey ? G.sizeKey(s) : '',
+        week: s.week, day: s.day, days: G.dayIndex(s), villain_level: G.villainLevel(s), hero_level: G.avgLevel(s),
+        lairs: G.builtLairs(s).length, mines: (s.nodes || []).filter(n => n.dev).length, collected: Math.round((col.gold || 0) + (col.lumber || 0) + (col.ore || 0)),
+        relics: (s.villain && s.villain.relics && s.villain.relics.found || []).length, recruits: s.recruitedTotal || G.commanded(s), sieges: s.siegeCount || 0,
+        play_minutes: Math.round((s.playSec || 0) / 60), result: s.phase === 'over' ? (s.result || 'over') : null,
+        context: { screen: `${innerWidth}x${innerHeight}`, view3d: document.body.classList.contains('view3d'), touch: matchMedia('(hover: none)').matches } };
+      sb.rpc('track_progress', { p }).then(() => {}, () => {});
+    } catch (e) { /* never let this get in the way of the game */ }
+  }
+
   return {
-    VERSION, SLOTS, slotLabel, isAuto, autoSlot, cloudReady: () => cloudReady && !!sb, google: CFG.googleSignIn ? google : null, feedbackEmail: CFG.feedbackEmail || '',
+    track, VERSION, SLOTS, slotLabel, isAuto, autoSlot, cloudReady: () => cloudReady && !!sb, google: CFG.googleSignIn ? google : null, feedbackEmail: CFG.feedbackEmail || '',
     init, user: () => user, onAuth: cb => authCbs.push(cb), recovering: () => recovery,
     signUp, signIn, magicLink, forgot, setPassword, rename, signOut, entitlements, invoke, redeem, isAdmin, adminMakeCodes, adminCodes, adminSetCode,
     list, save, load, remove, latest, autosave, flush, status: () => status,

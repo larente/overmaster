@@ -176,6 +176,15 @@ Testers can send feedback from the title screen or the in-game **Menu**. The gam
 - `context` has the game version, screen size, browser and where the tester was in their campaign.
 - If the tester attached their game, `save_state` holds it. To play their exact campaign: copy the `save_state` value into a file ending in `.json`, then in the game choose **Load game → Import a save file**.
 
+## How far testers get (0.36)
+
+The game keeps one anonymous row per campaign in the `progress` table and updates it when the campaign starts, at every dawn and when it ends. It records the version, villain, map size, week and day, the levels, mines opened, resources collected, lairs, relics, bands recruited, attacks on Millbrook, minutes actually played (time with the tab open and no input for two minutes doesn't count), the result and the screen size. A tester is identified only by a random id kept in their browser, plus their account if they're signed in. Nobody can read the table through the game.
+
+To switch it on, paste the whole of `supabase/schema.sql` into the **SQL Editor** again and click **Run** (it's safe to re-run). Then:
+
+- **Table Editor → progress_report** (or `select * from progress_report;`) is the funnel for each version: how many campaigns started, played three days, opened a mine, collected from one, built a second lair, found a relic, recruited a band, reached weeks 2 and 4, finished and won, with the median days and minutes played.
+- **Table Editor → progress_recent** (or `select * from progress_recent;`) lists each campaign, most recently played first, with the tester's email when they were signed in.
+
 ## Updating the game
 
 From GitHub (option A), updates go live on their own when the new version is pushed. With drag and drop (option B): when you get a new build, keep your `config.js` and replace everything else. In Cloudflare, open the project, select **Create a new deployment**, choose **Production**, and drag the folder in. Players' saves aren't affected. Saves from older builds are upgraded when they load.
