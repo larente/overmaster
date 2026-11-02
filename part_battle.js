@@ -37,7 +37,7 @@
   };
   function los(b, a, z) {
     const L = hexLine(a, z);
-    for (let i = 1; i < L.length - 1; i++) { const t = b.tiles[L[i]]; if (t && TILE_INFO[t].sight) return false; }
+    for (let i = 1; i < L.length - 1; i++) { const t = b.tiles[L[i]]; if (t && TILE_INFO[t].sight && !(t === 'wall' && (i === 1 || i === L.length - 2))) return false; }
     return true;
   }
   const conscious = u => u.alive && !u.down;
@@ -102,7 +102,7 @@
     if (u.P.breath) add('breath', !u.cd.breath && heroes.length > 0, u.cd.breath ? 'Recharging. Each turn it recharges on a roll of 5 or 6.' : 'No target.');
     if (u.P.hellfire) add('hellfire', !u.cd.hellfire && heroes.some(h => los(b, u.pos, h.pos)), u.cd.hellfire ? cdTxt('hellfire') : 'No hero in sight.');
     if (u.P.orb) add('orb', !u.cd.orb && heroes.some(h => los(b, u.pos, h.pos)), u.cd.orb ? cdTxt('orb') : 'No hero in sight.');
-    if (u.P.charm) add('charm', !u.cd.charm && heroes.length > 0, cdTxt('charm'));
+    if (u.P.charm) add('charm', !u.cd.charm && heroes.some(x => !x.structure), cdTxt('charm'));
     if (u.P.blink) add('blink', !u.cd.blink && !u.blinked, u.blinked ? 'Already blinked this turn.' : cdTxt('blink'));
     if (u.servants) add('servants', !u.raised && u.hp < u.maxHp * 0.6, u.raised ? 'Already called this battle.' : 'Only below 60% HP.');
     if (u.P.timestop) add('timestop', !u.stopped && u.hp < u.maxHp * 0.5, u.stopped ? 'Already used this battle.' : 'Only below half HP.');
@@ -147,6 +147,50 @@
     }
     return {};
   }
+  /* 0.37: the weekly assault. Millbrook's wall runs down column 3 with the gate in the middle and its towers in the
+     wall line; behind it stand the heroes (if they're home), the militia, the bell and the town hall. Your whole war
+     camp comes at it from the right. Break the gate or a tower to get in; bring down the hall and Millbrook is razed. */
+  // the knobs, kept together for balancing (tune() changes them in the headless sims)
+  const AS = { bruteHall: 0.5, boltBoss: 1, milLv: 0.5, milHp: 1.2, frontage: 10, towerLoss: 1, campWaves: 2, rounds: 6, hallArmor: 0.2, vHall: 0.35, vFlee: 0.5, milBase: 4, milPer: 4, milYard: 2, towerHp: 90, towerHpL: 40, towerAc: 13, gateAc: 12, hallAc: 13 };
+  const GATE_HEX = hk(WALL_COL, 5), HALL_HEX = hk(0, 5), BELL_HEX = hk(0, 8);
+  const TOWER_HEX = { watch: [hk(WALL_COL, 3), hk(WALL_COL, 7)], ballista: [hk(WALL_COL, 1)], arcane: [hk(WALL_COL, 9)] };
+  const HERO_IN = [hk(2, 5), hk(2, 4), hk(2, 6), hk(2, 3), hk(2, 7)], MILITIA_IN = [hk(1, 4), hk(1, 6), hk(2, 2), hk(2, 8), hk(1, 2), hk(1, 8)];
+  const TOWER_NAME = { watch: 'Archer Tower', ballista: 'Ballista Tower', arcane: 'Arcane Tower', bell: 'Temple Bell', gate: 'Gate', hall: 'Town Hall' };
+  function makeAssaultField(r, intact, keep) {
+    const tiles = {};
+    for (let row = 0; row < BH; row++) { const k = hk(WALL_COL, row); if (keep.indexOf(k) < 0) tiles[k] = 'wall'; }
+    // a battered wall has breaches, more the worse it is (never where a tower or the gate stands)
+    const holes = intact >= 0.99 ? 0 : intact > 0.6 ? 1 : intact > 0.25 ? 2 : 3;
+    const spots = [2, 8, 0, 10, 4, 6].map(row => hk(WALL_COL, row)).filter(k => tiles[k]);
+    for (let i = 0; i < holes && spots.length; i++) delete tiles[spots.splice(Math.floor(r() * Math.min(3, spots.length)), 1)[0]];
+    const put = (type, n, cmin, cmax) => { let g = 0; while (n > 0 && g++ < 300) { const k = hk(cmin + Math.floor(r() * (cmax - cmin + 1)), Math.floor(r() * BH)); if (tiles[k]) continue; tiles[k] = type; n--; } };
+    put('brush', 2 + Math.floor(r() * 3), 6, 11); put('rock', 1 + Math.floor(r() * 2), 6, 10);
+    return tiles;
+  }
+  // a piece of Millbrook on the field: it never moves; towers shoot, the gate, the hall and the bell just stand there
+  function structure(id, kind, hp, ac, extra) {
+    return Object.assign({ id, side: 'party', wild: true, structure: true, kind, icon: 'mb-' + kind, name: TOWER_NAME[kind] || kind, one: TOWER_NAME[kind] || kind, count: 1, hp: Math.max(1, Math.round(hp)), maxHp: Math.max(1, Math.round(hp)),
+      hit: 0, ac, save: 0, dice: [0, 1, 0], extra: [], spd: 0, ranged: false, shots: 0, flyer: false, attacks: 1, alive: true, down: false, retal: false, defending: false, pos: 0, startCount: 1, turns: 0, inert: true }, extra || {});
+  }
+  const militiaCount = s => AS.milBase + AS.milPer * townLv(s, 'walls') + AS.milYard * townLv(s, 'yard') + Math.floor(avgLevel(s) * AS.milLv);
+  function assaultDefenders(s) {
+    const T = s.town; const lv = k => townLv(s, k); const out = [];
+    const wl = lv('walls'), wmax = WALL_HP[wl] || 0;
+    if (wl && (T.wallHp || 0) > 0) out.push(Object.assign(structure('mb-gate', 'gate', T.wallHp, AS.gateAc + 2 * wl, { gate: true }), { pos: GATE_HEX, wallMax: wmax }));
+    const W = lv('watch'); for (let i = 0; i < Math.min(2, W); i++) out.push(Object.assign(structure('mb-watch' + i, 'watch', AS.towerHp + AS.towerHpL * W, AS.towerAc + W, { tower: true, bk: 'watch', inert: false, ranged: true, shots: 99, hit: 4 + W + Math.floor(avgLevel(s) / 4), dice: [1, 8, 1], vol: W >= 3 ? 5 : 4 }), { pos: TOWER_HEX.watch[i] }));
+    const Bl = lv('ballista'); if (Bl) out.push(Object.assign(structure('mb-ballista', 'ballista', AS.towerHp + 30 + AS.towerHpL * Bl, AS.towerAc + 1, { tower: true, bk: 'ballista', inert: false, ranged: true, shots: 99, hit: 5 + Bl + Math.floor(avgLevel(s) / 4), dice: [3, 12, 4], vol: Bl + 1 }), { pos: TOWER_HEX.ballista[0] }));
+    const Ar = lv('arcane'); if (Ar) out.push(Object.assign(structure('mb-arcane', 'arcane', AS.towerHp + 20 + AS.towerHpL * Ar, AS.towerAc, { tower: true, bk: 'arcane', inert: false, splash: SPLASH[Ar] || 5 }), { pos: TOWER_HEX.arcane[0] }));
+    if (lv('bell')) out.push(Object.assign(structure('mb-bell', 'bell', 70, 12, { bk: 'bell', bell: true }), { pos: BELL_HEX }));
+    out.push(Object.assign(structure('mb-hall', 'hall', T.hall === undefined ? hallMax(s) : T.hall, AS.hallAc, { hall: true }), { pos: HALL_HEX }));
+    // the militia: more behind better walls, tougher with the smith, sharper with the yard
+    // (and the heroes drill them: the militia grows and toughens as the heroes' fame does)
+    const HL = avgLevel(s); const n = militiaCount(s); const sm = lv('smith');
+    const parts = []; let left = n; while (left > 0) { const c = Math.min(3, left); parts.push(c); left -= c; }
+    parts.slice(0, MILITIA_IN.length).forEach((c, i) => out.push({ id: 'mil' + i, side: 'party', wild: true, militia: true, type: 'militia', icon: 'militia', name: 'Militia', one: 'Militiaman', count: c, hp: 10 + Math.round(HL * AS.milHp), maxHp: 10 + Math.round(HL * AS.milHp),
+      hit: 3 + Math.floor(HL / 3) + (sm >= 1 ? 1 : 0), ac: 13 + Math.floor(HL / 5) + (sm >= 2 ? 1 : 0), save: 2, dice: [1, 8, 1 + Math.floor(HL / 4) + (sm >= 3 ? 2 : 0)], extra: [], spd: 5, ranged: false, shots: 0, flyer: false, attacks: 1, alive: true, down: false, retal: true, defending: false,
+      pos: MILITIA_IN[i], startCount: c, turns: 0 }));
+    return out;
+  }
   // 0.31: where a band of the wilds lines up in a duel: the heroes' side, front columns first
   const WILD_POS = []; for (const c of [1, 2, 0]) for (const r of [5, 3, 7, 1, 9, 4, 6]) WILD_POS.push(hk(c, r));
   // starting hexes: wizards in the back row, everyone else in front, in party order
@@ -158,6 +202,12 @@
       const opts = h.cls === 'wizard' ? BACK.concat(FRONT) : (PREF[h.cls] || [0, 1, 2, 3, 4]).map(i => FRONT[i]).concat(BACK);
       const k = opts.find(x => !used.has(x)); used.add(k); out[h.id] = k;
     }
+    return out;
+  }
+  function assaultPositions(heroes) {
+    const out = {}; const used = new Set();
+    const order = heroes.slice().sort((a, z) => (a.cls === 'wizard' ? 1 : 0) - (z.cls === 'wizard' ? 1 : 0) || (a.cls === 'barbarian' ? -1 : 0) - (z.cls === 'barbarian' ? -1 : 0));
+    for (const h of order) { const k = HERO_IN.find(x => !used.has(x)); used.add(k); out[h.id] = k; }
     return out;
   }
   const DM_POS = [hk(13, 5), hk(13, 2), hk(13, 8), hk(14, 0), hk(14, 10), hk(14, 4), hk(14, 6), hk(12, 4), hk(12, 6), hk(12, 1), hk(12, 9), hk(13, 3), hk(13, 7), hk(11, 5), hk(14, 2), hk(14, 8)];
@@ -191,9 +241,12 @@
   function startBattle(s, stackObj, opts) {
     opts = opts || {};
     const f = partyFlags(s.heroes); const units = [];
-    const hp0 = heroPositions(s.heroes.filter(h => h.status === 'ok'));
+    const assault = !!opts.assault;
+    const hp0 = assault ? assaultPositions(s.heroes.filter(h => h.status === 'ok')) : heroPositions(s.heroes.filter(h => h.status === 'ok'));
     // 0.31: a duel is your villain alone against a band of the wilds: no heroes on the field
-    if (!opts.duel) for (const h of s.heroes) { if (h.status !== 'ok') continue; const u = heroUnit(h, f, s); u.pos = hp0[h.id]; units.push(u); }
+    // 0.37: in an assault on Millbrook, the heroes only fight if they're home
+    if (!opts.duel && (!assault || (opts.home !== undefined ? opts.home : partyHome(s)))) for (const h of s.heroes) { if (h.status !== 'ok') continue; const u = heroUnit(h, f, s); u.pos = hp0[h.id]; units.push(u); }
+    if (assault) for (const d of assaultDefenders(s)) units.push(d);
     let k = 0;
     if (opts.boss) { const B = bossUnit(opts.bossL || avgLevel(s), s.villain.up, !!opts.finale, s.villain.type, vName(s)); B.escapes = !opts.finale; B.pos = DM_POS[k++]; if (!opts.finale) B.hp = Math.max(1, Math.round(B.maxHp * clamp(s.villain.hpFrac === undefined ? 1 : s.villain.hpFrac, 0.1, 1))); if (opts.duel) { const D = talentFx(s).duel; if (D.hp) { B.maxHp = Math.round(B.maxHp * (1 + D.hp)); B.hp = Math.round(B.hp * (1 + D.hp)); } B.hit += D.hit; } units.push(B); }
     const stacks = opts.stacks || [[stackObj.type, stackObj.count]];
@@ -204,17 +257,21 @@
       let j = 0;
       for (const [t, n, src] of splitStacks(stacks, MAX_GROUPS - k)) { if (j >= WILD_POS.length) break; const u = stackUnit(t, n, 'w' + j); u.src = src; u.side = 'party'; u.wild = true; if (lvl > 1) veteran(u, lvl); u.pos = WILD_POS[j++]; units.push(u); }
     } else
-    for (const [t, n, src] of splitStacks(stacks, MAX_GROUPS - k)) { if (k >= DM_POS.length) break; const u = talentMod(s, stackUnit(t, n, 'm' + k)); u.src = src; if (command && u.type === 'knight') { u.hit += 2; u.commanded = true; } if (lvl > 1) veteran(u, lvl); u.pos = DM_POS[k++]; units.push(u); }
+    for (const [t, n, src] of splitStacks(stacks, MAX_GROUPS - k)) { if (k >= DM_POS.length) break; const u = talentMod(s, stackUnit(t, n, 'm' + k)); u.src = src; if (command && u.type === 'knight') { u.hit += 2; u.commanded = true; } const sl = opts.lvls ? opts.lvls[src] || 1 : 0; if (sl > 1) veteran(u, sl); else if (!opts.lvls && lvl > 1) veteran(u, lvl); u.pos = DM_POS[k++]; units.push(u); }
     const terrain = opts.finale ? 'waste' : opts.siege ? 'grass' : opts.duel && stackObj ? terrainAt(s, stackObj.x, stackObj.y) : terrainAt(s, s.party.x, s.party.y);
     const fr = mulberry((s.seed + s.week * 97 + s.day * 13 + s.party.x * 7 + s.party.y + (s.uid || 0) * 31) | 0);
-    const tiles = opts.siege ? makeSiegeField(fr, s.town ? (s.town.wallHp || 0) / Math.max(1, WALL_HP[townLv(s, 'walls')] || 1) : 1) : makeField(fr, terrain);
+    const intact = s.town ? (s.town.wallHp || 0) / Math.max(1, WALL_HP[townLv(s, 'walls')] || 1) : 1;
+    const tiles = assault ? (townLv(s, 'walls') ? makeAssaultField(fr, intact, units.filter(u => u.structure && hc(u.pos).c === WALL_COL).map(u => u.pos).concat([GATE_HEX])) : {})
+      : opts.siege ? makeSiegeField(fr, intact) : makeField(fr, terrain);
     for (const u of units) if (tiles[u.pos] && TILE_INFO[tiles[u.pos]].block) delete tiles[u.pos];
     const party = units.filter(isHero);
     // a party without a cleric stocks up on healing potions in Millbrook instead
     if (!opts.duel && !party.some(u => u.cls === 'cleric')) for (const u of party) u.potions = 2;
     const b = {
       tstate: { talents: { r: Object.assign({}, (s.talents && s.talents.r) || {}) } },   // the DM's talents, for monsters that join mid-fight
-      duel: !!opts.duel, kneel: opts.duel ? talentFx(s).kneel : 0, vtype: s.villain.type, siege: !!opts.siege, wallLv: opts.siege ? townLv(s, 'walls') : 0, towers: opts.siege && s.town ? { arrows: ARROWS[townLv(s, 'watch')] || 0, bolts: BOLTS[townLv(s, 'ballista')] || 0, splash: SPLASH[townLv(s, 'arcane')] || 0, bell: townLv(s, 'bell') > 0 } : null,
+      assault, campIds: opts.campIds || null, bell: assault && units.some(u => u.bell), heroesIn: party.length > 0, heroKillHp: 0,
+      sfx: assault ? (() => { const F = talentFx(s); return { wallDmg: F.wallDmg || 0, hallDmg: F.hallDmg || 0, towers: F.towers || 0 }; })() : null,
+      duel: !!opts.duel, kneel: opts.duel ? talentFx(s).kneel : 0, vtype: s.villain.type, siege: !!opts.siege, wallLv: opts.siege ? townLv(s, 'walls') : 0, towers: opts.siege && !assault && s.town ? { arrows: ARROWS[townLv(s, 'watch')] || 0, bolts: BOLTS[townLv(s, 'ballista')] || 0, splash: SPLASH[townLv(s, 'arcane')] || 0, bell: townLv(s, 'bell') > 0 } : null,
       objId: stackObj ? stackObj.id : null, dungeonId: opts.dungeonId || null, guardLair: opts.guardLair || null, raidNode: opts.raidNode || null, attack: !!opts.attack, sent: opts.attack ? stacks.map(x => [x[0], x[1]]) : null, villain: !!opts.boss, finale: !!opts.finale, stage: opts.stage || 0, terrain, boss: !!opts.boss,
       round: 1, units, tiles, traps: [], freeTraps: opts.dungeonId ? 2 : opts.stage === 1 ? 1 + (hasTech(s, 'forge') ? 2 : 0) : opts.finale ? 1 + (s.villain.up.traps || 0) : 0, boughtTraps: 0,
       hallowed: party.some(u => conscious(u) && u.ab.indexOf('hallowed') >= 0), intervention: party.some(u => u.ab.indexOf('intervention') >= 0), intervened: false,
@@ -229,9 +286,11 @@
     const foes = units.filter(u => u.side === 'dm');
     const ePow = forcePower(foes.map(u => u.boss ? bossStats(u.level || avgLevel(s), s.villain.up, !!opts.finale, s.villain.type) : stackStats(u.type, u.count) ));
     b.ratio = partyPower(s) / Math.max(1, ePow); b.challenge = judge(b.ratio, 0);
+    if (assault && !party.length) { b.ratio = 0; b.challenge = 'avoid'; }
     s.battle = b; s.phase = 'battle';
-    if (!opts.duel) s.partySeen = { x: s.party.x, y: s.party.y, w: s.week, d: s.day };   // 0.31: a fight gives away where the heroes are
-    const intro = opts.stage === 1 ? 'The citadel gates grind open. Your monsters pour out to defend the Dark Tower!'
+    if (!opts.duel && party.length) s.partySeen = { x: s.party.x, y: s.party.y, w: s.week, d: s.day };   // 0.31: a fight gives away where the heroes are
+    const intro = assault ? (party.length ? `${opts.boss ? vName(s) + ' leads' : 'Your war camp throws'} ${opts.boss ? 'the war camp' : 'itself'} at Millbrook! The heroes man the walls, and the towers take aim.` : `${opts.boss ? vName(s) + ' leads' : 'Your war camp throws'} ${opts.boss ? 'the war camp' : 'itself'} at Millbrook! The heroes are away: only the militia and the towers stand in the way.`)
+      : opts.stage === 1 ? 'The citadel gates grind open. Your monsters pour out to defend the Dark Tower!'
       : opts.finale ? `${vFull(s)} rises from the throne. Level ${villainLevel(s)}, and ready. This is the final battle.`
       : opts.duel ? `${vName(s)} faces the ${stackObj ? CREATURES[stackObj.type].name.toLowerCase() : 'monsters'} alone. Beat them down and they may kneel.`
       : opts.boss ? `${vName(s)} and ${vP(s).his} army block the road!`
@@ -252,6 +311,13 @@
   function startFinale(s) {
     say(s, 'The party reaches the Dark Tower. The final showdown begins!', 'boss');
     return startBattle(s, null, { finale: true, stage: 1, stacks: gateGuards(s) });
+  }
+  // 0.37: the weekly assault on Millbrook: the whole war camp, your villain at its head if you like
+  function startAssault(s, lead) {
+    const bands = campBands(s); if (!bands.length) return null;
+    const n = sum(bands, o => o.count);
+    say(s, lead ? `${vName(s)} rides to the war camp and leads ${n} monsters against Millbrook!` : `The war camp moves: ${n} monsters storm Millbrook!`, 'big');
+    return startBattle(s, null, { assault: true, siege: true, stacks: bands.map(o => [o.type, o.count]), lvls: bands.map(o => o.lvl || 1), campIds: bands.map(o => o.id), boss: !!lead, bossL: mapBossLevel(s) });
   }
   function blog(b, t, c) { b.log.push({ r: b.round, t, c: c || 'note' }); b.events.push({ t: 'log', text: t, c: c || 'note' }); }
 
@@ -301,13 +367,22 @@
     if (hits.length) { b.events.push({ t: 'spell', name: 'Millbrook\'s towers', fx: 'arrow', targets: hits.filter((id, i, a) => a.indexOf(id) === i) }); blog(b, 'Millbrook\'s towers loose a volley at your monsters.', 'note'); }
     if (!b.units.some(u => u.side === 'dm' && u.alive)) b.over = 'win';
   }
+  // 0.37: while Millbrook's bell stands, its ringing burns every undead group on the field at the start of a round
+  function bellToll(b) {
+    const bell = b.units.find(u => u.bell && u.alive); if (!bell) { b.bell = false; return; }
+    const hits = [];
+    for (const u of b.units.filter(x => x.side === 'dm' && x.alive && x.undead)) { applyDamage(b, u, HOLY * Math.min(u.count, 3), bell, 'aoe'); hits.push(u.id); }
+    if (hits.length) { b.events.push({ t: 'spell', name: 'The Temple Bell', src: bell.id, fx: 'holyword', targets: hits }); blog(b, 'Millbrook\'s temple bell rings out, and your undead smoke and burn.', 'note'); }
+    checkEnd(b);
+  }
   function newRound(b) {
     if (b.towers) { towerVolley(b); if (b.over) return; }
-    const alive = b.units.filter(conscious);
+    if (b.bell) { bellToll(b); if (b.over) return; }
+    const alive = b.units.filter(u => conscious(u) && !u.inert);
     alive.sort((x, y) => y.spd - x.spd || (x.side === 'party' ? -1 : 1) || (x.id < y.id ? -1 : 1));
     b.queue = alive.map(u => u.id); b.waitQ = [];
     for (const u of b.units) { u.retal = true; u.defending = false; u.uncanny = false; u.waited = false; }
-    if (b.hallowed && b.round > 1) { let tot = 0; for (const u of b.units) if (u.side === 'party' && conscious(u) && u.hp < u.maxHp) { const h = Math.min(u.maxHp - u.hp, Math.ceil(u.maxHp * 0.06)); u.hp += h; tot += h; } if (tot) blog(b, `Hallowed ground mends the party (+${tot} HP).`, 'heal'); }
+    if (b.hallowed && b.round > 1) { let tot = 0; for (const u of b.units) if (u.side === 'party' && !u.structure && conscious(u) && u.hp < u.maxHp) { const h = Math.min(u.maxHp - u.hp, Math.ceil(u.maxHp * 0.06)); u.hp += h; tot += h; } if (tot) blog(b, `Hallowed ground mends the party (+${tot} HP).`, 'heal'); }
     b.pull = false; b.cur = null;
     nextTurn(b);
   }
@@ -335,7 +410,8 @@
     checkEnd(b);
     if (b.over) return;
     if (b.duel) { duelRound(b); if (b.over) return; }
-    if ((!b.boss || b.finale) && b.round >= 2 && !b.duel) {
+    if (b.assault && b.round >= AS.rounds) { b.over = 'held'; blog(b, 'Dawn comes up over Millbrook. Your army falls back to its camp.', 'big'); return; }
+    if ((!b.boss || b.finale) && b.round >= 2 && !b.duel && !b.assault) {
       const P = b.units.filter(u => u.side === 'party');
       const ok = P.filter(conscious); const out = P.filter(u => !conscious(u)).length;
       const okFrac = sum(ok, u => u.hp) / Math.max(1, sum(ok, u => u.maxHp));
@@ -369,6 +445,13 @@
   }
   function checkEnd(b) {
     if (b.over) return;
+    if (b.assault) {
+      // Millbrook falls with its hall; the assault fails when your last monster does. Heroes going down doesn't end it.
+      const hall = b.units.find(u => u.hall);
+      if (hall && !hall.alive) { b.over = 'razed'; blog(b, 'The town hall comes down in flames. Millbrook is yours!', 'big'); return; }
+      if (!b.units.some(u => u.side === 'dm' && u.alive)) b.over = 'win';
+      return;
+    }
     if (!b.units.some(u => u.side === 'dm' && u.alive)) { b.over = 'win'; return; }
     if (!b.units.some(u => u.side === 'party' && conscious(u))) { if (b.duel) { b.over = 'tpk'; blog(b, `The last of them falls. ${b.vname} stands alone on the field.`, 'big'); } else tpkNow(b); }
   }
@@ -423,7 +506,7 @@
     const reach = reachable(b, u);
     const targets = [];
     if (b.cur === u.id && u.acted) return { reach, targets, canShoot: false };
-    const canShoot = u.ranged && u.shots > 0 && !adjacentFoe(b, u);
+    const canShoot = u.ranged && u.shots > 0 && (u.tower || !adjacentFoe(b, u));
     for (const f of foesOf(b, u)) {
       if (canShoot && los(b, u.pos, f.pos)) { targets.push({ id: f.id, ranged: true, from: [u.pos] }); continue; }
       const from = []; for (const n of hexNeighbors(f.pos)) if (reach.has(n)) from.push(n);
@@ -490,13 +573,14 @@
     if (!hit && a.ab && a.ab.indexOf('stroke') >= 0 && !a.stroke) { a.stroke = true; hit = true; notes.push('Stroke of Luck'); }
     return { d20: mode ? [r1, r2] : [r1], mode, nat, bonus: a.hit, extras, total, vs: ac, vsLabel: 'AC', result: crit ? 'crit' : hit ? 'hit' : fumble ? 'fumble' : 'miss', hit, crit, notes };
   }
-  function damageRoll(b, a, crit, mult) {
-    const k = Math.min(a.count, 10); const dice = []; let raw = 0;
+  // (0.37: only so many of a big group can get at a wall or a door at once: frontage caps the group at that many)
+  function damageRoll(b, a, crit, mult, front) {
+    const k = Math.min(a.vol || a.count, 10); const dice = []; let raw = 0;
     const n = a.dice[0] * (crit ? 2 : 1) + (crit && a.savage ? 1 : 0);
     for (let i = 0; i < k; i++) for (let j = 0; j < n; j++) { const v = rint(1, a.dice[1]); dice.push({ s: a.dice[1], v }); raw += v; }
     const flat = a.dice[2] * k; raw += flat;
     for (const e of a.extra || []) { const m = e.n * (crit ? 2 : 1); for (let j = 0; j < m; j++) { const v = rint(1, e.s); dice.push({ s: e.s, v, label: e.label }); raw += v; } }
-    const scale = a.count > 10 ? a.count / 10 : 1;
+    const scale = a.count > 10 ? (front ? Math.min(a.count, front) : a.count) / 10 : 1;
     const m = (mult || 1) * (a.side === 'dm' && b.pull ? 0.5 : 1);
     return { dice, flat, scale, mult: m, total: Math.max(1, Math.round(raw * scale * m)) };
   }
@@ -518,7 +602,7 @@
       }
       if ((ev.down || ev.died) && b.intervention && !b.intervened && b.units.some(u => isHero(u) && conscious(u) && u.ab.indexOf('intervention') >= 0)) {
         b.intervened = true; const ids = [];
-        for (const u of b.units) if (u.side === 'party' && conscious(u)) { u.hp = Math.min(u.maxHp, u.hp + Math.ceil(u.maxHp / 2)); ids.push(u.id); }
+        for (const u of b.units) if (u.side === 'party' && !u.structure && conscious(u)) { u.hp = Math.min(u.maxHp, u.hp + Math.ceil(u.maxHp / 2)); ids.push(u.id); }
         b.events.push(ev); b.events.push({ t: 'spell', name: 'Divine Intervention', fx: 'holyword', targets: ids, heal: true });
         blog(b, 'The cleric cries out to the heavens. Divine Intervention heals every standing hero!', 'heal');
         return ev;
@@ -526,7 +610,7 @@
     } else {
       if (d.boss && d.escapes) {
         d.hp -= dmg;
-        if (d.hp < d.maxHp * 0.35) { d.hp = Math.max(1, d.hp); d.alive = false; d.escaped = true; ev.escaped = true; b.events.push(ev); blog(b, `${d.name} staggers, then vanishes in a swirl of shadow. "We will meet again, heroes!"`, 'boss'); return ev; }
+        if (d.hp < d.maxHp * (b.assault ? AS.vFlee : 0.35)) { d.hp = Math.max(1, d.hp); d.alive = false; d.escaped = true; ev.escaped = true; b.events.push(ev); blog(b, `${d.name} staggers, then vanishes in a swirl of shadow. "We will meet again, heroes!"`, 'boss'); return ev; }
         b.events.push(ev); return ev;
       }
       if (d.boss && d.phyl && d.hp - dmg <= 0) {
@@ -534,10 +618,24 @@
         b.events.push(ev); b.events.push({ t: 'spell', name: 'Phylactery', src: d.id, fx: 'rend', targets: [d.id], heal: true });
         blog(b, `${d.name} crumbles to dust... and the dust rises again. Somewhere, a phylactery pulses. (${d.hp} HP)`, 'boss'); return ev;
       }
+      // 0.37: brutes smash gates; your siege talents bite harder on the walls and the hall
+      if (d.structure && src && src.side === 'dm') {
+        const fx = b.sfx || {};
+        if (d.gate) dmg = Math.round(dmg * (SMASH.indexOf(src.type) >= 0 ? 2 : 1) * (1 + (fx.wallDmg || 0)));
+        else if (d.hall) dmg = Math.round(dmg * (src.boss ? AS.vHall : SMASH.indexOf(src.type) >= 0 ? AS.bruteHall : AS.hallArmor) * (1 + (fx.hallDmg || 0)));
+        ev.dmg = dmg;
+      }
       const tot = totalHp(d) - dmg; const before = d.count;
       if (tot <= 0) { d.count = 0; d.hp = 0; d.alive = false; ev.killed = before; ev.died = true; }
       else { d.count = Math.ceil(tot / d.maxHp); d.hp = tot - (d.count - 1) * d.maxHp; ev.killed = before - d.count; }
-      if (ev.killed) { b.killedHp += ev.killed * d.maxHp; const key = d.one || d.name; b.killed[key] = (b.killed[key] || 0) + ev.killed; b.plural[key] = d.name; }
+      if (ev.killed && d.side === 'dm') {
+        b.killedHp += ev.killed * d.maxHp; const key = d.one || d.name; b.killed[key] = (b.killed[key] || 0) + ev.killed; b.plural[key] = d.name;
+        if (b.assault && src && isHero(src)) b.heroKillHp += ev.killed * d.maxHp;
+      }
+      if (b.assault && d.side === 'party' && ev.died) {
+        if (d.structure) { b.events.push(ev); b.events.push({ t: 'fall', id: d.id, kind: d.kind }); blog(b, d.gate ? 'The gate gives way! Your monsters pour into Millbrook.' : d.hall ? 'The town hall collapses!' : `The ${d.name} comes crashing down!`, 'big'); if (d.gate) b.gateFell = true; return ev; }
+        if (d.militia) blog(b, `The militia at that post is cut down.`, 'hurt');
+      }
     }
     b.events.push(ev);
     return ev;
@@ -550,7 +648,7 @@
     const R = attackRoll(b, a, d, { ranged: o.ranged, far });
     b.events.push({ t: 'attack', src: a.id, target: d.id, ranged: !!o.ranged });
     const rec = Object.assign({ t: 'roll', kind: 'attack', title: `${who(a)} ${o.verb} ${whom(d)}`, who: a.name, src: a.id, target: d.id }, R);
-    if (R.hit) rec.dmg = damageRoll(b, a, R.crit, o.mult);
+    if (R.hit) rec.dmg = damageRoll(b, a, R.crit, o.mult, d.structure && AS.frontage);
     b.events.push(rec); b.rolls++;
     if (!R.hit) { b.events.push({ t: 'miss', target: d.id }); blog(b, `${who(a)} ${o.verb} ${whom(d)}: ${R.total} vs AC ${R.vs}, ${R.result === 'fumble' ? 'a natural 1!' : 'miss.'}`, 'miss'); return { miss: true }; }
     if (d.images > 0 && chance(d.images / (d.images + 1))) {
@@ -560,7 +658,7 @@
     const before = d.count;
     const ev = applyDamage(b, d, rec.dmg.total, a, o.ranged ? 'ranged' : 'melee');
     ev.crit = R.crit;
-    if (!ev.dodge) blog(b, `${who(a)} ${R.crit ? 'land a critical hit on' : o.verb} ${whom(d)} for ${ev.dmg}${d.side === 'dm' && ev.killed ? (ev.died ? ', destroying the stack' : `, ${ev.killed} perish`) : ''}.`, a.side === 'party' ? 'hit' : 'hurt');
+    if (!ev.dodge) blog(b, `${who(a)} ${R.crit ? 'land a critical hit on' : o.verb} ${whom(d)} for ${ev.dmg}${(d.side === 'dm' || d.militia) && ev.killed ? (ev.died ? ', destroying the stack' : `, ${ev.killed} perish`) : ''}.`, a.side === 'party' ? 'hit' : 'hurt');
     if (a.drain && ev.dmg > 0 && a.alive && a.boss) {
       const heal = Math.min(a.maxHp - a.hp, Math.floor(ev.dmg / 2)); if (heal > 0) { a.hp += heal; blog(b, `${a.name} drinks deep (+${heal} HP).`, 'foe'); }
     } else if (a.drain && ev.dmg > 0 && a.alive) {
@@ -740,6 +838,9 @@
         }
       } else if (a.type === 'cast') {
         castHeroSpell(s, b, u, a.spell, a.target); u.didAttack = true;
+      } else if (a.type === 'volley') {
+        const t = b.units.find(x => x.id === a.target); if (!u.tower || !t || !t.alive) return 'No target.';
+        towerVolleyAct(s, b, u, t); u.didAttack = true;
       } else if (a.type === 'potion') {
         if (!u.potions) return 'No potions left.';
         u.potions--; const h = Math.min(u.maxHp - u.hp, Math.round(u.maxHp * 0.35)); u.hp += h;
@@ -818,7 +919,7 @@
       return null;
     }
     if (key === 'charm') {
-      const t = heroes.slice().sort((x, y) => threat(y) - threat(x))[0]; if (!t) return 'No target.';
+      const t = heroes.filter(x => !x.structure).sort((x, y) => threat(y) - threat(x))[0]; if (!t) return 'No target.';
       u.cd.charm = 3;
       b.events.push({ t: 'spell', name: 'Charm', src: u.id, fx: 'rend', targets: [t.id] });
       const sv = heroSave(t, u.aoeDC - 1, `${t.name} fights the charm`); b.events.push(sv);
@@ -920,7 +1021,7 @@
       blog(b, `${u.name} casts ${name} on ${t === u ? 'herself' : t.name}${was ? ', who gets back up' : ''} (+${amt} HP).`, 'heal');
     } else if (sp === 'masscure') {
       const r = hasA('massheal') ? dmgRecord(`${u.name} casts Mass Heal`, 2, 8, 2 * L) : dmgRecord(`${u.name} casts Mass Cure`, 1, 8, L); r.heal = true; b.events.push(r);
-      let tot = 0; for (const t of b.units.filter(x => x.side === 'party' && conscious(x))) { const before = t.hp; t.hp = Math.min(t.maxHp, t.hp + r.dmg.total); tot += t.hp - before; ev.targets.push(t.id); }
+      let tot = 0; for (const t of b.units.filter(x => x.side === 'party' && !x.structure && conscious(x))) { const before = t.hp; t.hp = Math.min(t.maxHp, t.hp + r.dmg.total); tot += t.hp - before; ev.targets.push(t.id); }
       ev.heal = true; blog(b, `${u.name} casts Mass Cure (+${tot} HP across the party).`, 'heal');
     } else if (sp === 'holyword') {
       blog(b, `${u.name} speaks a Holy Word!`, 'spell');
@@ -1008,7 +1109,7 @@
   function heroAI(s, b, u) {
     if (u.potions > 0 && u.hp < u.maxHp * 0.35) return { type: 'potion' };
     const foes = foesOf(b, u); const o = options(b, u);
-    const party = b.units.filter(x => x.side === 'party');
+    const party = b.units.filter(x => x.side === 'party' && !x.structure);
     const has_ = a => u.ab.indexOf(a) >= 0;
     if (u.cls === 'cleric') {
       const fallen = party.filter(x => x.alive && x.down);
@@ -1083,6 +1184,16 @@
     if (ready.charm && heroes.length >= 2) return 'charm';
     return null;
   }
+  // 0.37: walk toward the closest foe there's actually a way to (round the wall, through the gate once it's down)
+  function siegeStep(b, u, reach, foes) {
+    if (u.flyer) return null;
+    const far = reachable(b, u, 60); let best = null, bd = Infinity;
+    for (const f of foes) for (const n of hexNeighbors(f.pos)) { const e = far.get(n); if (e && e.d < bd) { bd = e.d; best = n; } }
+    if (best === null) return null;
+    const path = pathTo(far, best); let k = null;
+    for (const h of path) if (reach.has(h)) k = h;
+    return k === null || k === u.pos ? null : k;
+  }
   function monsterAI(s, b, u) {
     if (u.boss && u.P) { const k = bossChoice(b, u); if (k) return { type: 'power', key: k }; }
     const o = options(b, u);
@@ -1100,8 +1211,32 @@
       return { type: 'attack', target: best.t.id, from: best.t.ranged ? undefined : pickFromHex(b, u, best.f, best.t.from, o.reach) };
     }
     if (u.ranged && u.shots > 0) { const spot = sightSpot(b, u, o.reach, heroes); if (spot !== null) return { type: 'move', to: spot }; }
+    if (b.assault) { const k = siegeStep(b, u, o.reach, heroes); if (k !== null) return { type: 'move', to: k }; }
     const goal = heroes.slice().sort((x, y) => hexDist(u.pos, x.pos) - hexDist(u.pos, y.pos))[0];
     return { type: 'move', to: bestApproach(o.reach, goal.pos) };
+  }
+  // 0.37: Millbrook's towers. Archers pick off whoever they can finish, the ballista goes for the biggest thing on the
+  // field, the arcane tower rains fire on the thickest crowd
+  function towerTargets(b, u) { return b.units.filter(f => f.side === 'dm' && conscious(f) && los(b, u.pos, f.pos)); }
+  function towerAI(s, b, u) {
+    const fs = towerTargets(b, u); if (!fs.length) return { type: 'defend' };
+    let t;
+    if (u.kind === 'arcane') { let bv = -1; for (const f of fs) { const n = fs.filter(x => hexDist(x.pos, f.pos) <= 1); const v = sum(n, x => Math.min(x.count, 3)); if (v > bv) { bv = v; t = f; } } }
+    else if (u.kind === 'ballista') t = fs.slice().sort((x, y) => (y.boss ? 1e5 : y.maxHp) - (x.boss ? 1e5 : x.maxHp) || totalHp(y) - totalHp(x))[0];
+    else { const per = (u.vol || 1) * avgDie(u.dice[0], u.dice[1], u.dice[2]) * 0.6; t = fs.find(x => x.boss && AS.boltBoss) || fs.slice().sort((x, y) => Math.abs(totalHp(x) - per) - Math.abs(totalHp(y) - per))[0]; }   // every bow on the wall turns on a villain who comes in person
+    return { type: 'volley', target: t.id };
+  }
+  function towerVolleyAct(s, b, u, t) {
+    const fx = b.sfx || {}; const holy = f => f.undead && b.units.some(x => x.bell && x.alive) ? 1.5 : 1;
+    const mult = f => Math.max(0.1, (1 - (fx.towers || 0)) * holy(f));
+    if (u.kind === 'arcane') {
+      const hit = b.units.filter(f => f.side === 'dm' && conscious(f) && hexDist(f.pos, t.pos) <= 1).slice(0, 4);
+      b.events.push({ t: 'spell', name: 'Arcane fire', src: u.id, fx: 'fireball', targets: hit.map(f => f.id), center: t.pos });
+      blog(b, `The Arcane Tower rains fire on your monsters.`, 'spell');
+      for (const f of hit) applyDamage(b, f, Math.round(u.splash * Math.min(f.count, 3) * mult(f)), u, 'aoe');
+      return;
+    }
+    strike(b, u, t, { ranged: true, verb: u.kind === 'ballista' ? 'looses a great bolt at' : 'looses a volley at', mult: mult(t) });
   }
   // how the AI uses a bonus action: 'pre' before the main action, 'post' after it
   function bonusAI(s, b, u, when) {
@@ -1137,7 +1272,7 @@
     if (B.kind === 'strike' || B.kind === 'throw') { const t = o.targets.map(unit).sort((x, y) => (x.hp / x.maxHp) - (y.hp / y.maxHp))[0]; return t ? { type: 'bonus', target: t.id } : null; }
     if (B.kind === 'prone') {
       // knock down whoever the most allies can reach
-      const t = o.targets.map(unit).sort((x, y) => b.units.filter(z => z.side === u.side && conscious(z) && hexDist(z.pos, y.pos) <= 2).length - b.units.filter(z => z.side === u.side && conscious(z) && hexDist(z.pos, x.pos) <= 2).length)[0];
+      const t = o.targets.map(unit).filter(x => !x.structure).sort((x, y) => b.units.filter(z => z.side === u.side && conscious(z) && hexDist(z.pos, y.pos) <= 2).length - b.units.filter(z => z.side === u.side && conscious(z) && hexDist(z.pos, x.pos) <= 2).length)[0];
       return t ? { type: 'bonus', target: t.id } : null;
     }
     return null;
@@ -1149,14 +1284,14 @@
     u.steps = (u.steps || 0) + 1;
     if (u.steps > 10) return { type: 'end' };
     if (!u.preDone) { u.preDone = true; const bo = bonusAI(s, b, u, 'pre'); if (bo) return bo; }
-    const main = () => isHero(u) ? heroAI(s, b, u) : monsterAI(s, b, u);
+    const main = () => isHero(u) ? heroAI(s, b, u) : u.tower ? towerAI(s, b, u) : monsterAI(s, b, u);
     if (!u.acted) {
       const a = main();
       if (a.type !== 'move') return a;
       if (a.to !== u.pos && u.mv > 0) return a;
       // nothing in reach with the move that's left: dash closer if there's anyone to chase
       const foes = foesOf(b, u);
-      if (foes.length && Math.min.apply(null, foes.map(f => hexDist(f.pos, u.pos))) > 1 && !(u.ranged && u.shots > 0 && u.side === 'dm')) return { type: 'dash' };
+      if (foes.length && !u.structure && Math.min.apply(null, foes.map(f => hexDist(f.pos, u.pos))) > 1 && !(u.ranged && u.shots > 0 && u.side === 'dm')) return { type: 'dash' };
       return { type: 'defend' };
     }
     if (u.dashed && u.mv > 0) { const a = main(); if (a.type === 'move' && a.to !== u.pos) return a; u.mv = 0; }
@@ -1232,6 +1367,7 @@
   function finishBattle(s) {
     const b = s.battle; if (!b || !b.over) return null;
     if (b.duel) return finishDuel(s);   // 0.31: your villain against a band of the wilds
+    if (b.assault) return finishAssault(s);   // 0.37: the weekly assault on Millbrook
     const P = s.party; const lines = []; const gold0 = s.res ? s.res.gold : 0;
     const won = b.over === 'win';
     for (const u of b.units.filter(x => x.side === 'party')) {
@@ -1342,6 +1478,85 @@
     return summary;
   }
 
+  // 0.37: what the assault did. Millbrook keeps its wounds (the gate's damage stays on the walls, a fallen tower loses a
+  // level, the hall keeps its damage, and what got inside plunders and burns); the camp keeps whoever survived; the
+  // heroes earn experience for what they killed themselves; your villain, if it fell, flees home for three days.
+  function finishAssault(s) {
+    const b = s.battle; const T = s.town; const V = s.villain; const lines = [];
+    const tline = (l, v) => { const n = addInfamy(s, v, l); if (n) lines.push({ label: l, v: n }); };
+    const heroesIn = b.units.filter(isHero);
+    for (const u of heroesIn) {
+      const h = s.heroes.find(x => x.id === u.hero); if (!h) continue;
+      if (u.dead || !u.alive) { h.status = 'dead'; h.hp = 0; continue; }
+      h.hp = u.down ? 1 : Math.max(1, u.hp); h.mana = Math.max(0, u.mana); h.status = 'ok';
+    }
+    s.todayActive = true;
+    const frac = heroesIn.length ? b.dmgTaken / Math.max(1, b.startMax) : 0;
+    if (frac >= 0.06) tline(`Your army cost the heroes ${Math.round(Math.min(1, frac) * 100)}% of their health`, Math.round(Math.min(1, frac) * 12));
+    const downs = b.downed.filter(id => b.died.indexOf(id) < 0).length;
+    if (downs) tline(downs > 1 ? `${downs} heroes went down` : 'A hero went down', 3 * downs);
+    for (const id of b.died) { const h = s.heroes.find(x => x.id === id); if (!h) continue; tline(`${h.name} died`, 10); s.deaths++; }
+    s.seen = s.seen || {};
+    for (const u of b.units) if (u.side === 'dm' && !u.boss && CREATURES[u.type]) s.seen[u.type] = 1;
+    // Millbrook's wounds
+    const gate = b.units.find(u => u.gate), hall = b.units.find(u => u.hall);
+    const wall0 = T.wallHp || 0; if (gate) T.wallHp = gate.alive ? Math.round(gate.hp) : 0;
+    const wallDmg = Math.max(0, wall0 - (T.wallHp || 0));
+    const hall0 = T.hall === undefined ? hallMax(s) : T.hall;
+    const hallDmg = hall ? Math.max(0, Math.round(hall0 - (hall.alive ? hall.hp : 0))) : 0;
+    T.hall = Math.max(0, hall0 - hallDmg);
+    const fell = []; for (const u of b.units) if (u.structure && !u.alive && u.bk && townLv(s, u.bk) > 0) { if (AS.towerLoss) { T.b[u.bk]--; T.burned = (T.burned || 0) + 1; } fell.push(u.bk); }
+    const plunder = {}; const burned = [];
+    if (hallDmg > 0) {
+      const pf = 1 + talentFx(s).plunder;
+      for (const k of RES_KEYS) { const g = Math.min(Math.floor(T.res[k] || 0), Math.round(hallDmg * PLUNDER[k] * pf)); if (g > 0) { T.res[k] -= g; s.res[k] += g; plunder[k] = g; } }
+      const n = hallDmg >= 300 ? 3 : hallDmg >= 170 ? 2 : hallDmg >= 70 ? 1 : 0;
+      for (let i = 0; i < n; i++) { const k = burnBuilding(s); if (k) burned.push(k); }
+    }
+    if (T.hall > 0) T.hall = Math.min(T.hall, hallMax(s));
+    const razed = b.over === 'razed' || T.hall <= 0;
+    const gold = plunder.gold || 0;
+    const inf = (wallDmg || hallDmg ? 1 : 0) + wallDmg / 50 + hallDmg / 10 + 3 * (fell.length + burned.length) + gold / 8;
+    if (inf > 0) tline(razed ? 'You razed Millbrook' : hallDmg ? 'Your army broke into Millbrook' : wallDmg || fell.length ? 'Your army battered Millbrook\'s defences' : 'Your army attacked Millbrook', inf);
+    // the camp: whoever survived goes back to the fires
+    const ids = b.campIds || []; let lost = 0, left = 0;
+    ids.forEach((id, i) => {
+      const o = s.objects.find(z => z.id === id); const n = sum(b.units.filter(u => u.side === 'dm' && !u.boss && u.src === i && u.alive), u => u.count);
+      if (!o) return; lost += Math.max(0, o.count - n); left += n;
+      if (n > 0) o.count = n; else s.objects = s.objects.filter(z => z !== o);
+      if (o.lair) { const lair = myLairs(s).find(z => z.id === o.lair); if (lair) { lair.known = true; lair.rumored = true; lair.harm = (lair.harm || 0) + (hallDmg + wallDmg * 0.4) / Math.max(1, ids.length) + 5; } }
+    });
+    T.seen = campBands(s).map(o => ({ type: o.type, count: o.count, lvl: o.lvl || 1, day: dayIndex(s) })).concat(T.seen || []).slice(0, 4);
+    // your villain
+    let vfell = false;
+    const boss = b.units.find(u => u.boss);
+    if (boss) {
+      if (boss.escaped || !boss.alive) {
+        vfell = true; V.state = 'banished'; V.banish = 3; V.known = false; V.path = []; V.target = null; V.meet = null; V.hpFrac = 1;
+        const tw = siteOf(s, 'tower'); V.x = tw.x; V.y = tw.y;
+      } else V.hpFrac = clamp(boss.hp / boss.maxHp, 0.05, 1);
+    }
+    // the heroes' experience: for what they cut down themselves (the towers' kills are the town's), and a villain driven off
+    const xpMult = Math.max({ trivial: 0, beatable: 0.6, worthy: 1, avoid: 1.3 }[b.challenge || 'worthy'], frac >= 0.38 ? 1.2 : 0);
+    let xp = heroesIn.length && !razed ? Math.round(b.heroKillHp * xpMult + (vfell ? boss.maxHp * 0.65 : 0)) : 0;
+    if (xp && living(s).length) giveXp(s, xp); else xp = 0;
+    s.siegeCount = (s.siegeCount || 0) + 1;
+    if (s.wk) { s.wk.sieges = (s.wk.sieges || 0) + 1; if (hallDmg > 0 || b.gateFell) s.wk.breaches = (s.wk.breaches || 0) + 1; s.wk.plunder = (s.wk.plunder || 0) + gold; s.wk.burned = (s.wk.burned || 0) + fell.length + burned.length; s.wk.battles++; }
+    const diedNames = b.died.map(id => (s.heroes.find(x => x.id === id) || {}).name).filter(Boolean);
+    const mil = b.units.filter(u => u.militia); const milLost = sum(mil, u => u.startCount - (u.alive ? u.count : 0));
+    for (const id of b.died) { const h = s.heroes.find(x => x.id === id && x.status === 'dead'); if (h) replaceFallen(s, h); }
+    const label = razed ? 'Razed' : hallDmg >= 140 ? 'Sacked' : hallDmg > 0 || b.gateFell ? 'Broke in' : wallDmg || fell.length ? 'Battered' : 'Repelled';
+    const summary = { assault: true, result: b.over, label, wallDmg, wallLeft: T.wallHp || 0, gateFell: !!b.gateFell, hallDmg, hallLeft: T.hall, fell, burned, plunder, lost, left, led: !!boss, vfell, heroesIn: heroesIn.length,
+      died: diedNames, milLost, militia: sum(mil, u => u.startCount), xp, lines, killed: b.killed, plural: b.plural, rounds: b.round, week: s.week };
+    say(s, razed ? 'Millbrook falls!' : `The assault on Millbrook: ${label.toLowerCase()}. ${lost} of your monsters fell${left ? `, ${left} go back to the camp` : ''}.${vfell ? ` ${vName(s)} was driven off and flees to the Dark Tower.` : ''}`, 'big');
+    s.lastBattle = summary; s.lastAssault = summary; s.battle = null;
+    if (razed) { s.razed = true; s.result = 'razed'; s.phase = 'over'; say(s, `Millbrook burns. Its hall falls in on itself, and the road to the Dark Tower is open to the whole realm. ${vFull(s)} has won.`, 'boss'); return summary; }
+    s.phase = 'map';
+    if (heroesIn.length && !living(s).length) { summary.wiped = true; summary.newParty = !partyWiped(s) ? s.heroes.map(h => h.name) : null; if (s.phase === 'over') return summary; }
+    weekEnd(s);
+    return summary;
+  }
+
   /* ================= estimates ================= */
   // run the two-stage showdown n times from full health: gates, a breather, then the throne room
   function simulateFinale(s, n, opts) {
@@ -1369,6 +1584,27 @@
     let label = avg < 0.06 ? 'Trivial' : avg < 0.18 ? 'Easy' : avg < 0.38 ? 'Tense' : 'Harrowing';
     if (tpk / n >= 0.2) label = 'Deadly';
     return { label, avg, tpk: tpk / n, win: wins / n, gateLoss: gateLoss / n };
+  }
+  // 0.37: the war council's estimate: a few practice assaults on copies of Millbrook, the camp and the heroes
+  function simAssaultRun(s, lead, i, bands, home) {
+    const t = { seed: s.seed, layout: s.layout, mw: s.mw, mh: s.mh, uid: (s.uid || 0) + i * 7, week: s.week, day: s.day, heroes: clone(s.heroes), party: clone(s.party), villain: clone(s.villain), town: clone(s.town), talents: clone(s.talents || null),
+      objects: clone(bands), phase: 'map', wk: newWeekLog(), log: [], quests: [], seen: {}, deaths: 0, res: { gold: 0, lumber: 0, ore: 0 }, pendingLevelUps: [], heroesUsed: [] };
+    const hall0 = t.town.hall === undefined ? hallMax(t) : t.town.hall, wall0 = t.town.wallHp || 0;
+    startBattle(t, null, { assault: true, siege: true, stacks: bands.map(o => [o.type, o.count]), lvls: bands.map(o => o.lvl || 1), campIds: bands.map(o => o.id), boss: !!lead, bossL: mapBossLevel(s), home });
+    beginBattle(t);
+    const b = t.battle; let g = 0;
+    while (!b.over && !b.pendingTPK && g++ < 4000) autoStep(t);
+    const hall = b.units.find(u => u.hall), gate = b.units.find(u => u.gate), boss = b.units.find(u => u.boss);
+    const start = sum(bands, o => o.count), end = sum(b.units.filter(u => u.side === 'dm' && !u.boss && u.alive), u => u.count);
+    return { razed: b.over === 'razed', gate: !!b.gateFell || !gate, towers: b.units.filter(u => u.tower && !u.alive).length, hallDmg: hall ? hall0 - (hall.alive ? hall.hp : 0) : 0, wallDmg: gate ? wall0 - (gate.alive ? gate.hp : 0) : 0,
+      lost: start ? 1 - end / start : 0, vfell: !!(boss && (boss.escaped || !boss.alive)), deaths: b.died.length };
+  }
+  function simAssault(s, lead, n) {
+    const bands = campBands(s); if (!bands.length || !s.town) return null;
+    const home = partyHome(s); const runs = []; n = n || 6;
+    for (let i = 0; i < n; i++) runs.push(simAssaultRun(s, lead, i, bands, home));
+    const avg = f => sum(runs, f) / runs.length, p = f => runs.filter(f).length / runs.length;
+    return { n, razed: p(r => r.razed), gate: p(r => r.gate), towers: avg(r => r.towers), hallDmg: Math.round(avg(r => r.hallDmg)), wallDmg: Math.round(avg(r => r.wallDmg)), lost: avg(r => r.lost), vfell: p(r => r.vfell), deaths: avg(r => r.deaths), home };
   }
   // one practice run of a fight against these stacks (i picks the dice), for the balance meter
   function simAttackRun(s, stacks, i, lvl) {

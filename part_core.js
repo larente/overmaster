@@ -742,6 +742,7 @@
     if (s.phase === 'encounter') s.phase = 'map';
     delete s.enc; delete s.townEvent;
     relicInit(s);
+    for (const o of s.objects || []) if (o.atGates) o.atGates = false;   // 0.37: waves camp at the gates now
     return s;
   }
   function migrate0(s) {
@@ -992,7 +993,7 @@
   const siteAt = (s, x, y) => sitesOf(s).find(S => S.x === x && S.y === y);
   const isTrap = o => ITEMS[o.kind] && ITEMS[o.kind].cat === 'trap';
   function stackGuarding(s, x, y) {
-    return s.objects.find(o => o.kind === 'stack' && Math.abs(o.x - x) <= 1 && Math.abs(o.y - y) <= 1 && !(o.x === x && o.y === y));
+    return s.objects.find(o => o.kind === 'stack' && !o.camp && Math.abs(o.x - x) <= 1 && Math.abs(o.y - y) <= 1 && !(o.x === x && o.y === y));
   }
   const villainAdjacent = (s, x, y) => villainOnMap(s) && Math.abs(s.villain.x - x) <= 1 && Math.abs(s.villain.y - y) <= 1;
 
@@ -1153,7 +1154,7 @@
     const P = s.party; P.path = []; P.target = null; P.intent = []; P.goal = null;
     const live = living(s); if (!live.length) return;
     const V = s.villain;
-    const knownStack = (x, y) => s.objects.find(o => o.kind === 'stack' && o.known && Math.abs(o.x - x) <= 1 && Math.abs(o.y - y) <= 1 && !(o.x === x && o.y === y));
+    const knownStack = (x, y) => s.objects.find(o => o.kind === 'stack' && o.known && !o.camp && Math.abs(o.x - x) <= 1 && Math.abs(o.y - y) <= 1 && !(o.x === x && o.y === y));
     const vZone = (x, y) => villainOnMap(s) && V.known && Math.abs(V.x - x) <= 1 && Math.abs(V.y - y) <= 1;
     const zone = (x, y) => !!knownStack(x, y) || vZone(x, y);
     const blocked = (x, y) => s.objects.some(o => o.kind === 'stack' && o.known && o.x === x && o.y === y) || (villainOnMap(s) && V.known && V.x === x && V.y === y);
@@ -1181,6 +1182,9 @@
     const weak = frac < 0.5;
     const finale = !!s.march;
     const g = byDrive('glory');
+    // 0.37: an army camped at the gates and the week nearly out: the heroes hold Millbrook's walls for the assault
+    const camp = !finale && s.town ? campThreat(s) : 0;
+    if (camp && partyHome(s) && s.day >= 7 - (camp > 0.25 ? 1 : 0) - (camp > 0.7 ? 1 : 0)) { P.goal = 'the walls of Millbrook'; P.target = 'defend'; P.intent = [`An army is camped outside Millbrook. The heroes stay to man the walls.`]; return; }
     const fightValue = (ratio, reward, name) => {
       const j = judge(ratio, reward);
       let v, why;
@@ -1197,6 +1201,7 @@
       const q = questOn(s, { kind: 'obj', id: o.id }); const qb = q ? 4 + q.reward * 1.2 : 0;
       const rum = o.rumored ? 1.3 : 1; const rb = o.rumored ? 4 : 0;
       if (o.kind === 'stack') {
+        if (o.camp) continue;   // 0.37: the heroes don't ride out against the war camp; they wait for it on the walls
         const name = CREATURES[o.type].name;
         const fv = fightValue(fightRatio(s, o), q ? q.reward : 0, name);
         // 0.30: a wave on its way to Millbrook: the heroes want to stop it before it gets there, more if the walls won't
@@ -1255,6 +1260,11 @@
       if (S.kind === 'landmark' && !s.visited[S.id]) {
         const h = byDrive(S.drive); const q = questOn(s, { kind: 'site', id: S.id });
         add(S.id, S.x, S.y, (3 + (h ? 6 : 0)) * (finale ? 0.3 : 1) + (q ? 4 + q.reward * 1.2 : 0), q ? `The quest board offers a reward: "${q.name}."` : h ? `${h.name} wants to see ${S.name}.` : `The party has heard tales of ${S.name}.`, S, S.name);
+      }
+      if (S.kind === 'town' && camp && !(P.x === S.x && P.y === S.y)) {
+        // home before the week is out: the closer the assault, the more it matters
+        const eta = D.dist[tIdx(S.x, S.y)] / Math.max(1, mp); const daysLeft = 8 - s.day;
+        if (daysLeft <= eta + 2 + 2 * camp) { const d = byDrive('duty'); add('defend', S.x, S.y, 8 + Math.min(24, camp * 20) + (d ? 3 : 0), `${d ? d.name : 'The party'} won't leave Millbrook to the army camped at its gates. They ride home to man the walls.`, S, S.name); }
       }
       if (S.kind === 'town') {
         const anyDead = s.heroes.some(h => h.status !== 'ok');
@@ -1844,10 +1854,28 @@
   /* --- waves: your lairs send their brood down the road to Millbrook --- */
   const WAVE_NIGHTS = 3, WAVE_SPEED = 0.6;
   const wavesPerLair = s => 1 + talentFx(s).bands;
-  const wavesOf = (s, o) => s.objects.filter(z => z.kind === 'stack' && z.wave && z.lair === o.id).length;
+  const wavesOf = (s, o) => s.objects.filter(z => z.kind === 'stack' && z.wave && !z.camp && z.lair === o.id).length;
   const waveAt = (s, o) => Math.max(1, Math.round(lairRate(s, o) * WAVE_NIGHTS));
+  // 0.37: each lair keeps at most two waves' worth of its brood in the war camp; the rest stays home and guards it
+  const campFrom = (s, o) => sum(s.objects.filter(z => z.kind === 'stack' && z.camp && z.lair === o.id), z => z.count);
+  const campRoom = (s, o) => campFrom(s, o) < waveAt(s, o) * AS.campWaves * wavesPerLair(s);
   const atGates = (s, x, y) => { const tw = siteOf(s, 'town'); return Math.abs(x - tw.x) <= 1 && Math.abs(y - tw.y) <= 1 && !(x === tw.x && y === tw.y); };
   const partyHome = s => { const tw = siteOf(s, 'town'); return s.party.x === tw.x && s.party.y === tw.y && living(s).length > 0; };
+  // 0.37: the war camp. Waves no longer throw themselves at the walls one by one: they camp within two tiles of
+  // Millbrook, and at the end of the week the whole camp storms the town in one battle (see startAssault)
+  const CAMP_R = 2;
+  const inCamp = (s, x, y) => { const tw = siteOf(s, 'town'); const d = Math.max(Math.abs(x - tw.x), Math.abs(y - tw.y)); return d >= 1 && d <= CAMP_R; };
+  const campBands = s => s.objects.filter(o => o.kind === 'stack' && o.camp);
+  const campCount = s => sum(campBands(s), o => o.count);
+  // how worried the heroes are about the camp: its strength against theirs (0 when there's nothing to fear)
+  // (0.37: or of what it would do to the town if they weren't there: a goblin horde they'd laugh at can still burn Millbrook)
+  function campThreat(s) {
+    const B = campBands(s); if (!B.length || !living(s).length || !s.town) return 0;
+    const r = sum(B, o => bandThreatPower(s, o)) / Math.max(1, partyPower(s) * HERO_EDGE(avgLevel(s)));
+    const harm = sum(B, o => { const x = simSiege(s, { type: o.type, count: o.count, lvl: o.lvl }); return x.hallDmg * 2 + x.wallDmg * 0.3; }) / Math.max(100, s.town.hall || hallMax(s));
+    const v = Math.max(r, harm * 0.6);
+    return v < 0.12 ? 0 : Math.min(1.5, v);
+  }
   function releaseWave(s, o, count) {
     const b = releaseBand(s, o, count || Math.max(1, Math.floor(lairCount(o) * 0.8)), true);
     if (!b) return null;
@@ -1861,7 +1889,7 @@
     const enter = (x, y) => {
       if (x === tw.x && y === tw.y) return tileCost(s, x, y);
       if (siteAt(s, x, y) || nodeAt(s, x, y) || s.objects.some(z => z !== o && z.x === x && z.y === y)) return Infinity;
-      if (Math.abs(x - P.x) <= 1 && Math.abs(y - P.y) <= 1 && !atGates(s, x, y)) return Infinity;
+      if (Math.abs(x - P.x) <= 1 && Math.abs(y - P.y) <= 1 && !inCamp(s, x, y)) return Infinity;
       return tileCost(s, x, y);
     };
     const D = dijkstra(o.x, o.y, enter, null, tIdx(tw.x, tw.y));
@@ -1871,22 +1899,26 @@
   }
   // nights until a wave reaches the gates, if nothing stops it
   function waveEta(s, o) {
-    if (atGates(s, o.x, o.y)) return 0;
+    if (o.camp || inCamp(s, o.x, o.y)) return 0;
     const path = wavePath(s, o); if (!path) return null;
-    let c = 0, px = o.x, py = o.y; for (const [x, y] of path) { c += stepCost(s, px, py, x, y); px = x; py = y; }
+    let c = 0, px = o.x, py = o.y; for (const [x, y] of path) { c += stepCost(s, px, py, x, y); px = x; py = y; if (inCamp(s, x, y)) break; }
     return Math.max(1, Math.ceil(c / waveMP(s, o) - 0.001));
   }
-  // after the night's marching: waves at the gates lay siege tonight, unless the heroes are home and up to the fight
+  // after the night's marching: waves that reach Millbrook join the war camp (0.37: no more sieges night by night).
+  // A band of the same monsters and level already in the camp takes them in, so the camp stays a few big bands.
   function wavesArrive(s) {
-    s.nightSieges = [];
-    const home = partyHome(s);
+    s.nightSieges = []; const joined = [];
     for (const o of s.objects.slice()) {
-      if (o.kind !== 'stack' || !o.wave) continue;
-      if (!atGates(s, o.x, o.y)) { o.atGates = false; continue; }
-      o.known = true;
-      if (home && !o.noFight && judge(fightRatio(s, o), 0) !== 'avoid') { o.atGates = true; continue; }
-      resolveSiege(s, o);
+      if (o.kind !== 'stack' || !o.wave) { if (o.kind === 'stack' && o.camp) o.camp = false; continue; }
+      if (o.camp) continue;
+      if (!inCamp(s, o.x, o.y)) continue;
+      o.camp = true; o.atGates = false; o.known = true; o.trail = o.trail || null;
+      const into = campBands(s).find(z => z !== o && z.type === o.type && (z.lvl || 1) === (o.lvl || 1) && (z.lair || null) === (o.lair || null) && !(z.healUntil > dayIndex(s)) && !(o.healUntil > dayIndex(s)));
+      if (into) { into.count += o.count; o.mergedInto = into.id; s.objects = s.objects.filter(z => z !== o); joined.push(into); }
+      else joined.push(o);
     }
+    if (joined.length) { const n = sum(joined, z => z.count); say(s, `More of your monsters reach the war camp outside Millbrook. ${campCount(s)} wait for the assault at the end of the week.`, 'dm'); }
+    return joined;
   }
   // the heroes are dead. While the tavern stands, a new and greener party takes up the sword
   function hireParty(s) {
@@ -2133,7 +2165,7 @@
       if ((o.pool[u] || 0) < cap) o.pool[u] = Math.min(cap, (o.pool[u] || 0) + lairRate(s, o));
       const n = lairCount(o) - before; if (n > 0) out.push([u, n]);
       // 0.30: when the lair is full, three nights' brood marches on Millbrook as a wave; the rest stays home to guard it
-      if (lairCount(o) >= Math.min(Math.floor(lairCap(s, o)), waveAt(s, o) + Math.max(1, Math.round(lairRate(s, o)))) && wavesOf(s, o) < wavesPerLair(s)) { const b = releaseWave(s, o, waveAt(s, o)); if (b) out.released.push(b.id); }
+      if (lairCount(o) >= Math.min(Math.floor(lairCap(s, o)), waveAt(s, o) + Math.max(1, Math.round(lairRate(s, o)))) && wavesOf(s, o) < wavesPerLair(s) && campRoom(s, o)) { const b = releaseWave(s, o, waveAt(s, o)); if (b) out.released.push(b.id); }
     }
     return out;
   }
@@ -2209,8 +2241,19 @@
     const e2 = patrolCheck(s, o, x, y); if (e2) return e2;
     if (!bandPath(s, o, x, y)) return 'They can\'t get there.';
     o.patrol = { a: [o.x, o.y], b: [x, y], to: 1 };
-    if (o.wave) { o.wave = false; o.atGates = false; }   // a wave you set to patrol stops its march on Millbrook
+    if (o.wave) { o.wave = false; o.atGates = false; o.camp = false; }   // a wave you set to patrol stops its march on Millbrook (and leaves the camp)
     say(s, `You send ${bandName(o).toLowerCase()} to patrol toward ${regionName(s, x, y)}.`, 'dm');
+    return null;
+  }
+  // 0.37: send any of your bands to the war camp outside Millbrook, to join the next assault
+  function bandToCamp(s, id) {
+    const [o, err] = bandCheck(s, id); if (err) return err;
+    if (o.wild) return 'They answer to no one. Win them over first.';
+    if (o.wave) return o.camp ? 'They\'re already in the war camp.' : 'They\'re already on their way to the war camp.';
+    if (o.healUntil > dayIndex(s)) return 'They\'re still licking their wounds.';
+    o.patrol = null; o.home = null; o.wave = true;
+    if (inCamp(s, o.x, o.y)) { o.camp = true; o.known = true; }
+    say(s, `You send ${bandName(o).toLowerCase()} to the war camp outside Millbrook.`, 'dm');
     return null;
   }
   function bandHold(s, id) { const [o, err] = bandCheck(s, id); if (err) return err; o.patrol = null; return null; }
@@ -2239,10 +2282,11 @@
       if (o.kind !== 'stack') continue; o.trail = null;
       let path = null;
       if (o.wave) {
-        // a wave marches on Millbrook, round the heroes, and stops at the gates
+        // a wave marches on Millbrook, round the heroes, and stops at the war camp (0.37)
+        if (o.camp) continue;
         path = wavePath(s, o); if (!path || !path.length) continue;
         let left = waveMP(s, o), px = o.x, py = o.y; const trail = [[px, py]];
-        for (const [nx, ny] of path) { const c = stepCost(s, px, py, nx, ny); if (c > left || (closeToHeroes(nx, ny) && !atGates(s, nx, ny))) break; left -= c; px = nx; py = ny; trail.push([px, py]); }
+        for (const [nx, ny] of path) { const c = stepCost(s, px, py, nx, ny); if (c > left || (closeToHeroes(nx, ny) && !inCamp(s, nx, ny))) break; left -= c; px = nx; py = ny; trail.push([px, py]); if (inCamp(s, px, py)) break; }
         while (trail.length > 1) { const [lx, ly] = trail[trail.length - 1]; if (!siteAt(s, lx, ly) && !nodeAt(s, lx, ly) && !s.objects.some(z => z !== o && z.x === lx && z.y === ly)) break; trail.pop(); }
         if (trail.length < 2) continue;
         [o.x, o.y] = trail[trail.length - 1]; o.trail = trail;
@@ -3230,7 +3274,7 @@
     const lv0 = villainLevel(s);
     bandsMove(s);
     villainNight(s); recruitsHeal(s);   // 0.31
-    wavesArrive(s);
+    const camped = wavesArrive(s).map(o => o.id);
     for (const o of s.objects.slice()) if (o.kind === 'dungeon' && !o.mine) { lairGrow(s, o); lairSpawn(s, o); }
     if (s.minions) {
       // your side of the night: minions walk, dig and build, the tower pays its tithe, and every lair raises its brood
@@ -3238,7 +3282,7 @@
       const lp = lairsProduce(s);
       // 0.30: every lair standing (and not wrecked) spreads dread through the countryside
       { const n = builtLairs(s).filter(o => !lairWrecked(s, o)).length; if (n) addInfamy(s, 0.5 * n, 'Your lairs spread dread'); }
-      s.lastDay = { res: md.res, built: md.built, opened: md.opened, yields: md.yields, fills: md.fills, filled: md.filled, full: md.full, plot: md.plot, raised: lp, released: lp.released, summoned: md.summoned, library: md.library, researched: md.researched, town: s.townToday || null, sieges: s.nightSieges || [], level: villainLevel(s) > lv0 ? villainLevel(s) : 0 };
+      s.lastDay = { res: md.res, built: md.built, opened: md.opened, yields: md.yields, fills: md.fills, filled: md.filled, full: md.full, plot: md.plot, raised: lp, released: lp.released, summoned: md.summoned, library: md.library, researched: md.researched, camped, town: s.townToday || null, sieges: s.nightSieges || [], level: villainLevel(s) > lv0 ? villainLevel(s) : 0 };
       dmReveal(s);
     }
     townQuests(s);
@@ -3247,10 +3291,25 @@
     if (V.state === 'banished') { V.banish--; if (V.banish <= 0) { V.state = 'lair'; say(s, `${vName(s)} has recovered in the Dark Tower.`, 'dm'); } }
     if (!s.march && readiness(s).ready) startMarch(s, 'ready');
     else if (!s.march && living(s).every(h => h.level >= MAX_LEVEL)) startMarch(s, 'maxed');
-    if (s.day >= 7) { weekEnd(s); return; }
+    if (s.day >= 7) { if (campBands(s).length && s.town) { s.phase = 'council'; return; } weekEnd(s); return; }   // 0.37: the week ends with the war council
     s.day++;
     s.party.mp = mpPerDay(s);
     planRoute(s);
+  }
+  // 0.37: the war council at the end of the week: storm Millbrook with the camp (your villain at its head, or not),
+  // or hold back a week. The battle itself is in startAssault and finishBattle.
+  const canLead = s => s.villain && s.villain.state !== 'banished' && !!s.villain.type;
+  function councilCheck(s) { return s.phase !== 'council' ? 'There is no war council now.' : !campBands(s).length ? 'Nobody is camped outside Millbrook.' : null; }
+  function holdBack(s) {
+    const err = councilCheck(s); if (err) return err;
+    say(s, `${vName(s)} holds the army back. ${campCount(s)} monsters keep their fires burning outside Millbrook for another week.`, 'dm');
+    s.phase = 'map'; weekEnd(s); return null;
+  }
+  function orderAssault(s, lead) {
+    const err = councilCheck(s); if (err) return err;
+    if (lead && !canLead(s)) return `${vName(s)} is still recovering in the Dark Tower.`;
+    s.phase = 'map'; startAssault(s, !!lead);
+    return null;
   }
   function weekEnd(s) {
     for (const q of s.quests) if (q.status === 'open' && q.week <= s.week) q.status = 'failed';
@@ -3266,6 +3325,7 @@
     const nextFx = pick(['goblin', 'wolf', 'skeleton', 'orc', 'moon', 'harvest', 'storms'].filter(k => k !== s.weekFx));
     const T = s.town || {};
     s.recap = { week: s.week, lines: lines.slice(0, 10), infamy: inf, vlevel: villainLevel(s), xp: s.villain.xp || 0, next: villainNext(s), heroLevel: avgLevel(s), sieges: s.wk.sieges || 0, breaches: s.wk.breaches || 0, plunder: s.wk.plunder || 0, burned: s.wk.burned || 0,
+      assault: s.lastAssault && s.lastAssault.week === s.week ? s.lastAssault : null, towers: DEF_ORDER.filter(k => k !== 'walls').reduce((n, k) => n + townLv(s, k), 0),
       hall: T.hall || 0, hallMax: s.town ? hallMax(s) : 0, wall: T.wallHp || 0, wallMax: WALL_HP[townLv(s, 'walls')] || 0, grew, dead: dead.map(h => h.name), nextFx, result: null, march: false, level: avgLevel(s), ready: readiness(s),
       thrill: inf, eng: [], before: 0, after: 0, delta: 0, recruits: [] };
     s.phase = 'week';

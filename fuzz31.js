@@ -18,7 +18,10 @@ function check(s) {
   if (!(s.town.hall >= 0 && s.town.hall <= G.hallMax(s))) throw new Error('hall ' + s.town.hall + '/' + G.hallMax(s));
   if (!(s.villain.level >= 1 && s.villain.level <= 20) || !(s.villain.xp >= 0)) throw new Error('villain level ' + s.villain.level);
   if (G.VXP[s.villain.level] > s.villain.xp + 0.01) throw new Error('villain level ahead of xp');
-  for (const o of s.objects) if (o.wave && o.atGates && !G.atGates(s, o.x, o.y)) throw new Error('wave at gates away from town');
+  for (const o of s.objects) if (o.camp && !G.inCamp(s, o.x, o.y)) throw new Error('camped band away from the camp');
+  for (const o of s.objects) if (o.camp && !o.wave) throw new Error('camped band not marching');
+  if (s.phase === 'council' && !G.campBands(s).length) throw new Error('council with an empty camp');
+  if (s.villain.state === 'banished' && !(s.villain.banish >= 0)) throw new Error('banish days');
   for (const o of s.objects) if (o.kind === 'stack' && !(o.count >= 1)) throw new Error('empty band ' + o.count);
   const pos = s.objects.map(o => o.x + ',' + o.y); if (new Set(pos).size !== pos.length) throw new Error('two objects on a tile');
   for (const n of s.nodes) if (G.objAt(s, n.x, n.y)) throw new Error('object on a site');
@@ -75,6 +78,17 @@ for (let i = 0; i < N; i++) {
     if (s.phase === 'battle') { battle(s); continue; }
     if (s.phase === 'encounter') throw new Error('0.36: no more encounters');
     if (s.phase === 'week') { G.startNextWeek(s); if (s.phase !== 'over') check(s); continue; }
+    if (s.phase === 'council') {
+      check(s); const r = R(); c.councils = (c.councils || 0) + 1;
+      if (r < 0.15) { const e = G.holdBack(s); if (e) throw new Error(e); if (s.phase !== 'week') throw new Error('hold back left phase ' + s.phase); c.holds = (c.holds || 0) + 1; continue; }
+      const lead = r > 0.6 && G.canLead(s); if (R() < 0.1) { const est = G.simAssault(s, lead, 2); if (!est || !(est.lost >= 0 && est.lost <= 1)) throw new Error('bad estimate'); }
+      const before = G.campCount(s); const e = G.orderAssault(s, lead); if (e) throw new Error(e); if (s.phase !== 'battle' || !s.battle.assault) throw new Error('no assault battle');
+      const x = battle(s); if (!x || !x.assault) throw new Error('assault summary missing');
+      if (x.lost + x.left !== before) throw new Error('camp count mismatch ' + before + ' ' + x.lost + '+' + x.left);
+      if (s.phase !== 'week' && s.phase !== 'over') throw new Error('after assault phase ' + s.phase);
+      c['assault_' + x.label] = (c['assault_' + x.label] || 0) + 1; if (lead) c.led = (c.led || 0) + 1; if (x.vfell) c.vfell = (c.vfell || 0) + 1;
+      continue;
+    }
     if (R() < 0.4 && !G.trainMinion(s)) c.trains++;
     for (let t = 0; t < 3; t++) { const k = pickA(G.TALENT_ORDER); if (!G.learnTalent(s, k)) c.talents = (c.talents || 0) + 1; }
     if (R() < 0.02 && !G.resetTalents(s)) c.resets = (c.resets || 0) + 1;
@@ -110,7 +124,8 @@ for (let i = 0; i < N; i++) {
       if (r < 0.3) { if (!G.bandPatrol(s, o.id, o.x + Math.floor(R() * 13) - 6, o.y + Math.floor(R() * 13) - 6)) c.patrols = (c.patrols || 0) + 1; }
       else if (r < 0.45) { if (!G.bandLevelUp(s, o.id)) c.levels = (c.levels || 0) + 1; }
       else if (r < 0.52) { if (!G.bandAway(s, o.id)) c.aways = (c.aways || 0) + 1; }
-      else if (r < 0.6) G.bandHold(s, o.id); } }
+      else if (r < 0.6) G.bandHold(s, o.id);
+      else if (r < 0.75) { if (!G.bandToCamp(s, o.id)) { c.toCamp = (c.toCamp || 0) + 1; if (!o.wave) throw new Error('to camp did not march'); } } } }
     if (s.minions.length && R() < 0.15) { const m = pickA(s.minions); G.orderDance(s, m.id); }
     for (const o of s.objects) if (o.kind === 'stack' && (o.lvl || 1) > G.BAND_MAX_LEVEL) throw new Error('band level');
     if (s.dmSeen.length !== G.MW * G.MH) throw new Error('fog size');

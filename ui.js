@@ -36,13 +36,13 @@
   const today = () => G.dayKey(S);
   const isTrapKind = k => G.ITEMS[k] && G.ITEMS[k].cat === 'trap';
 
-  function toast(text, tone) {
+  function toast(text, tone, ms) {
     const box = $('toasts'); if (!box) return;
     const el = document.createElement('div'); el.className = 'toast ' + (tone || ''); el.textContent = text;
     if (tone === 'bad') sfx('deny', { vol: 0.7, gap: 300 });
     box.appendChild(el);
     while (box.children.length > 4) box.removeChild(box.firstChild);
-    setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 400); }, 3800);
+    setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 400); }, ms || 3800);
   }
   const shortName = n => { const p = n.split(' '); return /^(Sister|Brother|Mother|Father)$/.test(p[0]) && p[1] ? p[1] : p[0]; };
   const diceSpeed = () => ui.fast ? 0.5 : 1;
@@ -327,6 +327,12 @@
     else if (vDoor()) items.push({ y: vDoor().y - 0.2, f: () => drawVillain(c, ox, oy, now) });
     if (partyShown()) items.push({ y: pp.y / TILE - 0.5 + 0.02, f: () => { c.drawImage(A.IMG['obj-party'], pp.x + ox - 28, pp.y + oy - 46, 56, 56); } });
     items.sort((a, b) => a.y - b.y); for (const it of items) it.f();
+    // 0.37: the war camp's name over its bands (the 3D map has its own label)
+    if (!ui.r3d) { const B = G.campBands(S).filter(o => canSeeObj(o)); if (B.length) {
+      let cx = 0, cy = 0; for (const o of B) { cx += o.x + 0.5; cy += o.y + 0.5; } cx = cx / B.length * TILE + ox; cy = Math.min(...B.map(o => o.y)) * TILE + oy - 8;
+      const txt = `WAR CAMP ${B.reduce((a, o) => a + o.count, 0)}`; c.font = '700 11px Cinzel, Georgia, serif'; const w = c.measureText(txt).width + 14;
+      c.fillStyle = 'rgba(40,12,8,0.85)'; c.strokeStyle = '#c8603a'; c.lineWidth = 1; c.beginPath(); roundRect(c, cx - w / 2, cy - 15, w, 16, 3); c.fill(); c.stroke();
+      c.fillStyle = '#f2d8b0'; c.textAlign = 'center'; c.fillText(txt, cx, cy - 3); } }
     // quest markers
     for (const q of S.quests) {
       if (q.status !== 'open') continue;
@@ -1344,7 +1350,7 @@
       return `${img(vIcon(), 'abig')}<div><b>${esc(VN())} · Lv ${G.villainLevel(S)}</b><small>${villainLine()}${G.villainOnMap(S) ? ` Health ${hp}%.` : ''}</small></div>`; }
     if (sel && sel.type === 'node') { const n = S.nodes.find(z => z.id === sel.id); if (n) { const K = G.NODE_KINDS[n.kind]; const p = nodeProg(n);
       return `${img('obj-' + (n.dev ? 'node-' : 'dep-') + n.kind, 'abig')}<div><b>${esc(G.nodeName(n))}</b><small>${G.nodeRaided(S, n) ? 'Wrecked by the heroes.' : p === null ? 'Not yours yet. Send a minion to work it.' : p >= 1 ? `Full: ${G.nodeStock(S, n)} ${K.res}. Click it to collect.` : `${Math.round(p * 100)}% full. ${nodeLeft(n)} more night${nodeLeft(n) > 1 ? 's' : ''}.`}</small>${p !== null && p < 1 ? pbar(p, 'fill ' + n.kind) : ''}</div>`; } }
-    const b = selBand(); if (b) { const C = G.CREATURES[b.type]; return `${img('unit-' + b.type, 'abig')}<div><b>${b.count} ${esc(C.name)}</b><small>${b.wave ? 'Marching on Millbrook.' : b.patrol ? 'On patrol.' : 'Holding their ground.'}</small></div>`; }
+    const b = selBand(); if (b) { const C = G.CREATURES[b.type]; return `${img('unit-' + b.type, 'abig')}<div><b>${b.count} ${esc(C.name)}</b><small>${b.camp ? 'In the war camp outside Millbrook.' : b.wave ? 'Marching to the war camp.' : b.patrol ? 'On patrol.' : 'Holding their ground.'}</small></div>`; }
     const idle = G.idleMinions(S).length;
     return `<div><b>Your servants</b><small>Click a ${esc(MT().one.toLowerCase())} or ${esc(VN())} to give orders.${idle ? ` ${idle} idle: press I.` : ''}</small></div>`;
   }
@@ -1376,6 +1382,7 @@
       B({ act: 'nav', k: 'relics', label: 'Relics', icon: ABI.relic, tip: `${VN()}'s relics (R)` });
     } else if (selBand() && (selBand().lair || selBand().yours)) {
       B({ act: 'bpatrol', hk: 'q', label: 'Patrol', icon: MICON.patrol, on: ui.mode === 'patrol' });
+      B({ act: 'bcamp', hk: 'w', label: 'To camp', icon: img('unit-mb-gate', 'aico'), dis: !!selBand().wave, tip: selBand().wave ? (selBand().camp ? 'Already in the war camp' : 'Already marching to the war camp') : 'March to the war camp outside Millbrook and join the next assault' });
       B({ act: 'bhold', hk: 'x', label: 'Hold', icon: ABI.stop });
       B({ act: 'blevel', hk: 'u', label: 'Level up', icon: MICON.level });
     } else if (sel && sel.type === 'node') {
@@ -1481,7 +1488,7 @@
       const got = G.RES_KEYS.filter(k => n.res[k]).map(k => `+${n.res[k]} ${k}`).join(', ');
       if (got || n.raised.length) toast(`Overnight: ${got || 'no resources'}${n.raised.length ? '. Your lairs raised ' + n.raised.map(([t, c]) => `${c} ${c > 1 ? G.CREATURES[t].name.toLowerCase() : G.CREATURES[t].one.toLowerCase()}`).join(', ') : ''}.`, 'sys');
       for (const id of n.opened || []) { const nd = S.nodes.find(z => z.id === id); if (nd) toast(`Your ${MT().one.toLowerCase()} opened a ${G.NODE_KINDS[nd.kind].name} near ${G.regionName(S, nd.x, nd.y)}.`, 'good'); }
-      for (const id of n.released || []) { const b = S.objects.find(z => z.id === id); if (b) toast(`${G.bandName(b)} march ${b.wave ? 'on Millbrook from' : 'out of'} your ${G.DUNGEONS[(S.objects.find(z => z.id === b.lair) || { dtype: 'warren' }).dtype].name}.`, 'good'); }
+      for (const id of n.released || []) { const b = S.objects.find(z => z.id === id); if (b) toast(`${G.bandName(b)} march ${b.wave ? 'for the war camp from' : 'out of'} your ${G.DUNGEONS[(S.objects.find(z => z.id === b.lair) || { dtype: 'warren' }).dtype].name}.`, 'good'); }
       sfx('dawn', { vol: 0.6 });
       let at = 0.9; const later = k => { sfx(k, { delay: at }); at += 0.8; };
       if (n.built.length || n.library || (n.town && n.town.built)) later('built');
@@ -1492,7 +1499,7 @@
       if (n.library) toast(G.libraryLevel(S) > 1 ? "The Forbidden Library's new wing is finished: one more talent point." : 'The Forbidden Library is finished: a talent point to spend.', 'good');
       // 0.30: the night's sieges, and what Millbrook is up to
       for (const r of n.sieges || []) { toast(r.text, r.breached ? 'good' : 'sys'); if (r.breached) later('coins'); }
-      for (const o of S.objects.filter(z => z.wave && z.atGates)) toast(`${G.bandName(o)} wait at Millbrook's gates. The heroes will man the walls.`, 'warn');
+      if ((n.camped || []).length) { const c = G.campCount(S); toast(`${n.camped.length > 1 ? 'More of your monsters reach' : `${G.bandName(S.objects.find(z => z.id === n.camped[0]) || { type: 'goblin', count: 1 })} reach`} the war camp outside Millbrook. ${c} wait for the assault at the end of the week.`, 'good'); }
       // 0.31: your villain has something to say about the night
       { const br = (n.sieges || []).some(r => r.breached || r.hallDmg > 0); const wv = (n.released || []).some(id => { const b = S.objects.find(z => z.id === id); return b && b.wave; });
         const rp = !br && (n.sieges || []).length > 0;
@@ -1505,7 +1512,7 @@
       if (n.town && n.town.started) { const k = n.town.started; toast(`Millbrook starts work on ${k === 'walls' ? G.TOWN_B.walls.names[G.townLv(S, 'walls')].toLowerCase() : 'the ' + G.TOWN_B[k].name + (G.townLv(S, k) ? ' ' + G.roman(G.townLv(S, k) + 1) : '')}.`, 'sys'); }
     }
     if (S.phase === 'over') { commit(); showOver(); return; }
-    const go = () => { if (S.phase === 'week') { commit(); showWeek(); return; } commit(); morning(); };
+    const go = () => { if (S.phase === 'council') { commit(); showCouncil(); return; } if (S.phase === 'week') { commit(); showWeek(); return; } commit(); morning(); };
     if (S.vUps && S.vUps.length) { commit(); showVillainUps(go); return; }
     go();
   }
@@ -1642,14 +1649,14 @@
         const C = G.CREATURES[o.type]; const L = o.lvl || 1; const lair = o.lair && S.objects.find(z => z.id === o.lair);
         const from = lair ? `Bred in your ${esc(G.DUNGEONS[lair.dtype].name)}.` : o.lair ? 'Their lair is gone.' : 'Wanderers from the wilds.';
         const eta = o.wave ? G.waveEta(S, o) : null;
-        const doing = o.wave ? (o.atGates ? '<b class="warn">At Millbrook\'s gates.</b>' : `Marching on Millbrook${eta !== null ? `: ${eta} night${eta > 1 ? 's' : ''} to the gates` : ', but the way is blocked'}.`) : o.patrol ? `Patrolling between ${esc(G.regionName(S, o.patrol.a[0], o.patrol.a[1]))} and ${esc(G.regionName(S, o.patrol.b[0], o.patrol.b[1]))}.` : o.home ? 'Prowling near their lair.' : 'Standing their ground.';
-        const out = o.wave ? G.siegeOutlook(S, o) : null;
+        const doing = o.wave ? (o.camp ? `<b class="good">In the war camp outside Millbrook.</b> They join the assault when the week ends (${daysToAssault()}).` : `Marching to the war camp outside Millbrook${eta !== null ? `: ${eta} night${eta > 1 ? 's' : ''} away` : ', but the way is blocked'}.`) : o.patrol ? `Patrolling between ${esc(G.regionName(S, o.patrol.a[0], o.patrol.a[1]))} and ${esc(G.regionName(S, o.patrol.b[0], o.patrol.b[1]))}.` : o.home ? 'Prowling near their lair.' : 'Standing their ground.';
+        const out = o.wave && !o.camp ? G.siegeOutlook(S, o) : null;
         const siege = out ? `<p class="threat t-${esc(String(OUTLOOK_CLS[out.label]).toLowerCase())}"><b>Against Millbrook now: ${esc(out.label)}.</b> ${out.hallDmg ? `About ${out.hallDmg} damage to the hall, if nothing stops them.` : out.wallDmg ? `They'd hack ${out.wallDmg} off the walls.` : 'The towers would cut them down.'}</p>` : '';
         const th = bandThreat(o); const lc = L < 3 ? G.bandLevelCost(o) : null; const lerr = G.bandLevelCheck(S, o);
         const thr = th ? `<p class="threat t-${esc(String(th.label).toLowerCase())}"><b>Against the heroes now: ${esc(th.label)}.</b> ${th.avg !== undefined ? `They'd lose about ${Math.round(Math.min(1, th.avg) * 100)}% of their health.` : ''}</p><p class="hint">${esc(THREAT_TXT[th.label] || '')}</p>` : '<p class="hint">Sizing them up against the heroes…</p>';
         return `<section class="panel sel bpanel${ui.mode === 'patrol' ? ' placing' : ''}">${img('unit-' + o.type, 'selimg')}<div>${close}<h2 class="cap">${esc(G.bandName(o))}${L > 1 ? ` <span class="lv">Lv ${L}</span>` : ''}</h2>
           <p>${from} ${doing}${o.known ? ' The heroes know they\'re here.' : ''}</p>${siege}${thr}${wildBlock(o)}
-          <div class="mmenu three"><button class="mbtn${ui.mode === 'patrol' ? ' on' : ''}" data-act="bpatrol" title="${o.wave ? 'Stop the march on Millbrook. Click a spot: they patrol between here and there instead' : 'Click a spot: they walk back and forth between here and there'}">${MICON.patrol}<span>Patrol</span></button><button class="mbtn" data-act="blevel"${lerr ? ` disabled title="${esc(lerr)}"` : ` title="+2 to hit, +1 AC, +30% hit points, +1 damage, and a fifth more of them"`}>${MICON.level}<span>Level up${lc ? ` · ${lc.gold} gold` : ''}</span></button><button class="mbtn" data-act="baway" title="They leave the map for good">${MICON.away}<span>Go away</span></button></div>
+          <div class="mmenu"><button class="mbtn${ui.mode === 'patrol' ? ' on' : ''}" data-act="bpatrol" title="${o.wave ? 'Leave the war camp. Click a spot: they patrol between here and there instead' : 'Click a spot: they walk back and forth between here and there'}">${MICON.patrol}<span>Patrol</span></button><button class="mbtn" data-act="blevel"${lerr ? ` disabled title="${esc(lerr)}"` : ` title="+2 to hit, +1 AC, +30% hit points, +1 damage, and a fifth more of them"`}>${MICON.level}<span>Level up${lc ? ` · ${lc.gold} gold` : ''}</span></button><button class="mbtn" data-act="bcamp"${o.wave ? ' disabled' : ''} title="March to the war camp outside Millbrook and join the next assault">${img('unit-mb-gate', 'aico')}<span>To camp</span></button><button class="mbtn" data-act="baway" title="They leave the map for good">${MICON.away}<span>Go away</span></button></div>
           ${ui.mode === 'patrol' ? `<p class="hint placehint"><b>Click where they should patrol to</b> (explored ground within ${G.PATROL_RANGE} tiles).${o.wave ? ' They stop marching on Millbrook.' : ''} Right-click or Esc to cancel.</p>` : o.patrol ? '<div class="row"><button class="btn sm" data-act="bhold">Stop patrolling</button></div>' : o.wave ? '<p class="hint">Level them up to hit harder, or right-click the map to make them patrol instead.</p>' : '<p class="hint">Right-click the map to set a patrol.</p>'}${bountyRow({ kind: 'obj', id: o.id })}</div></section>`;
       }
       if (o.kind === 'relic') {
@@ -1701,12 +1708,14 @@
     if (ui.screen) renderScreen();
     renderBar(); renderActions();
   }
+  // 0.37: when the week's assault comes
+  const daysToAssault = () => S.day >= 7 ? 'tonight' : `in ${8 - S.day} days`;
   // the sidebar's Millbrook card: its walls and hall, what it's building, and any bounty on your lairs
   function townBtn() {
     const T = S.town; const wm = G.WALL_HP[G.townLv(S, 'walls')] || 0; const hm = G.hallMax(S); const nq = S.quests.filter(q => q.status === 'open').length;
-    const gates = S.objects.filter(o => o.wave && o.atGates).length;
+    const camp = G.campCount(S);
     const doing = T.build ? `building ${T.build.k === 'walls' ? G.TOWN_B.walls.names[G.townLv(S, 'walls')].toLowerCase() : G.TOWN_B[T.build.k].name.toLowerCase()}` : 'saving up';
-    return `<button class="towerbtn townbtn" data-act="town" title="Millbrook: its walls, and the hall your waves have to burn down to win. Click to see it on the map.">${img('obj-town', 'cicon')}<span><b>Millbrook</b><small>${esc(G.wallName(S))} ${Math.round(T.wallHp)}/${wm} · hall ${Math.round(T.hall)}/${hm} · ${esc(doing)}${nq ? ` · ${nq} bount${nq > 1 ? 'ies' : 'y'} on you` : ''}</small>${hpBar(T.hall, hm, 'hall')}</span>${gates ? `<i class="badge" title="${gates} wave${gates > 1 ? 's' : ''} at the gates">${gates}</i>` : ''}</button>`;
+    return `<button class="towerbtn townbtn" data-act="town" title="Millbrook: its walls, and the hall your waves have to burn down to win. Click to see it on the map.">${img('obj-town', 'cicon')}<span><b>Millbrook</b><small>${esc(G.wallName(S))} ${Math.round(T.wallHp)}/${wm} · hall ${Math.round(T.hall)}/${hm} · ${esc(doing)}${nq ? ` · ${nq} bount${nq > 1 ? 'ies' : 'y'} on you` : ''}</small>${hpBar(T.hall, hm, 'hall')}${camp ? `<small class="campline">War camp: <b>${camp}</b> monsters · assault ${daysToAssault()}</small>` : ''}</span>${camp ? `<i class="badge" title="${camp} monsters in your war camp">${camp}</i>` : ''}</button>`;
   }
   // the villain's level and the Infamy to the next one
   function villainXpHtml() {
@@ -1723,6 +1732,7 @@
       $('b-infbar').style.width = (hi ? Math.max(0, Math.min(1, (xp - lo) / (hi - lo))) * 100 : 100).toFixed(0) + '%';
       $('g-inf').title = `${VN()} is level ${L}. ${hi ? `${Math.ceil(hi - xp)} more Infamy to level ${L + 1}.` : 'The highest level there is.'} Hurting and killing heroes, breaking into Millbrook, plunder and every lair you keep standing earn Infamy. Each level makes your villain stronger on the throne and gives a talent point.`; }
     $('b-date').textContent = `Week ${S.week} · Day ${S.day}`;
+    { const c = $('b-camp'); if (c) { const n = G.campCount(S); c.hidden = !n; if (n) { c.innerHTML = `${img('unit-mb-gate', 'ci')}War camp <b>${n}</b> · assault ${daysToAssault()}`; c.classList.toggle('soon', S.day >= 6); } } }
     const fx = G.WEEKS_FX[S.weekFx]; $('b-week').textContent = fx.name; $('b-week').title = fx.text;
     $('b-lvl').textContent = 'Lv ' + G.avgLevel(S);
     const r = G.readiness(S); const rd = $('b-ready');
@@ -2163,7 +2173,10 @@
     save(true);
     const r = S.recap; const fx = G.WEEKS_FX[r.nextFx];
     const L = r.vlevel; const lo = G.VXP[L] || 0, hi = r.next;
-    const siege = r.sieges ? `<p>${r.sieges} siege${r.sieges > 1 ? 's' : ''} of Millbrook, ${r.breaches ? `<b class="good">${r.breaches} broke in</b>` : 'none got in'}${r.plunder ? `, ${r.plunder} gold plundered` : ''}${r.burned ? `, ${r.burned} building level${r.burned > 1 ? 's' : ''} burned` : ''}.</p>` : '<p class="hint">None of your waves reached Millbrook this week.</p>';
+    const A = r.assault;
+    const siege = A ? `<p><b>The assault: ${esc(A.label.toLowerCase())}.</b> ${A.gateFell ? 'The gate fell. ' : ''}${A.fell.length ? `${A.fell.length} of its towers came down. ` : ''}${A.hallDmg ? `The hall took ${A.hallDmg} damage. ` : ''}${A.lost} of your monsters fell${A.left ? `, ${A.left} are still in the war camp` : ''}.</p>`
+      : G.campCount(S) ? `<p>You held the war camp back this week: ${G.campCount(S)} monsters wait outside Millbrook.</p>`
+      : r.sieges ? `<p>${r.sieges} siege${r.sieges > 1 ? 's' : ''} of Millbrook, ${r.breaches ? `<b class="good">${r.breaches} broke in</b>` : 'none got in'}${r.plunder ? `, ${r.plunder} gold plundered` : ''}${r.burned ? `, ${r.burned} building level${r.burned > 1 ? 's' : ''} burned` : ''}.</p>` : '<p class="hint">None of your waves reached Millbrook this week.</p>';
     modal(`<h1 class="dtitle">End of week ${r.week}</h1>
       <div class="cols"><div><h2 class="cap">Infamy</h2>${ledger(r.lines.length ? r.lines : [{ label: 'Nothing to boast about', v: 0 }], r.infamy, 'This week')}
         <p class="big">${esc(VN())} · <b>level ${L}</b></p>${hpBar(hi ? r.xp - lo : 1, hi ? hi - lo : 1, 'inf')}<p class="hint">${hi ? `${Math.floor(r.xp)} / ${hi} Infamy to level ${L + 1}.` : 'The highest level there is.'}</p></div>
@@ -2174,6 +2187,89 @@
       <div class="astro"><h2 class="cap">Astrologers proclaim</h2><p class="fxname">${esc(fx.name)}</p><p>${esc(fx.text)}</p></div>
       <div class="row end"><button class="btn big" data-act="close">Begin week ${r.week + 1}</button></div>`,
     () => { const was = S.march; G.startNextWeek(S); if (S.phase === 'over') { commit(); showOver(); return; } ui.est = null; ui.finaleEst = null; commit(); toast(`Week ${S.week}: ${G.WEEKS_FX[S.weekFx].name}.`, 'sys'); if (S.march && !was) toast('The heroes march on the Dark Tower! Stop them on the road, or meet them at the throne.', 'warn'); morning(); }, 'wide');
+  }
+  /* ============ 0.37: the war camp, the war council and the assault on Millbrook ============ */
+  const capF = x => x ? x[0].toUpperCase() + x.slice(1) : x;
+  const DEF_TOWERS = ['watch', 'ballista', 'arcane', 'bell'];
+  // Millbrook as your scouts at the war camp see it
+  function defenceRows() {
+    const T = S.town; if (!T) return '';
+    const wl = G.townLv(S, 'walls'), wm = G.WALL_HP[wl] || 0, hm = G.hallMax(S); const hall = T.hall === undefined ? hm : T.hall;
+    const bar = (v, m, cls) => `<i class="dbar ${cls || ''}"><i style="width:${Math.round(Math.max(0, Math.min(1, v / Math.max(1, m))) * 100)}%"></i></i>`;
+    const row = (icon, name, right, extra) => `${img('unit-' + icon)}<span><b>${esc(name)}</b>${extra || ''}</span><span>${right}</span>`;
+    let h = row('mb-hall', 'Town hall', `${Math.round(hall)} / ${hm}`, bar(hall, hm, 'hall'));
+    h += wl ? row('mb-gate', `${G.wallName(S)} and gate`, (T.wallHp || 0) > 0 ? `${Math.round(T.wallHp)} / ${wm}` : 'broken', bar(T.wallHp || 0, wm, (T.wallHp || 0) > 0 ? '' : 'gone')) : row('mb-gate', 'No walls', '');
+    for (const k of DEF_TOWERS) { const l = G.townLv(S, k); if (l) h += row('mb-' + k, G.TOWN_B[k].name + (l > 1 ? ' ' + G.roman(l) : ''), k === 'watch' ? `${Math.min(2, l)} tower${Math.min(2, l) > 1 ? 's' : ''}` : k === 'bell' ? 'burns undead' : `level ${l}`); }
+    h += row('militia', 'Militia', `about ${G.militiaCount(S)}`);
+    return `<div class="def">${h}</div>`;
+  }
+  function showCouncil() {
+    save(true); syncAudio();
+    const bands = G.campBands(S); const n = G.campCount(S); const V = S.villain; const home = G.partyHome(S); const P = VP();
+    const groups = []; for (const o of bands) { const g = groups.find(x => x.type === o.type && (x.lvl || 1) === (o.lvl || 1)); if (g) g.count += o.count; else groups.push({ type: o.type, lvl: o.lvl || 1, count: o.count }); }
+    const army = groups.map(o => { const C = G.CREATURES[o.type]; return `<span class="band">${img('unit-' + o.type)}<b>${o.count}</b>${esc(o.count > 1 ? C.name : C.one)}${(o.lvl || 1) > 1 ? `<small>level ${o.lvl}</small>` : ''}</span>`; }).join('');
+    const heroes = home ? `<p class="warn">The heroes are inside Millbrook (level ${G.avgLevel(S)}). They will man the walls.</p>` : `<p class="good">The heroes are not in Millbrook. Only the militia and the towers stand in your way.</p>`;
+    const can = G.canLead(S); const hp = Math.round((V.hpFrac === undefined ? 1 : V.hpFrac) * 100);
+    const leadTxt = can ? `${esc(VN())} can lead the assault in person (health ${hp}%). ${capF(P.he)} breaks gates and halls like nothing else in your army, but every bow on the walls will turn on ${P.him}. Below half health ${P.he} flees to the Dark Tower for 3 days, and the heroes earn experience for driving ${P.him} off.`
+      : `${esc(VN())} is still recovering in the Dark Tower and can't lead this one.`;
+    modal(`<div class="council"><h1 class="dtitle">The war council</h1><p class="hint">Week ${S.week} is over. ${n} monsters wait outside Millbrook for your word. Bring down its town hall and Millbrook is yours.</p>
+      <div class="cols"><div><h2 class="cap">Your war camp</h2><div class="army">${army}</div>${heroes}</div>
+      <div><h2 class="cap">Millbrook</h2>${defenceRows()}</div></div>
+      <div class="odds" id="codds"><span class="wait">Your captains size up the walls…</span></div>
+      <p class="lead">${leadTxt}</p>
+      <div class="row end"><button class="btn" data-act="council" data-k="hold" title="The camp waits another week (and so do the heroes)">Hold back a week</button>${can ? '<button class="btn big lead" data-act="council" data-k="lead">Lead the assault</button>' : ''}<button class="btn big" data-act="council" data-k="attack">Attack</button></div></div>`, null, 'wide');
+    { const a = document.querySelector('#modal [data-k="attack"]'); if (a) a.focus({ preventScroll: true }); }
+    setTimeout(() => vsay('wave', { prio: 2 }), 600);
+    councilOdds(can);
+  }
+  // a few practice assaults on copies of the state, a frame apart, so the dialog opens at once
+  function councilOdds(can) {
+    const tok = ui.councilTok = (ui.councilTok || 0) + 1; const out = {};
+    const word = e => e.razed >= 0.5 ? '<b class="good">Likely to raze Millbrook</b>' : e.razed >= 0.2 ? '<b class="good">A real chance to raze Millbrook</b>' : e.hallDmg >= 120 ? '<b>Likely to sack the town</b>' : e.hallDmg > 0 || e.gate >= 0.5 ? '<b>Likely to break in</b>' : e.wallDmg > 20 || e.towers >= 0.5 ? '<b>Will batter the defences</b>' : '<b class="warn">Will be thrown back</b>';
+    const line = (k, e) => `<div class="row2"><span>${k}</span><span>${word(e)} · gate ${Math.round(e.gate * 100)}% · towers −${e.towers.toFixed(1)} · hall −${e.hallDmg} · you lose ${Math.round(e.lost * 100)}%${e.vfell !== undefined && k !== 'Attack' ? ` · ${Math.round(e.vfell * 100)}% that ${esc(VN())} falls` : ''}</span></div>`;
+    const step = (k, lead) => new Promise(res => setTimeout(() => { if (ui.councilTok !== tok || S.phase !== 'council') return res(); try { out[k] = G.simAssault(S, lead, 4); } catch (e) { /* no estimate */ } res(); }, 60));
+    step('Attack', false).then(() => can ? step('Lead the assault', true) : null).then(() => {
+      const el = $('codds'); if (!el || ui.councilTok !== tok) return;
+      el.innerHTML = Object.keys(out).map(k => out[k] ? line(k, out[k]) : '').join('') + '<span class="hint">Your captains\' guess, from a few practice runs. Dice decide the rest.</span>';
+    });
+  }
+  function councilAct(k) {
+    if (S.phase !== 'council') return;
+    ui.councilTok = (ui.councilTok || 0) + 1;
+    if (k === 'hold') { const err = G.holdBack(S); if (err) { toast(err, 'bad'); return; } closeModal(); commit(); showWeek(); return; }
+    const err = G.orderAssault(S, k === 'lead'); if (err) { toast(err, 'bad'); return; }
+    closeModal(); sfx('horde'); if (k === 'lead') setTimeout(() => vsay('ride', { prio: 3, force: true }), 300);
+    commit(); enterBattle();
+  }
+  // what the assault did
+  function assaultResult(res) {
+    const won = res.result === 'razed'; const P = VP();
+    const title = won ? 'Millbrook falls!' : res.label === 'Sacked' ? 'You sack Millbrook' : res.label === 'Broke in' ? 'You break into Millbrook' : res.label === 'Battered' ? 'Millbrook\'s defences crack' : 'Millbrook holds';
+    if (!won) setTimeout(() => vsay(res.hallDmg > 0 || res.gateFell ? 'breach' : 'repelled', { prio: 3, force: true }), 500);
+    const pic = (k, gone, label) => `<span class="${gone ? 'gone' : ''}">${img('unit-mb-' + k)}${esc(label)}</span>`;
+    const fell = (res.gateFell ? pic('gate', true, 'Gate broken') : '') + res.fell.map(k => pic(k, true, (G.TOWN_B[k] || {}).name || k)).join('') + (res.burned || []).map(k => `<span class="gone">${img('unit-mb-hall')}${esc((G.TOWN_B[k] || {}).name || k)} burned</span>`).join('');
+    const hm = G.hallMax(S); const pl = Object.keys(res.plunder || {}).filter(k => res.plunder[k]).map(k => `${res.plunder[k]} ${k}`).join(', ');
+    const killed = Object.keys(res.killed || {}).map(k => `<li>${res.killed[k]} ${esc(res.killed[k] > 1 ? res.plural[k] || k : k)}</li>`).join('') || '<li class="hint">None.</li>';
+    const infSum = Math.round(res.lines.reduce((t, l) => t + l.v, 0) * 10) / 10;
+    const wipe = res.wiped ? (res.newParty ? `<p class="fxname">The whole party fell on the walls. In the tavern a greener party takes up the sword: ${res.newParty.map(esc).join(', ')}.</p>` : '<p class="fxname">The whole party fell on the walls, and with the tavern in ashes nobody is left to take up the sword.</p>') : '';
+    sfx(won || res.hallDmg > 0 ? 'win' : 'lose');
+    modal(`<div class="assault"><h1 class="dtitle">${title}</h1>
+      <p>${res.led ? `${esc(VN())} led ${res.lost + res.left} monsters against the walls` : `${res.lost + res.left} monsters stormed the walls`}${res.heroesIn ? ', and the heroes stood against them' : ' while the heroes were away'}. The fighting lasted ${res.rounds} round${res.rounds > 1 ? 's' : ''}.</p>
+      ${fell ? `<div class="fell">${fell}</div>` : '<p class="hint">Nothing of Millbrook\'s fell this time.</p>'}
+      ${won ? '' : `<p><b>The town hall</b> ${Math.round(res.hallLeft)} / ${hm}${res.hallDmg ? ` <b class="good">(−${res.hallDmg})</b>` : ''}</p>${hpBar(res.hallLeft, hm, 'hall')}`}
+      ${pl ? `<div class="payoff"><span>${img('obj-res-gold', 'ticon')}<b class="gold">Plunder: ${esc(pl)}</b> carried back to the Dark Tower.</span></div>` : ''}
+      ${res.vfell ? `<p class="warn">${esc(VN())} was driven off. ${capF(P.he)} flees to the Dark Tower and needs 3 days to recover.</p>` : res.led ? `<p>${esc(VN())} comes back from the walls (health ${Math.round((S.villain.hpFrac || 1) * 100)}%).</p>` : ''}
+      <div class="cols"><div><h2 class="cap">Your losses</h2><p>${res.lost} fell${res.left ? `, ${res.left} go back to the war camp` : ''}.</p><ul class="plain">${killed}</ul>
+        <h2 class="cap">Millbrook's losses</h2><p>${res.milLost ? `${res.milLost} of ${res.militia} militia cut down.` : 'The militia held.'}</p>${res.died.length ? `<p class="good">Heroes slain: ${res.died.map(esc).join(', ')}.</p>` : ''}${res.xp ? `<p class="hint">Each hero gains ${res.xp} XP from the fight.</p>` : ''}${wipe}</div>
+      <div><h2 class="cap">Infamy</h2>${res.lines.length ? ledger(res.lines, infSum, 'From the assault') : '<p class="hint">Nothing to boast about.</p>'}</div></div>
+      <div class="row end"><button class="btn big" data-act="close">${won ? 'Continue' : 'To the week\'s end'}</button></div></div>`,
+    () => {
+      exitBattle();
+      if (S.phase === 'over') { showOver(); return; }
+      const go = () => { if (S.phase === 'week') { commit(); showWeek(); } else commit(); };
+      const after = () => showVillainUps(go);
+      if (S.pendingLevelUps.length) showLevelUps(after); else after();
+    }, 'wide');
   }
   // the heroes levelling up is news from the enemy camp now (0.30): a line, not a dialog
   function showLevelUps(then) {
@@ -2269,8 +2365,8 @@
       <ol class="rules">
         <li><b>Your eyes are your minions.</b> You start with two ${esc(mt.name.toLowerCase())} at the tower. The map stays dark where none of them have been; you see what your tower, your lairs, your bands, your minions and your villain see. <b>The heroes walk in the fog:</b> you only see them where one of yours can. You know roughly where Millbrook lies (the gold ring) until one of yours sees it.</li>
         <li><b>Gather.</b> Your units sit in the <b>action bar</b> along the bottom of the map: click one (Shift-click for more, <b>I</b> for the next idle minion) and give it an order there, or with its key: <b>M</b> move, <b>G</b> gather, <b>B</b> build, <b>H</b> home, <b>X</b> stop. Send a minion to a gold deposit, timber stand or ore deposit (or right-click it): it spends a day sinking a mine or clearing a camp, then the minion is free and the site works on its own. <b>A site fills over a few nights</b> (a gold mine in three) and then waits, sparkling, until you <b>click it to collect</b>; only then does it start again. Press <b>C</b> to jump to the next full one. You start with two minions; the talent A Third Servant (in Dominion) lets you keep a third. The heroes wreck mines they reach, and carry off whatever was piled up there.</li>
-        <li><b>Build lairs.</b> Pick <b>Build</b>, choose a lair and click explored ground the heroes can't see. Each lair breeds one kind of monster every night. <b>When it's full, a wave marches down the road to Millbrook on its own.</b> A lair near the town strikes often; one far away is harder for the heroes to find.</li>
-        <li><b>The siege.</b> A wave at the gates fights Millbrook's archers, ballista, arcane tower and temple bell, and batters its walls. Once it's through, or if it flies over, it sacks the town: it damages the hall, plunders gold and burns buildings. If the heroes are home, they man the walls and fight it themselves, with the towers firing. Millbrook builds its own defences against whatever keeps hurting it, so mix up what you send.</li>
+        <li><b>Build lairs.</b> Pick <b>Build</b>, choose a lair and click explored ground the heroes can't see. Each lair breeds one kind of monster every night. <b>When it's full, a wave marches to your war camp outside Millbrook on its own.</b> A lair near the town reinforces the camp quickly; one far away is harder for the heroes to find.</li>
+        <li><b>The war camp and the weekly assault.</b> Your waves and the bands that join you gather in a war camp just outside Millbrook; the heroes leave it alone. <b>When the week ends, you hold a war council</b>: attack, lead the assault yourself, or hold back a week. The assault is a battle against Millbrook's gate, towers, militia and town hall (and the heroes, if they're home). Break the gate or a tower to get in; every tower that falls loses Millbrook a level of it; whatever gets inside damages the hall, plunders gold and burns buildings. <b>Bring the hall down and Millbrook is yours.</b> Your villain hits hardest of all, but if ${esc(VP().he)} falls below half health ${esc(VP().he)} flees to the tower for 3 days.</li>
         <li><b>Infamy.</b> Hurting and killing heroes, breaking into Millbrook, plunder and every lair you keep standing earn Infamy. Infamy levels up your villain: stronger on the throne, a new power at levels 6, 11 and 16, and a talent point every level. Spend talents at the Dark Tower on the talent web: six regions around your sigil (The Brood, Dominion, Siegecraft, Dread, ${esc(VN())}'s own path with a monster only ${esc(VP().he)} can raise, and the Wilds for recruiting). Each talent you take has to join one you already have, so every campaign walks its own path.</li>
         <li><b>Your villain walks the map.</b> Click ${esc(VN())} in the sidebar, then right-click a band of the wilds to go and win it over: <b>pay</b> it, <b>talk</b> (Intimidate, Persuade or Deceive, a d20 each), or <b>fight</b> it alone. Every wild band shows its level next to ${esc(VP().his)}: a band four levels above ${esc(VP().him)} only fights. Bands that join you march on Millbrook; your banner holds 1 band plus 1 for every ${G.CMD_PER} levels at a time. Beaten, a band may kneel (or buy its life, if your banner is full) and march once it has healed; one that fights to the last leaves its hoard. Lose, and ${esc(VN())} limps home to recover.</li>
         <li><b>Relics.</b> Dark treasures lie hidden around the map, and only ${esc(VN())} can sense them: they glow where your servants have seen one, rarer the farther they lie from the tower. Select ${esc(VN())} and right-click one to go and claim it (${esc(VP().he)} can seize the heroes' artifacts before they do, too). ${esc(capWord(VP().he))} wears three at a time and carries the rest; each adds to ${esc(VP().his)} might, menace, stride or command, or gives a power. Some are cursed. <b>R</b> opens them.</li>
@@ -2354,6 +2450,7 @@
       // 0.31: your villain greets the heroes on the throne, then they answer; at the walls, on the road after a wave, at your lair, each has its line
       if (b.duel) { /* the parley already spoke */ }
       else if (b.finale && b.stage !== 1) setTimeout(() => { if (vsay('throne', { prio: 3, force: true })) bark('boss', null, { queue: true, force: true }); else bark('boss'); }, 2600);
+      else if (b.assault) { if (b.heroesIn) setTimeout(() => bark('walls', null, { force: true, queue: true }), 1800); }
       else if (b.siege) setTimeout(() => bark('walls', null, { force: true }), 1100);
       else {
         const o = b.objId && S.objects.find(z => z.id === b.objId);
@@ -2492,7 +2589,7 @@
     }
   }
   function drawUnit(c, x, v, p, R, now) {
-    const sz = R * 1.62; const b = S.battle;
+    const sz = R * (x.structure ? 2.15 : 1.62); const b = S.battle;
     const cur = (b.cur === x.id && !ui.playing && b.phase !== 'deploy') || (b.phase === 'deploy' && ui.deploySel === x.id);
     c.save();
     if (!v.alive) c.globalAlpha = Math.max(0, v.fade);
@@ -2504,11 +2601,11 @@
     c.drawImage(A.IMG['unit-' + x.icon], p.x - sz / 2, p.y - sz / 2 - R * 0.12, sz, sz);
     c.restore();
     if (!v.alive) return;
-    if (x.side === 'dm') {
+    if (x.side === 'dm' || x.militia) {
       const t = String(v.count); c.font = `700 ${Math.round(R * 0.36)}px Alegreya, Georgia, serif`;
       const w = Math.max(R * 0.6, c.measureText(t).width + 8), h = R * 0.42;
       const bx = p.x + R * 0.25, by = p.y + R * 0.38;
-      if (!x.boss) { c.fillStyle = '#1a2a5a'; c.strokeStyle = '#d9b45e'; c.lineWidth = 1; c.beginPath(); roundRect(c, bx - w / 2, by, w, h, 3); c.fill(); c.stroke(); c.fillStyle = '#fff'; c.textAlign = 'center'; c.fillText(t, bx, by + h * 0.78); }
+      if (!x.boss) { c.fillStyle = x.militia ? '#5a1a14' : '#1a2a5a'; c.strokeStyle = '#d9b45e'; c.lineWidth = 1; c.beginPath(); roundRect(c, bx - w / 2, by, w, h, 3); c.fill(); c.stroke(); c.fillStyle = '#fff'; c.textAlign = 'center'; c.fillText(t, bx, by + h * 0.78); }
       if (x.boss || (x.count === 1 && x.maxHp >= 60)) { const f = Math.max(0, v.hp / x.maxHp); c.fillStyle = '#000'; c.fillRect(p.x - R * 0.55, p.y + R * 0.86, R * 1.1, 4); c.fillStyle = x.boss ? '#c06cff' : '#e8604f'; c.fillRect(p.x - R * 0.55, p.y + R * 0.86, R * 1.1 * f, 4); }
     } else {
       const f = Math.max(0, v.hp / x.maxHp);
@@ -2583,6 +2680,7 @@
       step(); return dur * 0.6;
     }
     if (ev.t === 'miss') { const vd = ui.view[ev.target]; if (!vd) return 0; const p = hexXY(vd.pos); ui.floats.push({ battle: true, x: p.x, y: p.y, text: 'Miss', color: '#c9c0aa', t0: now }); return 150 * speed; }
+    if (ev.t === 'fall') { const vd = ui.view[ev.id]; if (!vd) return 0; const p = hexXY(vd.pos); vd.alive = false; fadeOut(vd, speed * 2); ui.fx.push({ kind: 'boom', x: p.x, y: p.y, t0: now, dur: 900 * speed }); ui.floats.push({ battle: true, x: p.x, y: p.y, text: ev.kind === 'gate' ? 'The gate falls!' : ev.kind === 'hall' ? 'The hall falls!' : 'Destroyed!', color: '#ffd36a', t0: now }); sfx('crit'); sfx('fire', { delay: 0.2, vol: 0.7 }); renderBattleUI(true); return 700 * speed; }
     if (ev.t === 'trapfx') { const p = hexXY(ev.k); ui.fx.push({ kind: 'ring', x: p.x, y: p.y, t0: now, dur: 400 * speed, color: '#ff6a50' }); return 200 * speed; }
     if (ev.t === 'revive') { const v = ui.view[ev.id]; const u = unit(ev.id); if (v && u) { v.down = false; v.hp = u.hp; } renderBattleUI(true); return 200 * speed; }
     if (ev.t === 'hit') {
@@ -2591,7 +2689,7 @@
       if (ev.dodge) { ui.floats.push({ battle: true, x: p.x, y: p.y, text: 'Dodge!', color: '#bfe6ff', t0: now }); return 260 * speed; }
       vd.flash = now;
       if (ev.escaped) { vd.alive = false; fadeOut(vd, speed); ui.fx.push({ kind: 'ring', x: p.x, y: p.y, t0: now, dur: 700 * speed, color: '#c06cff' }); ui.floats.push({ battle: true, x: p.x, y: p.y, text: 'Vanishes!', color: '#d9a8ff', t0: now }); renderBattleUI(true); return 500 * speed; }
-      if (d.side === 'dm') { if (d.boss) vd.hp = Math.max(0, vd.hp - ev.dmg); vd.count = Math.max(0, vd.count - (ev.killed || 0)); if (ev.died) { vd.alive = false; fadeOut(vd, speed); } }
+      if (d.side === 'dm' || d.militia) { if (d.boss) vd.hp = Math.max(0, vd.hp - ev.dmg); vd.count = Math.max(0, vd.count - (ev.killed || 0)); if (ev.died) { vd.alive = false; fadeOut(vd, speed); } }
       else { vd.hp = Math.max(0, vd.hp - ev.dmg); if (ev.down) vd.down = true; if (ev.died) { vd.alive = false; fadeOut(vd, speed); } if (ev.relentless) vd.hp = 1; }
       if (ev.dmg || ev.died) {
         const txt = (ev.crit ? 'Crit! ' : '') + '−' + ev.dmg + (ev.killed ? ` (${ev.killed} slain)` : '') + (ev.down ? ' · down' : '');
@@ -2676,6 +2774,7 @@
     const res = G.finishBattle(S);
     renderBar(); save(true); $('btray').hidden = true;
     if (res && res.duel) { duelResult(res); return; }
+    if (res && res.assault) { assaultResult(res); return; }
     if (res.result === 'win' && !(res.finale && res.stage !== 1)) { const hard = res.label === 'Tense' || res.label === 'Harrowing'; if (Math.random() < (hard ? 0.85 : 0.35)) setTimeout(() => bark(hard ? 'hard' : 'easy'), 700); }
     const killed = Object.keys(res.killed).map(k => `<li>${res.killed[k]} ${esc(res.killed[k] > 1 ? res.plural[k] || k : k)}</li>`).join('') || '<li class="hint">Nothing.</li>';
     const title = res.result === 'win' ? (res.finale && res.stage === 1 ? 'The heroes break through your gates' : res.finale ? `${esc(VN())} falls` : res.boss ? `${esc(VN())} is driven off` : res.dungeon ? 'The heroes wreck your lair' : res.siege ? 'Millbrook holds' : res.attack ? 'The heroes beat your war party' : 'The heroes win')
@@ -2716,11 +2815,16 @@
   function renderBattleUI(light) {
     const b = S.battle; if (!b) return;
     const u = curUnit();
-    const party = b.units.filter(x => x.side === 'party');
-    $('bparty').innerHTML = party.map(x => { const v = ui.view[x.id] || x; const f = Math.max(0, v.hp / x.maxHp) * 100; return `<div class="bh${!v.alive ? ' dead' : v.down ? ' down' : ''}${b.cur === x.id ? ' cur' : ''}">${img('unit-' + x.icon, 'port sm')}<span><b>${esc(shortName(x.name))}</b><i class="hpb"><i style="width:${f.toFixed(0)}%"></i></i><small>${v.alive ? (v.down ? 'Down' : Math.max(0, v.hp) + '/' + x.maxHp) : 'Dead'} · AC ${x.ac}${x.maxMana ? ' · ' + x.mana + ' mana' : ''}</small></span></div>`; }).join('');
+    const party = b.units.filter(x => x.side === 'party' && !x.structure && !x.militia);
+    // 0.37: in an assault, Millbrook's defences sit beside the heroes as small health bars (the militia as one head count)
+    const mb = !b.assault ? '' : (() => {
+      const st = b.units.filter(x => x.structure); const mil = b.units.filter(x => x.militia); const mv = mil.reduce((t, x) => t + ((ui.view[x.id] || x).alive ? (ui.view[x.id] || x).count : 0), 0);
+      return `<div class="bmb">${st.map(x => { const v = ui.view[x.id] || x; const f = v.alive ? Math.max(0, v.hp / x.maxHp) * 100 : 0; return `<span class="mbs${v.alive ? '' : ' dead'}" title="${esc(x.name)}: ${v.alive ? Math.max(0, Math.round(v.hp)) + ' / ' + x.maxHp : 'destroyed'}">${img('unit-' + x.icon, 'mbi')}<i class="hpb${x.hall ? ' hall' : ''}"><i style="width:${f.toFixed(0)}%"></i></i></span>`; }).join('')}${mil.length ? `<span class="mbs mil${mv ? '' : ' dead'}" title="Millbrook's militia: ${mv} left">${img('unit-militia', 'mbi')}<b>${mv}</b></span>` : ''}</div>`;
+    })();
+    $('bparty').innerHTML = (b.assault && !party.length ? '<div class="bh away"><span><b>The heroes are away</b><small>Only the militia and the towers defend</small></span></div>' : '') + party.map(x => { const v = ui.view[x.id] || x; const f = Math.max(0, v.hp / x.maxHp) * 100; return `<div class="bh${!v.alive ? ' dead' : v.down ? ' down' : ''}${b.cur === x.id ? ' cur' : ''}">${img('unit-' + x.icon, 'port sm')}<span><b>${esc(shortName(x.name))}</b><i class="hpb"><i style="width:${f.toFixed(0)}%"></i></i><small>${v.alive ? (v.down ? 'Down' : Math.max(0, v.hp) + '/' + x.maxHp) : 'Dead'} · AC ${x.ac}${x.maxMana ? ' · ' + x.mana + ' mana' : ''}</small></span></div>`; }).join('') + mb;
     $('bround').textContent = b.phase === 'deploy' ? 'Deployment' : `Round ${b.round}`;
     $('bterrain').textContent = b.siege ? 'Millbrook\'s gates' : G.TERRAIN[b.terrain] ? G.TERRAIN[b.terrain].name : '';
-    $('bdm').innerHTML = `<span title="The tower's gold: pays for extra traps and reinforcements">Tower <b>${Math.floor(S.res.gold)}</b></span><span title="${esc(VN())}'s level">${esc(VN())} <b>Lv ${G.villainLevel(S)}</b></span>${b.siege ? '<span>The siege of Millbrook</span>' : b.attack ? '<span>Your war party</span>' : b.finale ? '<span>The final showdown</span>' : ''}`;
+    $('bdm').innerHTML = `<span title="The tower's gold: pays for extra traps and reinforcements">Tower <b>${Math.floor(S.res.gold)}</b></span><span title="${esc(VN())}'s level">${esc(VN())} <b>Lv ${G.villainLevel(S)}</b></span>${b.assault ? `<span>The assault on Millbrook · dawn after round ${G.AS.rounds}</span>` : b.siege ? '<span>The siege of Millbrook</span>' : b.attack ? '<span>Your war party</span>' : b.finale ? '<span>The final showdown</span>' : ''}`;
     if (light) return;
     const dep = $('bdeploy');
     if (b.phase === 'deploy') {
@@ -2995,6 +3099,7 @@
       if (act !== 'ttab') sfx('click', { vol: 0.45, gap: 40 });
       switch (act) {
         case 'close': closeModal(); return;
+        case 'council': councilAct(d.k); return;
         case 'bskip': skipBattle(); return;
         case 'sound': { if (!window.SND) return; const st = typeof Store !== 'undefined' ? Store.setSettings({ muted: !SND.muted }) : { muted: !SND.muted }; SND.setVolumes(st); updateSoundBtn(); if (!SND.muted) sfx('chime'); return; }
         case 'hero': showHero(d.id); return;
@@ -3049,6 +3154,7 @@
         case 'vstop': { S.villain.path = []; S.villain.target = null; S.villain.goHome = false; vsay('order'); commit(); return; }
         case 'vmeet': showParley(); return;
         case 'ptalk': case 'ppay': case 'pfight': case 'pleave': parleyAct(act, d.k); return;
+        case 'bcamp': { const b = selBand(); if (!b) return; const err = G.bandToCamp(S, b.id); if (err) { toast(err, 'bad'); return; } sfx('horde', { vol: 0.6 }); ui.mode = null; commit(); return; }
         case 'bhold': { const b = selBand(); if (b) { const err = G.bandHold(S, b.id); if (err) toast(err, 'bad'); } ui.mode = null; commit(); return; }
         case 'blevel': { const b = selBand(); if (!b) return; const err = G.bandLevelUp(S, b.id); if (err) { toast(err, 'bad'); return; } sfx('growl'); ui.threat = null; ui.floats.push({ x: b.x * TILE + TILE / 2, y: b.y * TILE, text: 'Lv ' + b.lvl, color: '#ffd36a', t0: performance.now() }); kick(); commit(); return; }
         case 'baway': { const b = selBand(); if (!b) return; const err = G.bandAway(S, b.id); if (err) { toast(err, 'bad'); return; } ui.floats.push({ x: b.x * TILE + TILE / 2, y: b.y * TILE, text: 'Gone', color: '#c8b898', t0: performance.now() }); ui.sel = null; ui.mode = null; kick(); commit(); return; }
@@ -3174,8 +3280,10 @@
       { const c = opts.fresh || !G.partyVisible(S) ? G.siteOf(S, 'tower') : S.party; sizeMap(); centerOn(c.x, c.y, true); } commit(); drawMap();
       if (S.phase === 'battle' && S.battle) enterBattle();
       else if (S.phase === 'week') showWeek();
+      else if (S.phase === 'council') showCouncil();
       else if (S.phase === 'over') showOver();
       else if (opts.fresh) setTimeout(() => { if (ui.active && S && !ui.modal) vsay('intro', { prio: 3, force: true }); }, 1400);   // 0.35: no rules popup; the villain just speaks
+      if (opts.fresh) setTimeout(() => { if (ui.active && S) toast(`Your goal: raze Millbrook. Your lairs send their monsters to a war camp at its gates, and every week ends with an assault on the town. Bring down its town hall and you win.`, 'sys', 12000); }, 5200);   // 0.37
       morning();
       track(opts.fresh ? 'start' : 'resume');
     });

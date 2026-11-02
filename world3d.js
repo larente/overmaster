@@ -1316,6 +1316,10 @@ const World3D = (() => {
       if (lbl) { const L = label(MAP.labels, o.id, lbl.cls, lbl.html); L.pos.set(wx, hAt(wx, wz) + top + (o.kind === 'stack' ? 0.18 : 0.05), wz); if (lbl.below) L.pos.set(wx, hAt(wx, wz) + 0.02, wz + 0.48); }
     }
     for (const [id, E] of MAP.objs) if (!seen.has(id)) { MAP.scene.remove(E.grp); MAP.objs.delete(id); const L = MAP.labels.get(id); if (L) { L.el.remove(); MAP.labels.delete(id); } }
+    // 0.37: the war camp outside Millbrook, named over its bands
+    if (G.campBands) { const B = G.campBands(S).filter(o => !hooks.seeTile || hooks.seeTile(o.x, o.y));
+      if (B.length) { let cx = 0, cz = 0; for (const o of B) { cx += o.x + 0.5; cz += o.y + 0.5; } cx /= B.length; cz /= B.length; const n = B.reduce((a, o) => a + o.count, 0);
+        const L = label(MAP.labels, 'warcamp', 'l-camp', `War camp <b>${n}</b>`); L.pos.set(cx, hAt(cx, cz) + 1.25, cz); } }
     // the places your minions work, and the minions themselves
     if (!MAP.nodes) MAP.nodes = new Map(); if (!MAP.mins) MAP.mins = new Map();
     for (const n of S.nodes || []) {
@@ -1452,7 +1456,7 @@ const World3D = (() => {
     const known = o.known ? `<i class="k${o.rumored ? ' r' : ''}">${o.rumored ? '?' : '!'}</i>` : '';
     const qt = questTag(S, { kind: 'obj', id: o.id });
     if (o.kind === 'stack') { const ml = hooks.monLevel ? hooks.monLevel(o) : null;   // 0.31: a band of the wilds shows its level, coloured against your villain's
-      return { cls: 'l-stack' + (o.patrol ? ' patrol' : ''), html: `<b>${o.count}</b>${ml ? `<span class="mlv c-${ml.cls}">Lv ${ml.L}</span>` : (o.lvl || 1) > 1 ? `<span class="lv">★${o.lvl}</span>` : ''}${known}${qt}` }; }
+      return { cls: 'l-stack' + (o.patrol ? ' patrol' : '') + (o.camp ? ' camp' : ''), html: `<b>${o.count}</b>${ml ? `<span class="mlv c-${ml.cls}">Lv ${ml.L}</span>` : (o.lvl || 1) > 1 ? `<span class="lv">★${o.lvl}</span>` : ''}${known}${qt}` }; }
     if (o.kind === 'dungeon') return { cls: 'l-lair' + (o.mine ? ' mine' : ''), below: true, html: `${esc(G.DUNGEONS[o.dtype].name)}${(o.level || 1) > 1 ? ' <span class="lv">II</span>' : ''}${o.mine && hooks.lairLabel ? ' ' + hooks.lairLabel(o) : ''}${known}${qt}` };
     if (G.ITEMS[o.kind] && G.ITEMS[o.kind].cat === 'trap') return null;
     if (o.kind === 'relic') return { cls: 'l-relic t' + o.tier, below: true, html: ['', 'Lesser relic', 'Greater relic', 'Legendary relic'][o.tier] || 'Relic' };
@@ -1730,7 +1734,7 @@ const World3D = (() => {
       scene.add(grp);
     }
     // trap spikes (visible to the DM)
-    BAT.traps = new Map();
+    BAT.traps = new Map(); BAT.rubble = new Map();
     // units
     BAT.cur = M.circleMesh('#ffd36a', 1.9, 0.95); BAT.cur.position.y = 0.05; scene.add(BAT.cur);
     fitBattleCamera();
@@ -1747,10 +1751,18 @@ const World3D = (() => {
     if (BAT.scene && BAT.scene.fog) { BAT.scene.fog.near = Math.max(34, d * 1.15); BAT.scene.fog.far = Math.max(70, d * 2.6); }
     BAT.scale = clamp(18 / d, 0.75, 1.2);
   }
-  const UNIT_SCALE = { goblin: 3.77, wolf: 3.38, bandit: 3.55, skeleton: 3.51, orc: 3.38, ogre: 3.06, wraith: 3.25, troll: 2.99, giant: 2.79, dragon: 3.38, knight: 3.38, king: 3.38, barbarian: 3.51, rogue: 3.58, cleric: 3.51, wizard: 3.51, vampire: 3.38, hydra: 2.99, wyrm: 3.1, archfiend: 2.6, archmage: 3.3, vlord: 3.3, dknight: 3.2, demon: 2.73 };
+  const UNIT_SCALE = { militia: 3.5, goblin: 3.77, wolf: 3.38, bandit: 3.55, skeleton: 3.51, orc: 3.38, ogre: 3.06, wraith: 3.25, troll: 2.99, giant: 2.79, dragon: 3.38, knight: 3.38, king: 3.38, barbarian: 3.51, rogue: 3.58, cleric: 3.51, wizard: 3.51, vampire: 3.38, hydra: 2.99, wyrm: 3.1, archfiend: 2.6, archmage: 3.3, vlord: 3.3, dknight: 3.2, demon: 2.73 };
   const BIG = 1.25; // battle figures read better a little larger than the hexes strictly allow
   function makeUnit(u) {
     const g = new T.Group();
+    // 0.37: Millbrook's towers, gate, bell and hall: real models that stand still
+    if (u.structure) {
+      const fig = M.make(u.icon); g.add(fig); const mat = fig.userData.body ? fig.userData.body.material : null;
+      const fmat = mat ? mat.clone() : null; if (fmat) { fmat.transparent = true; fig.userData.body.material = fmat; }
+      const ring = M.circleMesh('#c8b48a', 1.8, 0.25); ring.position.y = 0.04; g.add(ring);
+      g.userData = { fig, ring, mat: fmat || { opacity: 1, depthWrite: true }, key: u.icon, sc: 1, h: (fig.userData.h || 2) + 0.2, rot: 0, structure: true };
+      return g;
+    }
     let key = u.icon || 'king';
     if (u.side === 'party') { const S0 = hooks.state(); const hero = S0 && S0.heroes.find(h => h.id === u.hero); key = hero ? M.defineHero(hero).slice(5) : key; }
     const stand = typeof Game !== 'undefined' && Game.CREATURES[key] && Game.CREATURES[key].stand;   // a stand-in keeps its model's scale (its own size is in the blueprint)
@@ -1777,6 +1789,16 @@ const World3D = (() => {
       const lift = (v.lift || 0) / BAT.bf.R;
       const ud = E.userData;
       E.position.set(w.x, 0, w.z);
+      if (ud.structure) {
+        // a tower that falls leaves its rubble behind
+        const fade = v.alive ? 1 : Math.max(0, v.fade); ud.mat.opacity = fade; ud.mat.depthWrite = fade > 0.95;
+        const fl = v.flash && now - v.flash < 260 ? 1 - (now - v.flash) / 260 : 0; if (ud.mat.emissive) ud.mat.emissive.setRGB(fl * 0.7, fl * 0.15, fl * 0.05);
+        ud.fig.position.y = v.alive ? 0 : -(1 - fade) * 1.2; ud.fig.rotation.z = v.alive ? 0 : (1 - fade) * 0.25;
+        if (!v.alive && !BAT.rubble.has(u.id)) { const r = rubble(); r.position.set(w.x, 0, w.z); BAT.scene.add(r); BAT.rubble.set(u.id, r); }
+        ud.ring.material.opacity = 0.25 * fade;
+        if (v.alive) { const f = Math.max(0, v.hp / u.maxHp); const L = label(BAT.labels, 'u' + u.id, 'b-hp b-struct', `<span class="sn">${esc(u.name)}</span>` + hpBar(f, f < 0.3 ? 'l' : f < 0.6 ? 'w' : 'g')); L.pos.set(w.x, ud.h + 0.2, w.z); }
+        continue;
+      }
       const float = ud.key === 'wraith' || ud.key === 'dragon';
       ud.fig.position.y = lift + (float ? 0.25 + Math.sin(t * 2 + w.x) * 0.08 : 0);
       // facing: toward the target while attacking, else toward the other side
@@ -1796,7 +1818,7 @@ const World3D = (() => {
       // labels: counts and health
       if (v.alive) {
         let html, cls;
-        if (u.side === 'dm' && !u.boss) { html = `<b>${v.count}</b>`; cls = 'b-count'; if (u.count === 1 && u.maxHp >= 60) html += hpBar(v.hp / u.maxHp, 'm'); }
+        if ((u.side === 'dm' && !u.boss) || u.militia) { html = `<b>${v.count}</b>`; cls = 'b-count'; if (u.count === 1 && u.maxHp >= 60) html += hpBar(v.hp / u.maxHp, 'm'); }
         else { const f = Math.max(0, v.hp / u.maxHp); html = hpBar(f, u.boss ? 'b' : f < 0.3 ? 'l' : f < 0.6 ? 'w' : 'g') + (v.down ? '<span class="dn">DOWN</span>' : ''); cls = 'b-hp'; }
         const L = label(BAT.labels, 'u' + u.id, cls, html); L.pos.set(w.x, ud.h + lift + 0.25, w.z);
       }
@@ -1821,6 +1843,11 @@ const World3D = (() => {
       const L = label(BAT.labels, 'f' + (f.id || (f.id = Math.random().toString(36).slice(2))), 'b-float', `<span style="color:${f.color}">${esc(f.text)}</span>`);
       const w = pxToW(f.x, f.y); L.pos.set(w.x, 2.2 + age * 1.2, w.z); L.el.style.opacity = (1 - age * age).toFixed(2);
     }
+  }
+  function rubble() {
+    const b = new M.Builder(11); const r = M.rng(5);
+    for (let i = 0; i < 9; i++) { const s = 0.2 + r() * 0.35; b.add(new T.BoxGeometry(s, s * 0.7, s), i % 3 ? '#8a8272' : '#6a6458', { x: (r() - 0.5) * 1.3, y: s * 0.3, z: (r() - 0.5) * 1.3, ry: r() * 3, rx: r() * 0.5 }); }
+    const g = new T.Group(); const m = new T.Mesh(b.build(), M.MAT.body); m.castShadow = m.receiveShadow = true; g.add(m); return g;
   }
   function hpBar(f, c) { return `<i class="hpb ${c}"><i style="width:${Math.round(clamp(f, 0, 1) * 100)}%"></i></i>`; }
   function spikes(sprung) {

@@ -487,6 +487,7 @@ const Models = (() => {
   // every blueprint: { body, glow, lights: [[x,y,z,color,size]], h, float }
   const UNIT_DEF = {
     // the villains' minions: small, with a tool, and a sack on the back
+    militia: (b, g) => humanoid(b, g, { h: 0.5, skin: '#e0b48c', cloth: '#8a6a3a', cloth2: '#5a4a2a', helm: '#8a8a92', weapon: 'spear', shield: '#7a3a2a', belt: '#3a2614', bulk: 0.95, eyes: '#2a1a10', cape: '#6a2a1e' }),   // 0.37: Millbrook's militia
     'm-thrall': (b, g) => { humanoid(b, g, { h: 0.42, skin: '#e8e0c8', cloth: '#5a4a38', cloth2: '#4a3a2a', skull: true, bulk: 0.72, weapon: 'axe', eyes: '#7ad0ff', boot: '#d8d0b8', armC: '#e0d8c0' }); b.add(sph(0.09, 1), '#8a7050', { y: 0.27, z: -0.08, s: [1, 1.1, 0.8], m: SURF.cloth }); },
     'm-kobold': (b, g) => { humanoid(b, g, { h: 0.36, skin: '#b0562a', cloth: '#6a4a2a', cloth2: '#4a3020', nose: true, horns: '#e8d9a8', headS: 1.15, legs: 0.38, weapon: 'axe', eyes: '#f2c13a', bulk: 0.9 }); b.add(sph(0.08, 1), '#8a7050', { y: 0.22, z: -0.07, s: [1, 1.1, 0.8], m: SURF.cloth }); },
     'm-imp': (b, g) => { humanoid(b, g, { h: 0.34, skin: '#c8402a', cloth: '#3a1a14', cloth2: '#2a100c', horns: '#2a1a14', bareArms: true, weapon: 'spear', eyes: '#ffd23a', bulk: 0.85 }); dragonWings(b, 0.34, '#5a1410', 0.62); },
@@ -581,6 +582,40 @@ const Models = (() => {
     // market square well
     b.add(cyl(0.06, 0.06, 0.06, 8), '#8a8274', { x: 0, y: 0.03, z: 0.1, m: SURF.stone });
     L.push([0.3, 0.4, 0.3, '#ffcf7a', 0.35], [-0.35, 0.35, 0.4, '#ffcf7a', 0.3], [0, 0.42, -0.08, '#ffd27a', 0.3]);
+  };
+  // 0.37: Millbrook's defences on the assault field, in battle units (a hex is about 2 across)
+  const MBS = '#a29a88', MBS2 = '#8a8272', MBR = '#7a3226';
+  function merlons(b, r, y, n, c) { for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2; b.add(box(0.26, 0.28, 0.26), c || MBS, { x: Math.cos(a) * r, y: y + 0.14, z: Math.sin(a) * r, ry: -a, m: SURF.stone }); } }
+  P['mb-watch'] = (b, g, L) => {
+    b.add(cyl(0.72, 0.82, 2.6, 10), MBS, { y: 1.3, m: SURF.stone }); b.add(cyl(0.88, 0.76, 0.3, 10), MBS2, { y: 2.7, m: SURF.stone }); merlons(b, 0.78, 2.85, 8);
+    b.add(cone(0.7, 0.9, 10), MBR, { y: 3.55, m: SURF.roof }); b.seg([0, 3.9, 0], [0, 4.5, 0], 0.03, 0.03, '#3a2a1a'); b.add(box(0.5, 0.28, 0.02), '#c0392b', { x: 0.25, y: 4.35, jit: 0 });
+    for (const [y, a] of [[1.0, 0.3], [1.9, 2.4], [1.5, 4.4]]) b.add(box(0.12, 0.34, 0.08), '#1e140c', { x: Math.cos(a) * 0.79, y, z: Math.sin(a) * 0.79, ry: -a, jit: 0 });
+  };
+  P['mb-ballista'] = (b, g, L) => {
+    b.add(box(1.5, 1.9, 1.5), MBS, { y: 0.95, m: SURF.stone }); for (let i = 0; i < 4; i++) for (let j = 0; j < 3; j++) { const s = i % 2 ? 1 : -1, ax = i < 2; b.add(box(0.28, 0.3, 0.28), MBS2, { x: ax ? s * 0.62 : -0.5 + j * 0.5, y: 2.05, z: ax ? -0.5 + j * 0.5 : s * 0.62, m: SURF.stone }); }
+    b.add(box(0.2, 0.2, 1.4), '#6a4626', { y: 2.35, x: -0.1, ry: 0.15, m: SURF.wood }); b.add(box(1.4, 0.12, 0.12), '#5a3a1e', { y: 2.4, x: 0.25, m: SURF.wood });
+    b.add(cone(0.08, 0.3, 5), '#b8b0a0', { y: 2.35, x: -0.2, z: -0.85, rx: -Math.PI / 2, m: SURF.metal });
+  };
+  P['mb-arcane'] = (b, g, L) => {
+    b.add(cyl(0.6, 0.75, 3.0, 9), '#7d7a92', { y: 1.5, m: SURF.stone }); b.add(cyl(0.78, 0.62, 0.25, 9), '#625f78', { y: 3.1, m: SURF.stone });
+    b.add(cone(0.62, 1.1, 9), '#3a3a7a', { y: 3.8, m: SURF.roof }); g.add(sph(0.22, 1), '#8fd0ff', { y: 4.55, jit: 0 });
+    for (let i = 0; i < 3; i++) { const a = i * 2.1; g.add(box(0.1, 0.3, 0.05), '#8fd0ff', { x: Math.cos(a) * 0.62, y: 1.4 + i * 0.5, z: Math.sin(a) * 0.62, ry: -a, jit: 0 }); }
+    L.push([0, 4.55, 0, '#8fd0ff', 1.6]);
+  };
+  P['mb-bell'] = (b, g, L) => {
+    for (const [x, z] of [[-0.5, -0.5], [0.5, -0.5], [-0.5, 0.5], [0.5, 0.5]]) b.add(box(0.22, 2.2, 0.22), '#c8bca6', { x, y: 1.1, z, m: SURF.stone });
+    b.add(prismRoof(1.5, 0.7, 1.5), MBR, { y: 2.2 }); b.add(cyl(0.12, 0.36, 0.5, 10), '#d9b45e', { y: 1.65, m: SURF.metal }); b.add(box(1.3, 0.25, 1.3), '#b8ac96', { y: 0.12, m: SURF.stone });
+  };
+  P['mb-gate'] = (b, g, L) => {
+    b.add(box(0.9, 2.3, 0.5), MBS, { y: 1.15, z: -0.8, m: SURF.stone }); b.add(box(0.9, 2.3, 0.5), MBS, { y: 1.15, z: 0.8, m: SURF.stone }); b.add(box(0.9, 0.6, 2.1), MBS2, { y: 2.0, m: SURF.stone });
+    for (let i = 0; i < 4; i++) b.add(box(0.95, 0.3, 0.3), MBS, { y: 2.45, z: -0.8 + i * 0.53, m: SURF.stone });
+    b.add(box(0.2, 1.75, 1.1), '#6a4626', { x: 0.05, y: 0.88, m: SURF.wood }); for (const y of [0.4, 0.95, 1.5]) b.add(box(0.24, 0.1, 1.12), '#3a2614', { x: 0.06, y, m: SURF.metal });
+  };
+  P['mb-hall'] = (b, g, L) => {
+    b.add(box(1.6, 1.3, 1.9), '#d6c9aa', { y: 0.65, m: SURF.timber }); b.add(prismRoof(1.85, 0.95, 2.1), MBR, { y: 1.3, rx: 0 });
+    b.add(box(0.7, 1.9, 0.7), '#c8bca6', { y: 0.95, z: -0.6, x: 0.4, m: SURF.stone }); b.add(cone(0.55, 0.8, 4), '#26406a', { y: 2.3, z: -0.6, x: 0.4, ry: Math.PI / 4, m: SURF.roof });
+    b.seg([0.4, 2.7, -0.6], [0.4, 3.3, -0.6], 0.03, 0.03, '#3a2a1a'); b.add(box(0.45, 0.25, 0.02), '#c0392b', { x: 0.62, y: 3.15, z: -0.6, jit: 0 });
+    b.add(box(0.05, 0.6, 0.45), '#3a2818', { x: 0.81, y: 0.3, z: 0.3, jit: 0 }); g.add(box(0.03, 0.22, 0.22), '#ffd27a', { x: 0.82, y: 0.85, z: -0.2, jit: 0 });
   };
   P.townMill = () => { const b = new Builder(5); for (let i = 0; i < 4; i++) b.add(box(0.04, 0.34, 0.01), '#e8dcc8', { y: 0.17, rz: 0, parent: new T.Matrix4().makeRotationZ(i * Math.PI / 2) }); return b.build(); };
   P.tower = (b, g, L) => {
