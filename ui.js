@@ -1736,7 +1736,7 @@
       $('b-infbar').style.width = (hi ? Math.max(0, Math.min(1, (xp - lo) / (hi - lo))) * 100 : 100).toFixed(0) + '%';
       $('g-inf').title = `${VN()} is level ${L}. ${hi ? `${Math.ceil(hi - xp)} more Infamy to level ${L + 1}.` : 'The highest level there is.'} Hurting and killing heroes, breaking into Millbrook, plunder and every lair you keep standing earn Infamy. Each level makes your villain stronger on the throne and gives a talent point.`; }
     $('b-date').textContent = `Week ${S.week} · Day ${S.day}`;
-    { const c = $('b-camp'); if (c) { const n = G.campCount(S); c.hidden = !n; if (n) { c.innerHTML = `${img('unit-mb-gate', 'ci')}War camp <b>${n}</b> · assault ${daysToAssault()}`; c.classList.toggle('soon', S.day >= 6); } } }
+    { const c = $('b-camp'); if (c) { const n = G.campCount(S); c.hidden = !n; if (n) { c.innerHTML = `${img('unit-mb-gate', 'ci')}War camp <b>${n}</b><span class="cx"> · assault ${daysToAssault()}</span>`; c.title = `Your war camp outside Millbrook: ${n} monsters. The assault: ${daysToAssault()}. Waves and recruits gather there; when the week ends, the whole camp storms the town.`; c.classList.toggle('soon', S.day >= 6); } } }
     const fx = G.WEEKS_FX[S.weekFx]; $('b-week').textContent = fx.name; $('b-week').title = fx.text;
     $('b-lvl').textContent = 'Lv ' + G.avgLevel(S);
     const r = G.readiness(S); const rd = $('b-ready');

@@ -852,3 +852,5 @@ ul.log small { color: #8a7a60; margin-right: 4px; }
 .tvcard .gdet { margin: 4px 0 6px; }
 .tvcard .gdet .row { flex-wrap: wrap; gap: 6px; align-items: center; }
 @media (max-width: 760px) { .tview .tvlist { width: auto; right: 12px; top: auto; bottom: 44px; max-height: 42%; } }
+/* 0.39: the food counter needs room in the bottom bar: a little tighter on mid-size screens so it stays one row */
+@media (max-width: 1600px) { .bar { gap: 6px 9px; } .bar .gauge .track { width: 62px; } .bar .purse .res { gap: 2px; } .campchip .cx, .bar .lvl .k { display: none; } }

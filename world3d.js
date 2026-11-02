@@ -796,6 +796,31 @@ const World3D = (() => {
     if (a.pixel) pixelTex(r.tex);
     return r;
   }
+  /* 0.39: one scale for every figure. Each hero's body (feet to the top of the head, not the weapon held over it) comes out
+     the same height for its race; the monsters below are set against them. Heights are in the battle's units
+     (the model's scale times UNIT_SCALE), so a human hero stands 2.25 tall and a hill giant 3.8. */
+  const HERO_BODY = 2.25, RACE_H = { human: 1, elf: 1.05, halforc: 1.08, dwarf: 0.8, halfling: 0.69 };
+  const BODY_H = { goblin: 1.75, orc: 2.35, skeleton: 2.15, ogre: 2.95, troll: 3.05, giant: 3.8, colossus: 3.1, irongolem: 2.95, hydra: 2.95, dragon: 3.4, archmage: 3.05, vlord: 3.05 };
+  function bodyTarget(key) {
+    const k = key.indexOf('unit-') === 0 ? key.slice(5) : key; const Gm = typeof Game !== 'undefined' ? Game : null;
+    if (k.indexOf('hero-') === 0) { const r = Gm && Gm.ROSTER.find(z => 'hero-' + z.id === k); return r ? HERO_BODY * (RACE_H[r.race] || 1) / 3.5 : null; }
+    if (!BODY_H[k]) return null;
+    const st = Gm && Gm.CREATURES[k] && Gm.CREATURES[k].stand; const sc = UNIT_SCALE[k] || (st && UNIT_SCALE[st]) || 1.7;
+    return BODY_H[k] / sc;
+  }
+  // the body's height in pixels: feet up to the first row at least 30% as wide as the body (a staff or spear tip doesn't count), the middle value over the directions
+  function massHeight(d, W, H, n, fw) {
+    const hs = [];
+    for (let i = 0; i < n; i++) {
+      const rows = new Array(H).fill(0); let top = -1, bot = -1;
+      for (let y = 0; y < H; y++) { let c = 0; const o = y * W; for (let x = i * fw; x < (i + 1) * fw; x++) if (d[(o + x) * 4 + 3] > 8) c++; rows[y] = c; if (c) { if (top < 0) top = y; bot = y + 1; } }
+      if (top < 0) continue;
+      const sl = rows.slice(top, bot).sort((a, b) => a - b); const mid = sl[Math.floor(sl.length * 2 / 3)];
+      let t = top; while (t < bot && rows[t] < 0.3 * mid) t++;
+      hs.push(bot - t);
+    }
+    hs.sort((a, b) => a - b); return hs.length ? hs[hs.length >> 1] : 0;
+  }
   function pixelTex(tex) { tex.magFilter = T.NearestFilter; tex.anisotropy = 1; tex.needsUpdate = true; }
   // a strip of n frames, one per direction. Every frame is cut to the same box, centred on the frame, so the feet
   // stay in one place as the character turns.
@@ -812,7 +837,10 @@ const World3D = (() => {
     const out = document.createElement('canvas'); out.width = pot((bw + G * 2) * n); out.height = pot(bh + G * 2); const oc = out.getContext('2d'); oc.imageSmoothingEnabled = false;
     for (let i = 0; i < n; i++) oc.drawImage(src, i * fw + fx0, fy0, bw, bh, i * (bw + G * 2) + G, G, bw, bh);
     const tex = new T.CanvasTexture(out); tex.encoding = T.sRGBEncoding; if (pixel) pixelTex(tex); else tex.anisotropy = 2;
-    const bp = M.blueprint(key); const upp = (bp && bp.h ? bp.h : 0.6) * 1.12 / (y1 + 1 - y0);
+    const bp = M.blueprint(key); let upp = (bp && bp.h ? bp.h : 0.6) * 1.12 / (y1 + 1 - y0);
+    // 0.39: heroes (and the monsters listed in BODY_H) are sized by the body, not by the low-poly model's reach:
+    // a wizard's staff over the head no longer makes the whole wizard a head taller than the barbarian beside him
+    const bt = bodyTarget(key); if (bt) { const mh = massHeight(d, W, H, n, fw); if (mh > 8) upp = bt / mh; }
     const w = bw * upp, h = bh * upp;
     return { tex, w, h, left: -w / 2, bottom: 0, painted: true, top: h, dirs: n, cell: (bw + G * 2) / out.width, inset: G / out.width, frame: bw / out.width, v0: 1 - (G + bh) / out.height, v1: 1 - G / out.height, upp, ground: y1 + 1, fw, fh: H };
   }
