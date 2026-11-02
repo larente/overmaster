@@ -845,7 +845,7 @@ const World3D = (() => {
   function animRec(key, name) {
     const ak = key + '~' + name; if (SPR.atex.has(ak)) return SPR.atex.get(ak);
     const a = (SPR.anims.get(key) || {})[name]; const base = spriteTex(key);
-    const r = a && base && base.dirs === a.dirs ? fromSheet(a.img, a.dirs, a.frames, a.pixel, base) : null;
+    const r = a && base && (base.dirs === a.dirs || a.dirs === 1) ? fromSheet(a.img, a.dirs, a.frames, a.pixel, base) : null;   // 0.38: or one side only
     if (r) r.fps = a.fps || 10;
     SPR.atex.set(ak, r); return r;
   }
@@ -919,12 +919,15 @@ const World3D = (() => {
         if (i !== ud.dir && angDiff(a, ud.dir * step) < step / 2 + 0.12) i = ud.dir; // a little stickiness, so it doesn't flicker
         // 0.35: walking or building: this frame of that animation, if there is one
         let rec = ud.rec, k = ud.key, f; const ar = ud.anim ? animRec(ud.key, ud.anim) : null;
-        if (ar) { rec = ar; k = ud.key + '~' + ud.anim; f = (((ud.frame | 0) % ar.frames) + ar.frames) % ar.frames; }
-        const gk = k + '#' + i + '#' + (f === undefined ? '' : f);
-        if (gk !== ud.gk) { ud.gk = gk; ud.dir = i; q.geometry = spriteGeo(k, rec, i, f); if (q.material.map !== rec.tex) q.material.map = rec.tex; }
-        _rq.setFromAxisAngle(_Z, -g.rotation.z);
+        if (ar) { rec = ar; k = ud.key + '~' + ud.anim; f = ar.once ? Math.min(ar.frames - 1, Math.max(0, ud.frame | 0)) : (((ud.frame | 0) % ar.frames) + ar.frames) % ar.frames; }
+        // 0.38: an animation drawn facing east only: east-ish plays it as drawn, west-ish mirrored, straight on by the side it leans to
+        const side = ar && ar.dirs === 1; const flip = side ? (i >= 5 ? -1 : i >= 1 && i <= 3 ? 1 : d < 0 ? -1 : 1) : 1;
+        const gk = k + '#' + (side ? 0 : i) + '#' + (f === undefined ? '' : f);
+        if (gk !== ud.gk) { ud.gk = gk; ud.dir = i; q.geometry = spriteGeo(k, rec, side ? 0 : i, f); if (q.material.map !== rec.tex) q.material.map = rec.tex; }
+        else ud.dir = i;
+        _rq.setFromAxisAngle(_Z, -g.rotation.z * flip);
         q.quaternion.copy(_pq.invert()).multiply(_cq).multiply(_rq);
-        q.scale.x = 1; continue;
+        q.scale.x = flip; continue;
       }
       if (ud.flip === undefined) ud.flip = d < 0 ? -1 : 1; else if (d < -0.12) ud.flip = -1; else if (d > 0.12) ud.flip = 1;
       _rq.setFromAxisAngle(_Z, -g.rotation.z * ud.flip);
@@ -1627,6 +1630,9 @@ const World3D = (() => {
   const BAT = { scene: null, camera: null, units: new Map(), labels: new Map(), fx: new Map(), overlayKey: '' };
   const FW = (G.BW + 0.5) * SQ3, FH = 1.5 * (G.BH - 1) + 2;
   const hexW = k => { const c = k % G.BW, r = Math.floor(k / G.BW); return { x: SQ3 * (c + 0.5 * (r & 1)) + SQ3 / 2, z: 1.5 * r + 1 }; };
+  // 0.38: a pointy-topped hex for water and the like, and how high a hill lifts whoever stands on it
+  const HEXG_C = new Map(); const HEXG = rad => { let g = HEXG_C.get(rad); if (!g) { g = new T.CircleGeometry(rad, 6, Math.PI / 6); HEXG_C.set(rad, g); } return g; };
+  const HILL_H = 0.42; const liftAt = (b, k) => b && b.tiles && b.tiles[k] === 'hill' ? HILL_H : 0;
   const BTC = { grass: ['#4c7228', '#628632'], forest: ['#3a5a22', '#4a6a2a'], dirt: ['#7e6442', '#937852'], swamp: ['#4c5530', '#5e6838'], snow: ['#d8e0e8', '#eef3f7'], waste: ['#4a413d', '#5e524a'] };
   function enterBattle(S, BF) {
     const b = S.battle; BAT.bf = BF;
@@ -1703,6 +1709,11 @@ const World3D = (() => {
       mesh.castShadow = true; mesh.receiveShadow = true; scene.add(mesh);
     }
     // obstacles on the field
+    BAT.waterMat = [new T.MeshStandardMaterial({ color: lin('#2f6a86'), roughness: 0.08, metalness: 0.25, transparent: true, opacity: 0.86, emissive: new T.Color(lin('#0e3446')) }), new T.MeshStandardMaterial({ color: lin('#6fa2b2'), roughness: 0.1, metalness: 0.15, transparent: true, opacity: 0.55 })];
+    BAT.stoneMat = new T.MeshStandardMaterial({ color: lin(terr === 'snow' ? '#9a988f' : terr === 'waste' ? '#544a46' : '#767062'), roughness: 0.95 });
+    BAT.mossMat = new T.MeshStandardMaterial({ color: lin(terr === 'snow' ? '#dfe6ea' : terr === 'waste' ? '#3e322e' : '#4e5e32'), roughness: 1 });
+    BAT.darkMat = new T.MeshStandardMaterial({ color: lin('#1a1612'), roughness: 1 }); BAT.sackMat = new T.MeshStandardMaterial({ color: lin('#b49a6a'), roughness: 1 });
+    BAT.hillMat = new T.MeshStandardMaterial({ color: lin((BTC[terr] || BTC.grass)[1]), roughness: 0.95, flatShading: true });
     for (const k of Object.keys(b.tiles)) {
       const t = b.tiles[k]; const w = hexW(+k); const r = M.rng(+k * 7 + seed);
       const grp = new T.Group(); grp.position.set(w.x, 0, w.z);
@@ -1725,6 +1736,47 @@ const World3D = (() => {
           const wall = new T.Mesh(new T.BoxGeometry(0.75, h, 2.05), stone); wall.position.y = h / 2; wall.castShadow = wall.receiveShadow = true; grp.add(wall);
           for (let i = 0; i < 4; i++) { const m = new T.Mesh(new T.BoxGeometry(0.8, 0.3, 0.3), stone); m.position.set(0, h + 0.15, -0.8 + i * 0.53); m.castShadow = true; grp.add(m); }
         }
+      }
+      else if (t === 'water' || t === 'ford' || t === 'bridge') {
+        // 0.38: deep water, shallows to wade, a plank bridge over the deep
+        const deep = t !== 'ford';
+        const bed = new T.Mesh(HEXG(1.0), new T.MeshStandardMaterial({ color: lin(deep ? '#16303c' : '#3c5a5a'), roughness: 1 })); bed.rotation.x = -Math.PI / 2; bed.position.y = 0.025; grp.add(bed);
+        const sh = new T.Mesh(HEXG(0.97), BAT.waterMat[deep ? 0 : 1]); sh.rotation.x = -Math.PI / 2; sh.position.y = 0.045; grp.add(sh);
+        if (!deep) for (let i = 0; i < 4; i++) { const m = new T.Mesh(M.treeVariants('crag')[Math.floor(r() * 3)], tmat); m.scale.setScalar(0.18 + r() * 0.12); m.position.set((r() - 0.5) * 1.1, 0, (r() - 0.5) * 1.1); m.rotation.y = r() * 6; grp.add(m); }
+        if (t === 'bridge') {
+          const wood = new T.MeshStandardMaterial({ color: lin('#7a5636'), roughness: 0.9 }), dark = new T.MeshStandardMaterial({ color: lin('#5a3c22'), roughness: 0.9 });
+          for (let i = 0; i < 6; i++) { const pl = new T.Mesh(new T.BoxGeometry(1.9, 0.08, 0.26), i % 2 ? wood : dark); pl.position.set(0, 0.16, -0.68 + i * 0.27); pl.rotation.y = (r() - 0.5) * 0.05; pl.castShadow = pl.receiveShadow = true; grp.add(pl); }
+          for (const z of [-0.8, 0.8]) { const rl = new T.Mesh(new T.BoxGeometry(1.9, 0.08, 0.08), dark); rl.position.set(0, 0.5, z); rl.castShadow = true; grp.add(rl); for (const x of [-0.85, 0, 0.85]) { const post = new T.Mesh(new T.BoxGeometry(0.1, 0.5, 0.1), dark); post.position.set(x, 0.3, z); post.castShadow = true; grp.add(post); } }
+        }
+      }
+      else if (t === 'ruin') {
+        // broken walls of an old building, mossy, with fallen blocks at their feet
+        const stone = BAT.stoneMat, moss = BAT.mossMat; const a0 = r() * Math.PI;
+        for (let i = 0; i < 2 + Math.floor(r() * 2); i++) {
+          const w = 0.7 + r() * 0.8, h = 0.9 + r() * 1.1; const a = a0 + i * (Math.PI / 2) * (r() < 0.5 ? 1 : -1);
+          const wall = new T.Mesh(new T.BoxGeometry(w, h, 0.32), stone); wall.position.set(Math.cos(a) * 0.35, h / 2, Math.sin(a) * 0.35); wall.rotation.y = -a + Math.PI / 2; wall.castShadow = wall.receiveShadow = true; grp.add(wall);
+          for (let j = 0; j < 3; j++) { const cap = new T.Mesh(new T.BoxGeometry(w / 3.2, 0.18 + r() * 0.35, 0.34), j % 2 ? moss : stone); cap.position.set(-w / 3 + j * w / 3, h + 0.05, 0); wall.add(cap); }
+          if (r() < 0.6) { const win = new T.Mesh(new T.BoxGeometry(0.22, 0.32, 0.36), BAT.darkMat); win.position.set((r() - 0.5) * w * 0.4, h * 0.55, 0); wall.add(win); }
+        }
+        for (let i = 0; i < 5; i++) { const s = 0.16 + r() * 0.2; const bl = new T.Mesh(new T.BoxGeometry(s, s * 0.7, s * 1.2), r() < 0.3 ? moss : stone); bl.position.set((r() - 0.5) * 1.4, s * 0.3, (r() - 0.5) * 1.4); bl.rotation.set(r() * 0.4, r() * 3, r() * 0.4); bl.castShadow = true; grp.add(bl); }
+      }
+      else if (t === 'barricade') {
+        // a low wall: dry stone on hard ground, a split-rail fence and a few sacks on soft
+        if (terr === 'snow' || terr === 'waste' || terr === 'dirt' || terr === 'mount' || r() < 0.4) {
+          for (let i = 0; i < 7; i++) { const s = 0.3 + r() * 0.12; const st = new T.Mesh(new T.BoxGeometry(s, 0.26, 0.36), i % 3 ? BAT.stoneMat : BAT.mossMat); st.position.set(-0.85 + i * 0.28, 0.13 + (i % 2) * 0.24, (r() - 0.5) * 0.06); st.rotation.y = (r() - 0.5) * 0.3; st.castShadow = st.receiveShadow = true; grp.add(st); }
+          for (let i = 0; i < 5; i++) { const st = new T.Mesh(new T.BoxGeometry(0.34, 0.22, 0.32), BAT.stoneMat); st.position.set(-0.7 + i * 0.35, 0.58, 0); st.castShadow = true; grp.add(st); }
+        } else {
+          const wood = new T.MeshStandardMaterial({ color: lin('#7a5636'), roughness: 0.92 });
+          for (const x of [-0.85, -0.28, 0.28, 0.85]) { const post = new T.Mesh(new T.CylinderGeometry(0.06, 0.07, 0.85, 6), wood); post.position.set(x, 0.42, 0); post.castShadow = true; grp.add(post); }
+          for (const y of [0.35, 0.65]) { const rail = new T.Mesh(new T.BoxGeometry(1.9, 0.08, 0.07), wood); rail.position.set(0, y, 0); rail.rotation.z = (r() - 0.5) * 0.08; rail.castShadow = true; grp.add(rail); }
+          for (let i = 0; i < 2; i++) { const sack = new T.Mesh(new T.SphereGeometry(0.2, 7, 5), BAT.sackMat); sack.scale.set(1.3, 0.8, 1); sack.position.set((r() - 0.5) * 1.2, 0.14, 0.22); sack.castShadow = true; grp.add(sack); }
+        }
+        grp.rotation.y = Math.PI / 2 + (r() - 0.5) * 0.3;   // it runs down the rows, across the line of fire
+      }
+      else if (t === 'hill') {
+        // a grassy rise; whoever stands on it is lifted up
+        const mound = new T.Mesh(new T.CylinderGeometry(0.72, 1.02, HILL_H, 6, 1), BAT.hillMat); mound.rotation.y = Math.PI / 6; mound.position.y = HILL_H / 2; mound.receiveShadow = mound.castShadow = true; grp.add(mound);
+        for (let i = 0; i < 3; i++) { const m = new T.Mesh(M.treeVariants('bush')[Math.floor(r() * 3)], tmat); m.scale.setScalar(0.9 + r() * 0.4); const a = r() * 6.3; m.position.set(Math.cos(a) * 0.85, 0.05, Math.sin(a) * 0.85); grp.add(m); }
       }
       else if (t === 'bog') {
         const pool = new T.Mesh(new T.CircleGeometry(0.85, 18), new T.MeshStandardMaterial({ color: lin('#2a3a2c'), roughness: 0.15, metalness: 0.1, transparent: true, opacity: 0.88 }));
@@ -1757,6 +1809,10 @@ const World3D = (() => {
     const g = new T.Group();
     // 0.37: Millbrook's towers, gate, bell and hall: real models that stand still
     if (u.structure) {
+      // 0.38: Millbrook's own building art, at the characters' pixel size, when it's loaded
+      const sp = structSprite(u);
+      if (sp) { g.add(sp.g); const ring = M.circleMesh('#c8b48a', 1.8, 0.25); ring.position.y = 0.04; g.add(ring);
+        g.userData = { fig: sp.g, ring, mat: sp.mat, key: u.art, sc: 1, h: sp.h + 0.1, rot: 0, structure: true, sprite: true }; return g; }
       const fig = M.make(u.icon); g.add(fig); const mat = fig.userData.body ? fig.userData.body.material : null;
       const fmat = mat ? mat.clone() : null; if (fmat) { fmat.transparent = true; fig.userData.body.material = fmat; }
       const ring = M.circleMesh('#c8b48a', 1.8, 0.25); ring.position.y = 0.04; g.add(ring);
@@ -1778,6 +1834,7 @@ const World3D = (() => {
   function updateBattle(t, dt) {
     const S = hooks.state(); const b = S && S.battle; if (!b || !BAT.scene) return;
     BAT.U.uTime.value = t;
+    if (BAT.waterMat) BAT.waterMat[0].emissiveIntensity = 0.35 + 0.25 * Math.sin(t * 1.3);   // 0.38: the water glints
     const view = hooks.view(); const now = performance.now();
     const seen = new Set();
     for (const u of b.units) {
@@ -1788,17 +1845,25 @@ const World3D = (() => {
       const w = v.px ? pxToW(v.px.x, v.px.y) : hexW(v.pos);
       const lift = (v.lift || 0) / BAT.bf.R;
       const ud = E.userData;
-      E.position.set(w.x, 0, w.z);
+      E.position.set(w.x, v.px ? 0 : liftAt(b, v.pos), w.z);
       if (ud.structure) {
         // a tower that falls leaves its rubble behind
         const fade = v.alive ? 1 : Math.max(0, v.fade); ud.mat.opacity = fade; ud.mat.depthWrite = fade > 0.95;
-        const fl = v.flash && now - v.flash < 260 ? 1 - (now - v.flash) / 260 : 0; if (ud.mat.emissive) ud.mat.emissive.setRGB(fl * 0.7, fl * 0.15, fl * 0.05);
+        const fl = v.flash && now - v.flash < 260 ? 1 - (now - v.flash) / 260 : 0; if (ud.mat.emissive) ud.mat.emissive.setRGB(fl * 0.7, fl * 0.15, fl * 0.05); else if (ud.mat.color) ud.mat.color.setRGB(1, 1 - fl * 0.5, 1 - fl * 0.6);
         ud.fig.position.y = v.alive ? 0 : -(1 - fade) * 1.2; ud.fig.rotation.z = v.alive ? 0 : (1 - fade) * 0.25;
         if (!v.alive && !BAT.rubble.has(u.id)) { const r = rubble(); r.position.set(w.x, 0, w.z); BAT.scene.add(r); BAT.rubble.set(u.id, r); }
         ud.ring.material.opacity = 0.25 * fade;
         if (v.alive) { const f = Math.max(0, v.hp / u.maxHp); const L = label(BAT.labels, 'u' + u.id, 'b-hp b-struct', `<span class="sn">${esc(u.name)}</span>` + hpBar(f, f < 0.3 ? 'l' : f < 0.6 ? 'w' : 'g')); L.pos.set(w.x, ud.h + 0.2, w.z); }
         continue;
       }
+      // 0.38: an idle loop while it waits, its attack when it strikes (side-on sheets from pixellab_gen.py acts)
+      { const qd = ud.fig.userData && ud.fig.userData.quad && ud.fig.userData.quad.userData; const ak = 'unit-' + ud.key;
+        if (qd) {
+          let an = null, fr = 0;
+          if (v.alive && !v.down && v.atk && hasAnim(ak, 'attack')) { const ar = animRec(ak, 'attack'); const e = (now - v.atk) / 1000; if (ar && e * ar.fps < ar.frames) { an = 'attack'; fr = Math.floor(e * ar.fps); } }
+          if (!an && v.alive && !v.down && hasAnim(ak, 'idle')) { const ar = animRec(ak, 'idle'); if (ar) { an = 'idle'; fr = Math.floor((t + (w.x * 0.37 + w.z * 0.61)) * ar.fps); } }
+          qd.anim = an; qd.frame = fr;
+        } }
       const float = ud.key === 'wraith' || ud.key === 'dragon';
       ud.fig.position.y = lift + (float ? 0.25 + Math.sin(t * 2 + w.x) * 0.08 : 0);
       // facing: toward the target while attacking, else toward the other side
@@ -1820,7 +1885,7 @@ const World3D = (() => {
         let html, cls;
         if ((u.side === 'dm' && !u.boss) || u.militia) { html = `<b>${v.count}</b>`; cls = 'b-count'; if (u.count === 1 && u.maxHp >= 60) html += hpBar(v.hp / u.maxHp, 'm'); }
         else { const f = Math.max(0, v.hp / u.maxHp); html = hpBar(f, u.boss ? 'b' : f < 0.3 ? 'l' : f < 0.6 ? 'w' : 'g') + (v.down ? '<span class="dn">DOWN</span>' : ''); cls = 'b-hp'; }
-        const L = label(BAT.labels, 'u' + u.id, cls, html); L.pos.set(w.x, ud.h + lift + 0.25, w.z);
+        const L = label(BAT.labels, 'u' + u.id, cls, html); L.pos.set(w.x, ud.h + lift + 0.25 + E.position.y, w.z);
       }
     }
     for (const [id, E] of BAT.units) if (!seen.has(id)) { BAT.scene.remove(E); BAT.units.delete(id); }
@@ -1843,6 +1908,19 @@ const World3D = (() => {
       const L = label(BAT.labels, 'f' + (f.id || (f.id = Math.random().toString(36).slice(2))), 'b-float', `<span style="color:${f.color}">${esc(f.text)}</span>`);
       const w = pxToW(f.x, f.y); L.pos.set(w.x, 2.2 + age * 1.2, w.z); L.el.style.opacity = (1 - age * age).toFixed(2);
     }
+  }
+  const STRUCT_W = { hall: 3.7, gate: 3.0, watch: 2.4, ballista: 2.6, arcane: 2.2, bell: 2.2 };
+  function structSprite(u) {
+    const key = u.art; if (!key || !SPR.on || !renderer || !SPR.art.has('obj-' + key)) return null;
+    const r = propTex(key); if (!r) return null;
+    const k = Math.min(0.03, (STRUCT_W[u.kind] || 2.6) / r.pw); const w = r.pw * k, h = r.ph * k;
+    const geo = new T.PlaneGeometry(w, h); geo.translate(0, h / 2, 0);
+    const uv = geo.attributes.uv; for (let i = 0; i < uv.count; i++) { uv.setX(i, r.u0 + uv.getX(i) * (r.u1 - r.u0)); uv.setY(i, r.v0 + uv.getY(i) * (r.v1 - r.v0)); } uv.needsUpdate = true;
+    const mat = new T.MeshBasicMaterial({ map: r.tex, transparent: true, alphaTest: 0.1, depthWrite: true, side: T.DoubleSide, toneMapped: false });
+    const q = new T.Mesh(geo, mat); q.renderOrder = 1; q.userData = { still: true, anchor: 0.35 };
+    const g = new T.Group(); g.add(q); SPR.list.add(q);
+    spriteRig(); const sh = new T.Mesh(SPR.shadow.geo, SPR.shadow.mat); sh.rotation.x = -Math.PI / 2; sh.position.y = 0.012; sh.scale.set(w * 0.8, w * 0.4, 1); g.add(sh);
+    return { g, mat, h };
   }
   function rubble() {
     const b = new M.Builder(11); const r = M.rng(5);

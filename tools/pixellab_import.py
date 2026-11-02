@@ -68,13 +68,16 @@ def strip(paths):
     return out
 
 
-ANIM_FPS = {'walk': 10, 'build': 9}
+ANIM_FPS = {'walk': 10, 'build': 9, 'idle': 6, 'attack': 12}
 
 
 def sheet(folder):
-    """anim-<name>/<direction>/NN.png -> one image: a column per direction, a row per frame (None if a direction is missing)"""
+    """anim-<name>/<direction>/NN.png -> one image: a column per direction, a row per frame (None if a direction is missing).
+    0.38: an animation made facing east only (pixellab_gen.py acts) becomes a one-column sheet; the game mirrors it for west."""
     cols = []
-    for d in ORDER:
+    dirs = [d for d in ORDER if os.path.isdir(os.path.join(folder, d))]
+    order = ['east'] if dirs == ['east'] else ORDER
+    for d in order:
         dd = os.path.join(folder, d)
         fs = sorted(f for f in os.listdir(dd) if f.lower().endswith('.png')) if os.path.isdir(dd) else []
         if not fs:
@@ -82,7 +85,7 @@ def sheet(folder):
         cols.append([Image.open(os.path.join(dd, f)).convert('RGBA') for f in fs])
     n = min(len(c) for c in cols)
     w = max(i.width for c in cols for i in c); h = max(i.height for c in cols for i in c)
-    out = Image.new('RGBA', (w * len(ORDER), h * n), (0, 0, 0, 0))
+    out = Image.new('RGBA', (w * len(order), h * n), (0, 0, 0, 0))
     for x, c in enumerate(cols):
         for y, im in enumerate(c[:n]):
             out.paste(im, (x * w + (w - im.width) // 2, y * h + (h - im.height)))
@@ -136,12 +139,12 @@ def main():
         for sub in sorted(os.listdir(folder)):
             if not sub.startswith('anim-') or not os.path.isdir(os.path.join(folder, sub)):
                 continue
-            an = sub[5:]; sim, nf = sheet(os.path.join(folder, sub))
+            an = sub[5:]; sim, nf = sheet(os.path.join(folder, sub)); ndirs = 8 if os.path.isdir(os.path.join(folder, sub, 'south')) else 1
             if not sim:
                 skipped.append('%s %s (a direction is missing)' % (name, an)); continue
             arel = 'sprites/%s-%s.webp' % (key, an)
             sim.save(os.path.join(args.art, arel), 'WEBP', lossless=True, method=6, quality=100)
-            man.setdefault('anim', {}).setdefault(key, {})[an] = {'sprite': arel, 'dirs': 8, 'frames': nf, 'fps': ANIM_FPS.get(an, 10), 'pixel': True}
+            man.setdefault('anim', {}).setdefault(key, {})[an] = {'sprite': arel, 'dirs': ndirs, 'frames': nf, 'fps': ANIM_FPS.get(an, 10), 'pixel': True}
             done.append('%s %s -> %s (%d frames, %dx%d, %d KB)' % (name, an, arel, nf, sim.width, sim.height, os.path.getsize(os.path.join(args.art, arel)) // 1024))
         # the bust portrait, if PixelLab made one (pixellab_gen.py portraits)
         pp = os.path.join(folder, 'portrait.png')

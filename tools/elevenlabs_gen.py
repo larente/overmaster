@@ -17,6 +17,7 @@ Run it in Terminal:
     python3 ~/Documents/bts-art/elevenlabs_gen.py voices            # all of them: heroes, villains, minions, monsters
     python3 ~/Documents/bts-art/elevenlabs_gen.py intro             # 0.34: the intro's storyteller, music and sounds (from intro.json)
     python3 ~/Documents/bts-art/elevenlabs_gen.py intro music       # just one part: voice, music or sfx
+    python3 ~/Documents/bts-art/elevenlabs_gen.py warhorn crumble splinter splash   # 0.38: the assault's sounds
 
 Lines and voice descriptions are in hero_lines.json next to this script. Each speaker's voice is designed once
 and saved in your ElevenLabs voices (one of your custom voice slots each); its id is kept in out-voice/voices.json.
@@ -65,6 +66,11 @@ SFX = {
     'researched': ('an arcane discovery: a shimmering magical swell and a deep resonant chime', 2.0, False),
     'mine': ('a pickaxe strikes rock three times, small stones tumble', 1.5, False),
     'horde': ('a horde of monsters marching: heavy footsteps, clanking weapons, war drums in the distance', 3.0, False),
+    # 0.38: the weekly assault on Millbrook
+    'warhorn': ('a deep, ominous war horn blown twice across a battlefield, a monster army about to attack a town', 3.0, False),
+    'crumble': ('a stone tower collapsing: cracking masonry, heavy blocks crashing down, a rumble of rubble and dust', 2.5, False),
+    'splinter': ('a heavy wooden gate smashed open: splintering planks, a cracking beam and iron hinges giving way', 1.6, False),
+    'splash': ('someone wading quickly through shallow water, a few heavy splashes', 1.0, False),
     'growl': ('a crowd of monsters growling and snarling menacingly', 1.5, False),
     'laugh': ('a deep evil villain laugh echoing in a stone throne room', 3.0, False),
     # battle

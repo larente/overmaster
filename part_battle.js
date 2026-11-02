@@ -33,11 +33,19 @@
     brush: { name: 'Brush', block: false, sight: true, cover: true, text: 'Half cover: +2 AC against ranged attacks. Blocks line of sight through it.' },
     bog: { name: 'Bog', block: false, sight: false, slow: true, text: 'Difficult ground: costs 2 movement to enter.' },
     // 0.30: Millbrook's walls, when the heroes defend the town
-    wall: { name: 'Wall', block: true, sight: true, text: 'Millbrook\'s wall. Blocks movement and line of sight: your monsters have to come through the gate or a breach.' }
+    wall: { name: 'Wall', block: true, sight: true, cover: true, text: 'Millbrook\'s wall. Blocks movement and line of sight: your monsters have to come through the gate or a breach. Archers right behind it can shoot over it, with cover.' },
+    // 0.38: tactical ground
+    water: { name: 'Deep water', block: true, sight: false, text: 'Too deep to wade: only flyers cross it. It doesn\'t block line of sight.' },
+    ford: { name: 'Shallows', block: false, sight: false, slow: true, wet: true, text: 'Shallow water: costs 2 movement to enter, and whoever stands in it is easier to hit (−1 AC).' },
+    bridge: { name: 'Bridge', block: false, sight: false, text: 'A way across the water.' },
+    ruin: { name: 'Ruins', block: true, sight: true, text: 'Broken walls: block movement and line of sight. Hide behind them from archers.' },
+    barricade: { name: 'Low wall', block: true, sight: false, cover: true, text: 'Waist-high: blocks movement but not line of sight. Right behind it you have half cover (+2 AC) against shots across it.' },
+    hill: { name: 'Hill', block: false, sight: false, high: true, text: 'High ground: shots from it get +1 to hit, ignore half cover and see over brush; +1 AC against attacks from below.' }
   };
+  const tileAt = (b, k) => TILE_INFO[b.tiles[k]] || null;
   function los(b, a, z) {
-    const L = hexLine(a, z);
-    for (let i = 1; i < L.length - 1; i++) { const t = b.tiles[L[i]]; if (t && TILE_INFO[t].sight && !(t === 'wall' && (i === 1 || i === L.length - 2))) return false; }
+    const L = hexLine(a, z); const high = b.tiles[a] === 'hill';
+    for (let i = 1; i < L.length - 1; i++) { const t = b.tiles[L[i]]; if (t && TILE_INFO[t].sight && !(t === 'wall' && (i === 1 || i === L.length - 2)) && !(high && t === 'brush')) return false; }
     return true;
   }
   const conscious = u => u.alive && !u.down;
@@ -109,24 +117,79 @@
     return out;
   }
 
-  function makeField(r, terrain) {
-    const P = { grass: [3, 1, 6, 0], forest: [1, 6, 5, 0], swamp: [1, 2, 3, 6], snow: [3, 2, 3, 0], waste: [5, 0, 2, 2], dirt: [4, 1, 4, 1], water: [3, 1, 6, 0], mount: [6, 0, 3, 0] }[terrain] || [3, 1, 5, 0];
-    for (let attempt = 0; attempt < 25; attempt++) {
-      const tiles = {};
-      const put = (type, n) => { let g = 0; while (n > 0 && g++ < 300) { const k = hk(3 + Math.floor(r() * 9), Math.floor(r() * BH)); if (tiles[k]) continue; tiles[k] = type; n--; } };
-      const cluster = (type, n, cmin, cmax) => {
-        let g = 0;
-        while (n > 0 && g++ < 200) {
-          let k = hk(cmin + Math.floor(r() * (cmax - cmin + 1)), Math.floor(r() * BH)); const size = 1 + Math.floor(r() * 3);
-          for (let i = 0; i < size && n > 0; i++) { const { c } = hc(k); if (!tiles[k] && c >= cmin && c <= cmax) { tiles[k] = type; n--; } const nb = hexNeighbors(k); k = nb[Math.floor(r() * nb.length)]; }
-        }
-      };
-      put('rock', P[0] + Math.floor(r() * 2)); put('tree', P[1] + Math.floor(r() * 2));
-      cluster('brush', P[2] + Math.floor(r() * 3), 2, 12); cluster('bog', P[3] + Math.floor(r() * 2), 3, 11);
-      // the two sides must be able to reach each other
+  // 0.38: tactical battlefields. Each fight picks a layout that suits the ground it's fought on: a river with fords
+  // and a bridge, a ruined village, fenced farmland, woods, marsh, crags, or a field of ruins. Blocking terrain keeps to
+  // the middle columns, so both sides can deploy, and there's always a way from one side to the other.
+  const LAYOUTS = { grass: ['village', 'river', 'farm'], forest: ['woods', 'river'], swamp: ['marsh'], snow: ['crags', 'village'],
+    dirt: ['crags', 'village', 'farm'], mount: ['crags'], water: ['river'], waste: ['ruinfield'] };
+  function fieldKit(r, tiles) {
+    const ok = k => k >= 0 && k < BW * BH;
+    const free = k => ok(k) && !tiles[k];
+    const at = (c, row) => (c >= 0 && c < BW && row >= 0 && row < BH) ? hk(c, row) : -1;
+    const rc = (a, z) => a + Math.floor(r() * (z - a + 1));
+    const put = (type, n, cmin, cmax, rmin, rmax) => { let g = 0; while (n > 0 && g++ < 300) { const k = at(rc(cmin, cmax), rc(rmin === undefined ? 0 : rmin, rmax === undefined ? BH - 1 : rmax)); if (!free(k)) continue; tiles[k] = type; n--; } };
+    const cluster = (type, n, cmin, cmax, size) => {
+      let g = 0;
+      while (n > 0 && g++ < 200) {
+        let k = at(rc(cmin, cmax), rc(0, BH - 1)); const sz = size || 1 + Math.floor(r() * 3);
+        for (let i = 0; i < sz && n > 0; i++) { const { c } = hc(k); if (free(k) && c >= cmin && c <= cmax) { tiles[k] = type; n--; } const nb = hexNeighbors(k); k = nb[Math.floor(r() * nb.length)]; }
+      }
+    };
+    // a ruined building: two or three broken walls in a bent line, rubble (a low wall) beside them
+    const ruin = (c, row) => {
+      let k = at(c, row); if (k < 0) return; const n = 2 + Math.floor(r() * 2); const dir = Math.floor(r() * 6);
+      for (let i = 0; i < n; i++) { if (free(k) && hc(k).c >= 3 && hc(k).c <= 11) tiles[k] = 'ruin'; const nb = hexNeighbors(k); k = nb[(dir + (i === 1 && r() < 0.6 ? 1 : 0)) % nb.length] || k; }
+      const nb = hexNeighbors(at(c, row)).filter(free); if (nb.length && r() < 0.7) tiles[nb[Math.floor(r() * nb.length)]] = r() < 0.5 ? 'barricade' : 'brush';
+    };
+    // a straight low wall down the rows (a fence, a dry-stone wall)
+    const fence = (c, row, len) => { for (let i = 0; i < len; i++) { const k = at(c + (((row + i) & 1) && r() < 0.3 ? 1 : 0), row + i); if (free(k)) tiles[k] = 'barricade'; } };
+    const hill = (c, row) => { const k = at(c, row); if (free(k)) tiles[k] = 'hill'; if (r() < 0.55) { const nb = hexNeighbors(k).filter(z => free(z) && hc(z).c >= 2 && hc(z).c <= 12); if (nb.length) tiles[nb[Math.floor(r() * nb.length)]] = 'hill'; } };
+    // a river down the middle: fords to wade, maybe a bridge
+    const river = (cx, deep) => {
+      let c = cx; const rows = [];
+      for (let row = 0; row < BH; row++) { if (row && r() < 0.35) c = Math.max(cx - 1, Math.min(cx + 1, c + (r() < 0.5 ? -1 : 1))); const k = at(c, row); tiles[k] = deep ? 'water' : 'ford'; rows.push(k); }
+      if (deep) {
+        const fords = [rc(0, 3), rc(7, 10)]; for (const row of fords) tiles[rows[row]] = 'ford';
+        if (r() < 0.6) tiles[rows[rc(4, 6)]] = 'bridge'; else tiles[rows[rc(4, 6)]] = 'ford';
+      }
+      return rows;
+    };
+    const pond = (c, row, n) => { let k = at(c, row); for (let i = 0; i < n; i++) { if (free(k) && hc(k).c >= 4 && hc(k).c <= 10) tiles[k] = 'water'; const nb = hexNeighbors(k); k = nb[Math.floor(r() * nb.length)]; }
+      for (const z of hexNeighbors(at(c, row))) if (free(z) && r() < 0.4) tiles[z] = r() < 0.5 ? 'ford' : 'brush'; };
+    return { put, cluster, ruin, fence, hill, river, pond, rc, at, free };
+  }
+  function makeField(r, terrain, layout) {
+    const opts = LAYOUTS[terrain] || LAYOUTS.grass;
+    for (let attempt = 0; attempt < 30; attempt++) {
+      const tiles = {}; const K = fieldKit(r, tiles); const lay = layout || opts[Math.floor(r() * opts.length)];
+      if (lay === 'river') {
+        K.river(K.rc(6, 8), true); K.cluster('brush', 3 + K.rc(0, 3), 3, 11); K.put('rock', 1 + K.rc(0, 1), 3, 11); K.put('tree', K.rc(0, 2), 3, 11);
+        if (r() < 0.6) K.hill(K.rc(3, 4), K.rc(1, 9)); if (r() < 0.6) K.hill(K.rc(10, 11), K.rc(1, 9));
+      } else if (lay === 'village') {
+        const spots = [[K.rc(4, 6), K.rc(1, 4)], [K.rc(7, 9), K.rc(6, 9)], [K.rc(5, 9), K.rc(4, 6)]];
+        for (const [c, row] of spots) K.ruin(c, row);
+        K.fence(K.rc(4, 10), K.rc(0, 7), 2 + K.rc(0, 1)); K.cluster('brush', 2 + K.rc(0, 3), 3, 11); K.put('rock', K.rc(0, 2), 3, 11);
+        if (r() < 0.4) K.hill(K.rc(4, 10), K.rc(1, 9));
+      } else if (lay === 'farm') {
+        K.fence(K.rc(4, 5), K.rc(0, 3), 3 + K.rc(0, 1)); K.fence(K.rc(9, 10), K.rc(5, 7), 3 + K.rc(0, 1)); K.fence(K.rc(6, 8), K.rc(3, 6), 2);
+        K.ruin(K.rc(6, 8), r() < 0.5 ? K.rc(0, 2) : K.rc(8, 10)); K.cluster('brush', 3 + K.rc(0, 3), 3, 11); K.hill(K.rc(4, 10), K.rc(2, 8));
+      } else if (lay === 'woods') {
+        K.cluster('tree', 8 + K.rc(0, 4), 3, 11, 4); K.cluster('brush', 5 + K.rc(0, 3), 2, 12); K.put('rock', K.rc(0, 2), 3, 11);
+        if (r() < 0.45) K.river(K.rc(6, 8), false); if (r() < 0.5) K.hill(K.rc(4, 10), K.rc(1, 9));
+      } else if (lay === 'marsh') {
+        K.pond(K.rc(5, 6), K.rc(1, 4), 3); K.pond(K.rc(8, 9), K.rc(6, 9), 3); if (r() < 0.5) K.pond(K.rc(6, 8), K.rc(4, 6), 2);
+        K.cluster('bog', 5 + K.rc(0, 3), 3, 11); K.cluster('brush', 3 + K.rc(0, 2), 3, 11); K.put('tree', 1 + K.rc(0, 2), 3, 11);
+      } else if (lay === 'crags') {
+        K.cluster('rock', 4 + K.rc(0, 3), 3, 11, 2); K.hill(K.rc(4, 6), K.rc(1, 9)); K.hill(K.rc(8, 10), K.rc(1, 9));
+        K.fence(K.rc(5, 9), K.rc(0, 7), 2 + K.rc(0, 1)); K.cluster('brush', 2 + K.rc(0, 2), 3, 11); if (terrain === 'snow' && r() < 0.5) K.pond(K.rc(6, 8), K.rc(3, 7), 2);
+      } else {   // ruinfield: the blasted land around the Dark Tower
+        K.ruin(K.rc(4, 6), K.rc(1, 3)); K.ruin(K.rc(8, 10), K.rc(1, 3)); K.ruin(K.rc(4, 6), K.rc(7, 9)); K.ruin(K.rc(8, 10), K.rc(7, 9));
+        K.put('rock', 2 + K.rc(0, 2), 3, 11); K.fence(K.rc(6, 8), K.rc(3, 5), 2); if (r() < 0.5) K.hill(K.rc(6, 8), K.rc(0, 10));
+      }
+      // the two sides must be able to reach each other on foot
       const seen = new Set([hk(1, 5)]); const q = [hk(1, 5)];
       while (q.length) { const k = q.pop(); for (const n of hexNeighbors(k)) { if (seen.has(n) || (tiles[n] && TILE_INFO[tiles[n]].block)) continue; seen.add(n); q.push(n); } }
-      if (seen.has(hk(13, 5)) && seen.has(hk(13, 2)) && seen.has(hk(13, 8))) return tiles;
+      if (seen.has(hk(13, 5)) && seen.has(hk(13, 2)) && seen.has(hk(13, 8))) { Object.defineProperty(tiles, 'layout', { value: lay, enumerable: false }); return tiles; }
     }
     return {};
   }
@@ -139,7 +202,7 @@
       for (let row = 0; row < BH; row++) if (row < 4 || row > 6) tiles[hk(WALL_COL, row)] = 'wall';
       const holes = intact >= 0.99 ? 0 : intact > 0.6 ? 1 : intact > 0.25 ? 2 : 3;
       for (let i = 0; i < holes; i++) { const row = [1, 8, 2, 9, 0, 10][Math.floor(r() * 6)]; delete tiles[hk(WALL_COL, row)]; }
-      const put = (type, n, cmin, cmax) => { let g = 0; while (n > 0 && g++ < 300) { const k = hk(cmin + Math.floor(r() * (cmax - cmin + 1)), Math.floor(r() * BH)); if (tiles[k]) continue; tiles[k] = type; n--; } };
+    const put = (type, n, cmin, cmax) => { let g = 0; while (n > 0 && g++ < 300) { const k = hk(cmin + Math.floor(r() * (cmax - cmin + 1)), Math.floor(r() * BH)); if (tiles[k]) continue; tiles[k] = type; n--; } };
       put('brush', 3 + Math.floor(r() * 3), 5, 12); put('rock', 1 + Math.floor(r() * 2), 6, 11);
       const seen = new Set([hk(1, 5)]); const q = [hk(1, 5)];
       while (q.length) { const k = q.pop(); for (const n of hexNeighbors(k)) { if (seen.has(n) || (tiles[n] && TILE_INFO[tiles[n]].block)) continue; seen.add(n); q.push(n); } }
@@ -163,8 +226,29 @@
     const holes = intact >= 0.99 ? 0 : intact > 0.6 ? 1 : intact > 0.25 ? 2 : 3;
     const spots = [2, 8, 0, 10, 4, 6].map(row => hk(WALL_COL, row)).filter(k => tiles[k]);
     for (let i = 0; i < holes && spots.length; i++) delete tiles[spots.splice(Math.floor(r() * Math.min(3, spots.length)), 1)[0]];
-    const put = (type, n, cmin, cmax) => { let g = 0; while (n > 0 && g++ < 300) { const k = hk(cmin + Math.floor(r() * (cmax - cmin + 1)), Math.floor(r() * BH)); if (tiles[k]) continue; tiles[k] = type; n--; } };
-    put('brush', 2 + Math.floor(r() * 3), 6, 11); put('rock', 1 + Math.floor(r() * 2), 6, 10);
+    // 0.38: the ground outside the walls: a moat with a causeway to the gate, burned-out cottages to hide behind
+    // from the towers, or fenced fields. Whatever it is, your army can always reach the wall.
+    const base = Object.assign({}, tiles);
+    for (let attempt = 0; attempt < 30; attempt++) {
+      for (const k of Object.keys(tiles)) if (!(k in base)) delete tiles[k];
+      const K = fieldKit(r, tiles); const x = r(); const lay = x < 0.25 ? 'moat' : x < 0.65 ? 'outskirts' : 'fields';   // ruins outside help the attacker hide from the towers
+      if (lay === 'moat') {
+        for (let row = 0; row < BH; row++) { const k = hk(5, row); if (row !== 5 && !tiles[k]) tiles[k] = row === 4 || row === 6 ? 'ford' : r() < 0.25 ? 'ford' : 'water'; }
+        tiles[hk(5, 5)] = 'bridge'; K.cluster('brush', 2 + K.rc(0, 2), 7, 11); K.put('rock', 1, 7, 10); if (r() < 0.5) K.ruin(K.rc(7, 9), K.rc(1, 9));
+      } else if (lay === 'outskirts') {
+        K.ruin(K.rc(6, 7), K.rc(1, 3)); K.ruin(K.rc(6, 7), K.rc(7, 9)); if (r() < 0.6) K.ruin(K.rc(8, 9), K.rc(4, 6));
+        K.fence(K.rc(5, 9), K.rc(0, 7), 2); K.cluster('brush', 2 + K.rc(0, 2), 6, 11);
+      } else {
+        K.fence(K.rc(6, 7), K.rc(0, 2), 3); K.fence(K.rc(6, 7), K.rc(7, 8), 3); K.fence(K.rc(9, 10), K.rc(3, 5), 3);
+        K.cluster('brush', 3 + K.rc(0, 3), 5, 11); if (r() < 0.6) K.hill(K.rc(7, 10), K.rc(1, 9));
+      }
+      for (const k of Object.keys(tiles)) if (!(k in base) && hc(+k).c <= 4) delete tiles[k];   // nothing in the breaches or at the foot of the wall
+      // from your side of the field to the foot of the gate (or the wall, if there's no gate) on foot
+      const seen = new Set([hk(13, 5)]); const q = [hk(13, 5)];
+      while (q.length) { const k = q.pop(); for (const n of hexNeighbors(k)) { if (seen.has(n) || (tiles[n] && TILE_INFO[tiles[n]].block)) continue; seen.add(n); q.push(n); } }
+      if (seen.has(hk(WALL_COL + 1, 5)) && seen.has(hk(13, 1)) && seen.has(hk(13, 9))) { Object.defineProperty(tiles, 'layout', { value: lay, enumerable: false }); return tiles; }
+    }
+    for (const k of Object.keys(tiles)) if (!(k in base)) delete tiles[k];
     return tiles;
   }
   // a piece of Millbrook on the field: it never moves; towers shoot, the gate, the hall and the bell just stand there
@@ -176,12 +260,14 @@
   function assaultDefenders(s) {
     const T = s.town; const lv = k => townLv(s, k); const out = [];
     const wl = lv('walls'), wmax = WALL_HP[wl] || 0;
-    if (wl && (T.wallHp || 0) > 0) out.push(Object.assign(structure('mb-gate', 'gate', T.wallHp, AS.gateAc + 2 * wl, { gate: true }), { pos: GATE_HEX, wallMax: wmax }));
-    const W = lv('watch'); for (let i = 0; i < Math.min(2, W); i++) out.push(Object.assign(structure('mb-watch' + i, 'watch', AS.towerHp + AS.towerHpL * W, AS.towerAc + W, { tower: true, bk: 'watch', inert: false, ranged: true, shots: 99, hit: 4 + W + Math.floor(avgLevel(s) / 4), dice: [1, 8, 1], vol: W >= 3 ? 5 : 4 }), { pos: TOWER_HEX.watch[i] }));
-    const Bl = lv('ballista'); if (Bl) out.push(Object.assign(structure('mb-ballista', 'ballista', AS.towerHp + 30 + AS.towerHpL * Bl, AS.towerAc + 1, { tower: true, bk: 'ballista', inert: false, ranged: true, shots: 99, hit: 5 + Bl + Math.floor(avgLevel(s) / 4), dice: [3, 12, 4], vol: Bl + 1 }), { pos: TOWER_HEX.ballista[0] }));
-    const Ar = lv('arcane'); if (Ar) out.push(Object.assign(structure('mb-arcane', 'arcane', AS.towerHp + 20 + AS.towerHpL * Ar, AS.towerAc, { tower: true, bk: 'arcane', inert: false, splash: SPLASH[Ar] || 5 }), { pos: TOWER_HEX.arcane[0] }));
-    if (lv('bell')) out.push(Object.assign(structure('mb-bell', 'bell', 70, 12, { bk: 'bell', bell: true }), { pos: BELL_HEX }));
-    out.push(Object.assign(structure('mb-hall', 'hall', T.hall === undefined ? hallMax(s) : T.hall, AS.hallAc, { hall: true }), { pos: HALL_HEX }));
+    // 0.38: each piece wears Millbrook's own building art for its level (the hall for the town's stage)
+    const art = (k, l) => 't-' + k + (l > 1 ? '-' + l : '');
+    if (wl && (T.wallHp || 0) > 0) out.push(Object.assign(structure('mb-gate', 'gate', T.wallHp, AS.gateAc + 2 * wl, { gate: true, art: art('walls', wl) }), { pos: GATE_HEX, wallMax: wmax }));
+    const W = lv('watch'); for (let i = 0; i < Math.min(2, W); i++) out.push(Object.assign(structure('mb-watch' + i, 'watch', AS.towerHp + AS.towerHpL * W, AS.towerAc + W, { art: art('watch', Math.min(2, W)), tower: true, bk: 'watch', inert: false, ranged: true, shots: 99, hit: 4 + W + Math.floor(avgLevel(s) / 4), dice: [1, 8, 1], vol: W >= 3 ? 5 : 4 }), { pos: TOWER_HEX.watch[i] }));
+    const Bl = lv('ballista'); if (Bl) out.push(Object.assign(structure('mb-ballista', 'ballista', AS.towerHp + 30 + AS.towerHpL * Bl, AS.towerAc + 1, { art: art('ballista', Bl), tower: true, bk: 'ballista', inert: false, ranged: true, shots: 99, hit: 5 + Bl + Math.floor(avgLevel(s) / 4), dice: [3, 12, 4], vol: Bl + 1 }), { pos: TOWER_HEX.ballista[0] }));
+    const Ar = lv('arcane'); if (Ar) out.push(Object.assign(structure('mb-arcane', 'arcane', AS.towerHp + 20 + AS.towerHpL * Ar, AS.towerAc, { art: art('arcane', Ar), tower: true, bk: 'arcane', inert: false, splash: SPLASH[Ar] || 5 }), { pos: TOWER_HEX.arcane[0] }));
+    if (lv('bell')) out.push(Object.assign(structure('mb-bell', 'bell', 70, 12, { bk: 'bell', bell: true, art: 't-bell' }), { pos: BELL_HEX }));
+    out.push(Object.assign(structure('mb-hall', 'hall', T.hall === undefined ? hallMax(s) : T.hall, AS.hallAc, { hall: true, art: art('hall', hallStage(s).stage) }), { pos: HALL_HEX }));
     // the militia: more behind better walls, tougher with the smith, sharper with the yard
     // (and the heroes drill them: the militia grows and toughens as the heroes' fame does)
     const HL = avgLevel(s); const n = militiaCount(s); const sm = lv('smith');
@@ -262,14 +348,14 @@
     const fr = mulberry((s.seed + s.week * 97 + s.day * 13 + s.party.x * 7 + s.party.y + (s.uid || 0) * 31) | 0);
     const intact = s.town ? (s.town.wallHp || 0) / Math.max(1, WALL_HP[townLv(s, 'walls')] || 1) : 1;
     const tiles = assault ? (townLv(s, 'walls') ? makeAssaultField(fr, intact, units.filter(u => u.structure && hc(u.pos).c === WALL_COL).map(u => u.pos).concat([GATE_HEX])) : {})
-      : opts.siege ? makeSiegeField(fr, intact) : makeField(fr, terrain);
+      : opts.siege ? makeSiegeField(fr, intact) : makeField(fr, terrain, opts.layout);
     for (const u of units) if (tiles[u.pos] && TILE_INFO[tiles[u.pos]].block) delete tiles[u.pos];
     const party = units.filter(isHero);
     // a party without a cleric stocks up on healing potions in Millbrook instead
     if (!opts.duel && !party.some(u => u.cls === 'cleric')) for (const u of party) u.potions = 2;
     const b = {
       tstate: { talents: { r: Object.assign({}, (s.talents && s.talents.r) || {}) } },   // the DM's talents, for monsters that join mid-fight
-      assault, campIds: opts.campIds || null, bell: assault && units.some(u => u.bell), heroesIn: party.length > 0, heroKillHp: 0,
+      layout: tiles.layout || null, assault, campIds: opts.campIds || null, bell: assault && units.some(u => u.bell), heroesIn: party.length > 0, heroKillHp: 0,
       sfx: assault ? (() => { const F = talentFx(s); return { wallDmg: F.wallDmg || 0, hallDmg: F.hallDmg || 0, towers: F.towers || 0 }; })() : null,
       duel: !!opts.duel, kneel: opts.duel ? talentFx(s).kneel : 0, vtype: s.villain.type, siege: !!opts.siege, wallLv: opts.siege ? townLv(s, 'walls') : 0, towers: opts.siege && !assault && s.town ? { arrows: ARROWS[townLv(s, 'watch')] || 0, bolts: BOLTS[townLv(s, 'ballista')] || 0, splash: SPLASH[townLv(s, 'arcane')] || 0, bell: townLv(s, 'bell') > 0 } : null,
       objId: stackObj ? stackObj.id : null, dungeonId: opts.dungeonId || null, guardLair: opts.guardLair || null, raidNode: opts.raidNode || null, attack: !!opts.attack, sent: opts.attack ? stacks.map(x => [x[0], x[1]]) : null, villain: !!opts.boss, finale: !!opts.finale, stage: opts.stage || 0, terrain, boss: !!opts.boss,
@@ -492,7 +578,7 @@
       if (d > res.get(k).d) continue;
       for (const n of hexNeighbors(k)) {
         if (occ.has(n)) continue;
-        const nd = d + (b.tiles[n] === 'bog' ? 2 : 1);
+        const nd = d + (b.tiles[n] && TILE_INFO[b.tiles[n]].slow ? 2 : 1);
         if (nd > mv) continue;
         const e = res.get(n);
         if (!e || nd < e.d) { res.set(n, { d: nd, prev: k }); open.push([nd, n]); }
@@ -546,6 +632,11 @@
     return n >= 2;
   }
   const inCover = (b, u) => b.tiles[u.pos] === 'brush';
+  function behindCover(b, a, d) {
+    if (hexDist(a.pos, d.pos) <= 1) return false;
+    const L = hexLine(a.pos, d.pos); const t = b.tiles[L[L.length - 2]];
+    return !!(t && TILE_INFO[t].cover);
+  }
   function attackRoll(b, a, d, o) {
     let adv = 0, dis = 0; const notes = [];
     if (a.ab && a.ab.indexOf('reckless') >= 0 && !o.ranged) { adv++; notes.push('Reckless'); }
@@ -563,15 +654,21 @@
     const nat = mode === 'adv' ? Math.max(r1, r2) : mode === 'dis' ? Math.min(r1, r2) : r1;
     const extras = [];
     if (a.side === 'party' && b.bless) { extras.push({ s: 4, v: rint(1, 4), label: 'Bless' }); }
-    const total = nat + a.hit + sum(extras, e => e.v);
+    const high = b.tiles[a.pos] === 'hill';
+    const hb = o.ranged && high ? 1 : 0; if (hb) notes.push('High ground +1');
+    const total = nat + a.hit + hb + sum(extras, e => e.v);
     let ac = d.ac;
-    if (o.ranged && inCover(b, d)) { ac += 2; notes.push('Cover +2'); }
+    if (o.ranged && !high && inCover(b, d)) { ac += 2; notes.push('Cover +2'); }
+    // 0.38: a low wall (or Millbrook's own wall) right in front of the target, between it and the shooter
+    else if (o.ranged && !high && behindCover(b, a, d)) { ac += 2; notes.push('Behind a wall +2'); }
+    if (!o.ranged && b.tiles[d.pos] === 'hill' && b.tiles[a.pos] !== 'hill' && !a.flyer) { ac += 1; notes.push('Uphill +1'); }
+    if (b.tiles[d.pos] === 'ford' && !d.flyer) { ac -= 1; notes.push('In the water −1'); }
     if (d.guard) { ac += d.guard; notes.push(`Shield Wall +${d.guard}`); }
     const critOn = a.ab && a.ab.indexOf('assassin') >= 0 ? 18 : a.ab && a.ab.indexOf('brutal') >= 0 ? 19 : 20;
     const crit = nat >= critOn, fumble = nat === 1;
     let hit = !fumble && (crit || total >= ac);
     if (!hit && a.ab && a.ab.indexOf('stroke') >= 0 && !a.stroke) { a.stroke = true; hit = true; notes.push('Stroke of Luck'); }
-    return { d20: mode ? [r1, r2] : [r1], mode, nat, bonus: a.hit, extras, total, vs: ac, vsLabel: 'AC', result: crit ? 'crit' : hit ? 'hit' : fumble ? 'fumble' : 'miss', hit, crit, notes };
+    return { d20: mode ? [r1, r2] : [r1], mode, nat, bonus: a.hit + hb, extras, total, vs: ac, vsLabel: 'AC', result: crit ? 'crit' : hit ? 'hit' : fumble ? 'fumble' : 'miss', hit, crit, notes };
   }
   // (0.37: only so many of a big group can get at a wall or a door at once: frontage caps the group at that many)
   function damageRoll(b, a, crit, mult, front) {
@@ -1094,6 +1191,13 @@
     }
     return best;
   }
+  // 0.38: how good a hex is to stand on under fire: brush, high ground, a low wall between it and the enemy, not wading
+  function coverScore(b, k, foes) {
+    const t = b.tiles[k]; let sc = t === 'brush' ? 2 : t === 'hill' ? 1.5 : t === 'ford' ? -1 : 0;
+    const shooters = foes.filter(f => f.ranged && (f.shots === undefined || f.shots > 0));
+    if (shooters.length) { const f = shooters.slice().sort((x, y) => hexDist(x.pos, k) - hexDist(y.pos, k))[0]; if (hexDist(f.pos, k) > 1) { const L = hexLine(f.pos, k); const c = b.tiles[L[L.length - 2]]; if (c && TILE_INFO[c].cover) sc += 1.5; if (!los(b, f.pos, k)) sc += 1; } }
+    return sc;
+  }
   function sightSpot(b, u, reach, targets) {
     // a hex this ranged unit can reach that has line of sight to a target and isn't next to an enemy
     let best = null, bs = -Infinity;
@@ -1101,7 +1205,8 @@
       if (k === u.pos) continue;
       if (foesOf(b, u).some(f => hexDist(f.pos, k) === 1)) continue;
       let sc = -Infinity;
-      for (const f of targets) if (los(b, k, f.pos)) sc = Math.max(sc, threat(f) - hexDist(k, f.pos) * 0.2 + (b.tiles[k] === 'brush' ? 2 : 0));
+      for (const f of targets) if (los(b, k, f.pos)) sc = Math.max(sc, threat(f) - hexDist(k, f.pos) * 0.2);
+      if (sc > -Infinity) sc += coverScore(b, k, foesOf(b, u));
       if (sc > bs) { bs = sc; best = k; }
     }
     return best;
@@ -1166,8 +1271,9 @@
     if (!goal) return { type: 'defend' };
     if (u.cls === 'cleric') {
       const wiz = party.find(x => x.cls === 'wizard' && conscious(x));
-      if (wiz && hexDist(u.pos, wiz.pos) > 2) return { type: 'move', to: bestApproach(o.reach, wiz.pos) };
+      if (wiz && hexDist(u.pos, wiz.pos) > 2) { const k = siegeStep(b, u, o.reach, [wiz]); return { type: 'move', to: k !== null ? k : bestApproach(o.reach, wiz.pos) }; }
     }
+    { const k = siegeStep(b, u, o.reach, [goal]); if (k !== null) return { type: 'move', to: k }; }   // 0.38: round the water and the ruins
     return { type: 'move', to: bestApproach(o.reach, goal.pos) };
   }
   // when a villain reaches for a signature power instead of a plain attack
@@ -1211,7 +1317,7 @@
       return { type: 'attack', target: best.t.id, from: best.t.ranged ? undefined : pickFromHex(b, u, best.f, best.t.from, o.reach) };
     }
     if (u.ranged && u.shots > 0) { const spot = sightSpot(b, u, o.reach, heroes); if (spot !== null) return { type: 'move', to: spot }; }
-    if (b.assault) { const k = siegeStep(b, u, o.reach, heroes); if (k !== null) return { type: 'move', to: k }; }
+    { const k = siegeStep(b, u, o.reach, heroes); if (k !== null) return { type: 'move', to: k }; }
     const goal = heroes.slice().sort((x, y) => hexDist(u.pos, x.pos) - hexDist(u.pos, y.pos))[0];
     return { type: 'move', to: bestApproach(o.reach, goal.pos) };
   }

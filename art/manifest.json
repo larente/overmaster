@@ -1,5 +1,21 @@
 {
  "anim": {
+  "unit-goblin": {
+   "attack": {
+    "dirs": 1,
+    "fps": 12,
+    "frames": 8,
+    "pixel": true,
+    "sprite": "sprites/unit-goblin-attack.webp"
+   },
+   "idle": {
+    "dirs": 1,
+    "fps": 6,
+    "frames": 5,
+    "pixel": true,
+    "sprite": "sprites/unit-goblin-idle.webp"
+   }
+  },
   "unit-m-digger": {
    "build": {
     "dirs": 8,

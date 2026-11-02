@@ -1,5 +1,5 @@
 {
- "about": "Voice lines for Overmaster: the heroes, each villain, the monsters of the wilds you parley with (0.31), and each villain's minions (0.33). A category can have variants (cat, cat2, cat3...): the game picks one, never the same twice in a row. elevenlabs_gen.py voices speaks them; pixellab_gen.py talk lip-syncs the portraits; tools/voice_import.py brings both into the game. Edit the text here and redo a line with --redo.",
+ "about": "Voice lines for Overmaster: the heroes, each villain, the monsters of the wilds you parley with (0.31), and each villain's minions (0.33). A category can have variants (cat, cat2, cat3...): the game picks one, never the same twice in a row. elevenlabs_gen.py voices speaks them; pixellab_gen.py talk lip-syncs the portraits; tools/voice_import.py brings both into the game. Edit the text here and redo a line with --redo. 0.38: the weekly assault on Millbrook (heroes: gate, held, tower; villains: council, assault, lead, hold, tower; monsters: charge) and second takes of the battle lines heard most.",
  "categories": [
   "start",
   "danger",
@@ -20,7 +20,10 @@
   "lair",
   "villain",
   "dying",
-  "hired"
+  "hired",
+  "gate",
+  "held",
+  "tower"
  ],
  "heroes": {
   "brakka": {
@@ -45,7 +48,14 @@
     "lair": "A monster nest! Kick it open and let's see what crawls out!",
     "villain": "There! The villain, out in the open! Come and fight me!",
     "dying": "Sing it loud... and make me taller in the song...",
-    "hired": "A new hero for a new song! The name's Brakka. Remember it!"
+    "hired": "A new hero for a new song! The name's Brakka. Remember it!",
+    "gate": "The gate's down! Good! Now they come to me!",
+    "held": "Ha! Back they run! Millbrook stands, and so do I!",
+    "tower": "They knocked down a tower? I'll build it again with their bones!",
+    "start2": "Line up, monsters! One at a time or all at once, I don't mind!",
+    "easy2": "Is that all? I've had harder fights over the last ale.",
+    "hard2": "Now that's a fight! My arms are shaking, and I love it!",
+    "down2": "Not today, friend! Up! There's more killing to do!"
    }
   },
   "thrain": {
@@ -70,7 +80,14 @@
     "lair": "Another of the villain's burrows. We'll bring it down stone by stone.",
     "villain": "That's the villain, walking free as you like. Mark the spot.",
     "dying": "Tell my clan... I kept my oath...",
-    "hired": "The fallen swore an oath. I'll finish it for them."
+    "hired": "The fallen swore an oath. I'll finish it for them.",
+    "gate": "The gate is breached! Form a wall of steel behind it!",
+    "held": "They break against us like the sea on stone. Millbrook holds.",
+    "tower": "A tower falls. We'll mourn it after. Hold the line!",
+    "start2": "Steady, all. We fight as one, or we fall as one.",
+    "easy2": "A small fight. Small fights are good. Fewer graves.",
+    "hard2": "My oath held. My knees nearly didn't.",
+    "down2": "Stay with me! Your ancestors can wait!"
    }
   },
   "grukka": {
@@ -95,7 +112,14 @@
     "lair": "Monster house. I knock on the door. With my maul.",
     "villain": "Hey! Big villain! Come here and fight!",
     "dying": "Good fight... best fight...",
-    "hired": "Grukka heard there was fighting here. Grukka is here."
+    "hired": "Grukka heard there was fighting here. Grukka is here.",
+    "gate": "Gate's broken! Fine. More of them in reach!",
+    "held": "They run! Ha! The wall wins. Grukka wins.",
+    "tower": "Tower fell over. Grukka didn't. Keep hitting!",
+    "start2": "Lots of them. Good. Grukka was bored.",
+    "easy2": "Too quick. Grukka wants another.",
+    "hard2": "Ow. Good fight. Very good. Ow.",
+    "down2": "No sleeping in a fight! Up!"
    }
   },
   "sylvaine": {
@@ -120,7 +144,14 @@
     "lair": "Something lives in there. Let's find out what!",
     "villain": "Is that the villain? Out walking, like anyone else? Strange!",
     "dying": "The forest... I want to see the forest...",
-    "hired": "Everyone's talking about a villain. I had to see for myself!"
+    "hired": "Everyone's talking about a villain. I had to see for myself!",
+    "gate": "They're through the gate! Everyone back, back to the hall!",
+    "held": "We did it! They're running! The town is still ours!",
+    "tower": "The tower's falling! Look out below!",
+    "start2": "Oh, I've never seen these ones before! Let's find out what they're made of!",
+    "easy2": "Over already? But I was just getting started!",
+    "hard2": "Everything hurts. But that was amazing.",
+    "down2": "Breathe! Please, just keep breathing!"
    }
   },
   "bramble": {
@@ -145,7 +176,14 @@
     "lair": "A monster den! There's always loot in a monster den!",
     "villain": "Oi! That's the villain! What's the bounty on that one?",
     "dying": "I want... a refund...",
-    "hired": "Heard the last lot didn't make it. So the pay's gone up, right?"
+    "hired": "Heard the last lot didn't make it. So the pay's gone up, right?",
+    "gate": "They broke the gate? Who's paying for that? Not me!",
+    "held": "They're running! That's a win, and a win costs extra!",
+    "tower": "There goes a tower! Put it on the town's bill!",
+    "start2": "Monsters again? Hazard pay, everyone, hazard pay!",
+    "easy2": "Quick job. Full price, though.",
+    "hard2": "That was a difficult battle. My rates just went up.",
+    "down2": "Get up! Dead men don't pay their tab!"
    }
   },
   "vex": {
@@ -170,7 +208,14 @@
     "lair": "A villain's lair. Let's see if they keep anything nice.",
     "villain": "Well, well. The villain, out for a stroll. How bold.",
     "dying": "Not like this... I'm wearing silk...",
-    "hired": "I hear there's a dark lord with a very full treasury."
+    "hired": "I hear there's a dark lord with a very full treasury.",
+    "gate": "The gate is down. How tiresome. Everyone, to the hall.",
+    "held": "And off they scurry. Millbrook survives. Do try to look grateful.",
+    "tower": "There goes a tower. I never liked the architecture anyway.",
+    "start2": "Shall we dance, then? Try to keep up.",
+    "easy2": "Was that the whole show? How disappointing.",
+    "hard2": "I'll need a bath. And a new coat. And a nap.",
+    "down2": "Up, darling. Lying in the mud is so unbecoming."
    }
   },
   "pip": {
@@ -195,7 +240,14 @@
     "lair": "A secret monster hideout! I bet there's a secret door!",
     "villain": "Look, look! The villain! Can I pick their pocket? Just once?",
     "dying": "Hey... who ate my... last biscuit...",
-    "hired": "New in town! Pip Thistledown, at your service. Mind your purses!"
+    "hired": "New in town! Pip Thistledown, at your service. Mind your purses!",
+    "gate": "The gate! They're in! Run, hide, no, fight! Fight!",
+    "held": "They're running away! We won! Can I have a medal?",
+    "tower": "Whoa! That tower just fell right over!",
+    "start2": "Ooh, they've got shiny bits! I call dibs!",
+    "easy2": "Done already? I barely got to stab anything!",
+    "hard2": "I'm tired. And sore. And I lost my snack.",
+    "down2": "Hey! Hey! Don't you dare stop breathing!"
    }
   },
   "sable": {
@@ -220,7 +272,14 @@
     "lair": "A lair. Villains always hoard. Let's see the stock.",
     "villain": "There's the villain. Out in the open. Careless.",
     "dying": "Should have... charged more...",
-    "hired": "The last crew's gone. I'll take the job. And their shares."
+    "hired": "The last crew's gone. I'll take the job. And their shares.",
+    "gate": "Gate's gone. Fall back to the hall, and nobody touch my stash.",
+    "held": "They're leaving. Good. Nobody robs this town but me.",
+    "tower": "There goes a tower. That'll cost the town a pretty penny.",
+    "start2": "Right then. Quick and quiet, and check their pockets after.",
+    "easy2": "Cheap fight. I like a bargain.",
+    "hard2": "That cost us. Somebody's going to pay it back.",
+    "down2": "Come on. You still owe me money."
    }
   },
   "korra": {
@@ -245,7 +304,14 @@
     "lair": "A villain's lair! Now that's a stage worth stealing!",
     "villain": "Look, the villain in the flesh! Someone fetch a painter!",
     "dying": "Make sure... the story's good...",
-    "hired": "Heard there's a vacancy for heroes. You're welcome, Millbrook!"
+    "hired": "Heard there's a vacancy for heroes. You're welcome, Millbrook!",
+    "gate": "They broke the gate! Perfect! Now everyone can watch me save the day!",
+    "held": "They ran! Did you see that? Someone tell the bards!",
+    "tower": "A whole tower, gone! Okay, that was almost as good as me.",
+    "start2": "Places, everyone! The show's about to start!",
+    "easy2": "Too short! The crowd wanted more!",
+    "hard2": "That was a difficult battle. And I was amazing in it.",
+    "down2": "Get up! You're missing my best part!"
    }
   },
   "nilsa": {
@@ -270,7 +336,14 @@
     "lair": "The villain's lair. Watch for traps. I'll go first.",
     "villain": "Target sighted. The villain. Noting the route.",
     "dying": "Should have... checked... for traps...",
-    "hired": "The guild sent me. The last team missed their deadlines."
+    "hired": "The guild sent me. The last team missed their deadlines.",
+    "gate": "Gate breached! Second line, now! Fall back on the hall!",
+    "held": "Enemy retreating. Walls held. Good work, all of you.",
+    "tower": "We've lost a tower. Close the gap, and quickly!",
+    "start2": "Eyes open. Keep your spacing.",
+    "easy2": "Efficient. Very efficient.",
+    "hard2": "We need better tactics. And more bandages.",
+    "down2": "Stay down, I've got you. Pressure on the wound."
    }
   },
   "ione": {
@@ -295,7 +368,14 @@
     "lair": "Something terrible is made in there. We have to end it.",
     "villain": "That's the villain... out there in the open. Gods protect us.",
     "dying": "Don't cry... I'll be with the gods...",
-    "hired": "Millbrook needs healers now more than ever. I'm here."
+    "hired": "Millbrook needs healers now more than ever. I'm here.",
+    "gate": "They've broken the gate! Protect the townsfolk!",
+    "held": "They're retreating! Thank the gods, Millbrook is safe!",
+    "tower": "The tower's fallen! Is anyone hurt? Bring them to me!",
+    "start2": "Stay together! Nobody falls while I'm here!",
+    "easy2": "Not a scratch. The gods are kind today.",
+    "hard2": "Everyone sit. I'll go one by one.",
+    "down2": "Stay with me! Look at me! You'll be all right!"
    }
   },
   "durgan": {
@@ -320,7 +400,14 @@
     "lair": "A nest of wickedness! I'll sing it a hymn it won't forget!",
     "villain": "Ho there, villain! Care to join us for a hymn? No? Pity!",
     "dying": "Finish the song... for me...",
-    "hired": "The last party sang their last. Time for a new verse, friends!"
+    "hired": "The last party sang their last. Time for a new verse, friends!",
+    "gate": "The gate's broken! Sing louder, lads, and swing harder!",
+    "held": "They're running! A hymn of victory, everyone, from the top!",
+    "tower": "There goes a tower! We'll sing it a lament later!",
+    "start2": "A battle! I know just the hymn!",
+    "easy2": "Ha! Not even a full chorus!",
+    "hard2": "My throat's raw and my hammer's dented. A grand fight!",
+    "down2": "Up you get! I'm not singing your funeral hymn today!"
    }
   },
   "wren": {
@@ -345,7 +432,14 @@
     "lair": "A villain's den. They must have a terrible lot of gold in there.",
     "villain": "Is that the villain? Somebody ask if they'd like to make a donation.",
     "dying": "Make sure... the temple gets my savings...",
-    "hired": "Such a shame about the last heroes. Now, about my fee..."
+    "hired": "Such a shame about the last heroes. Now, about my fee...",
+    "gate": "Oh, not the gate! Do you know what a gate costs, dearies?",
+    "held": "There, they're off. Now, about a little donation for the repairs.",
+    "tower": "There goes a tower. The temple will need a collection for that.",
+    "start2": "Careful now, dears. Healing costs extra after dark.",
+    "easy2": "Lovely. Nobody needs healing. That's bad for business.",
+    "hard2": "Oh, my old bones. Line up, dearies, and have your coin ready.",
+    "down2": "Up, dear! You haven't settled your account!"
    }
   },
   "aelith": {
@@ -370,7 +464,14 @@
     "lair": "A pit of shadow! Let the light pour in!",
     "villain": "The villain walks beneath my sun? How bold. And how foolish.",
     "dying": "Even the sun... must set...",
-    "hired": "Millbrook called for a hero. The sun answered!"
+    "hired": "Millbrook called for a hero. The sun answered!",
+    "gate": "The gate falls! Then I shall be the wall! Behold!",
+    "held": "They flee before my light! Millbrook is saved, by me!",
+    "tower": "A tower crumbles! No matter, I still shine!",
+    "start2": "Bask in my glory, monsters, it will be your last sight!",
+    "easy2": "Such a brief performance. Alas.",
+    "hard2": "That was a difficult battle. My radiance never dimmed.",
+    "down2": "Arise! The sun commands you!"
    }
   },
   "ushka": {
@@ -395,7 +496,14 @@
     "lair": "A place of suffering. We will end it.",
     "villain": "The villain walks alone. Interesting.",
     "dying": "It is... peaceful...",
-    "hired": "The others have gone. I will walk the path in their place."
+    "hired": "The others have gone. I will walk the path in their place.",
+    "gate": "The gate is gone. Then we are the gate.",
+    "held": "They retreat. The town breathes. So do we.",
+    "tower": "The tower falls. We do not.",
+    "start2": "Be still. Then move.",
+    "easy2": "Quickly done. Good.",
+    "hard2": "Rest now. All of you.",
+    "down2": "Breathe with me. In. Out."
    }
   },
   "orrin": {
@@ -420,7 +528,14 @@
     "lair": "A lair! I wonder if the villain keeps a library in there.",
     "villain": "Is that the villain? Hmm. Smaller than the illustrations.",
     "dying": "I never... finished the chapter...",
-    "hired": "I was told there's an opening for heroes? Ah. I thought it was the library."
+    "hired": "I was told there's an opening for heroes? Ah. I thought it was the library.",
+    "gate": "The gate? Broken? Oh dear. Was that the important one?",
+    "held": "Oh, they're leaving! Splendid. Did we win? We won, didn't we?",
+    "tower": "Goodness, the tower! I left a book in there!",
+    "start2": "Ah, monsters. Now, which spell was the, er, explodey one?",
+    "easy2": "Oh, finished? I'd only just found my page.",
+    "hard2": "My, my. I may need a very long sit down.",
+    "down2": "Oh dear! Wake up! I can't remember the healing words!"
    }
   },
   "maelis": {
@@ -445,7 +560,14 @@
     "lair": "The villain's workshop. I'd love to see their notes.",
     "villain": "The villain, walking the land. Such a waste of power.",
     "dying": "Fascinating... so this is how it feels...",
-    "hired": "The last heroes fell. I am not them."
+    "hired": "The last heroes fell. I am not them.",
+    "gate": "The gate has fallen. Let them come through. Into the fire.",
+    "held": "They retreat. The experiment concludes in our favour.",
+    "tower": "A tower lost. A variable I failed to account for.",
+    "start2": "Fascinating. Let's see how they burn.",
+    "easy2": "Predictable. Disappointingly so.",
+    "hard2": "Instructive. Painful, but instructive.",
+    "down2": "Stay alive. My research isn't finished with you."
    }
   },
   "tobias": {
@@ -470,7 +592,14 @@
     "lair": "A villain's lair! Ooh, think of the salvage rights!",
     "villain": "Look, the villain! Do you think they need a good wizard? Kidding!",
     "dying": "No refunds... no...",
-    "hired": "Millbrook's hiring heroes? Wonderful! I'll need an advance."
+    "hired": "Millbrook's hiring heroes? Wonderful! I'll need an advance.",
+    "gate": "The gate's down! Emergency fireball, half price! Today only!",
+    "held": "They're running! Victory! Commemorative scrolls available!",
+    "tower": "Lost a tower! Good thing I sell rebuilding charms!",
+    "start2": "Step right up, monsters! Free fireball for the first customer!",
+    "easy2": "Quick sale! Next!",
+    "hard2": "That was a difficult battle. I'm out of stock on everything!",
+    "down2": "Don't die! I've got a scroll for that, somewhere!"
    }
   },
   "esk": {
@@ -495,7 +624,14 @@
     "lair": "A lair, eh? I'll carve a demolition rune on the front door!",
     "villain": "Is that the villain? Hmph. I've seen better armour on a goat.",
     "dying": "Carve my name... in the biggest rune...",
-    "hired": "Heroes wanted? You'll want a runesmith. You'll want the best one."
+    "hired": "Heroes wanted? You'll want a runesmith. You'll want the best one.",
+    "gate": "The gate's broken? Impossible! I runed that gate myself! Mostly!",
+    "held": "They're running! My runes held! Well, the ones on the walls did!",
+    "tower": "That tower didn't have my runes on it. Clearly.",
+    "start2": "Stand back and watch real rune work!",
+    "easy2": "Didn't even scratch the runes.",
+    "hard2": "That was a difficult battle. I'll be carving bigger runes.",
+    "down2": "Up! My rune of healing never fails! Usually!"
    }
   },
   "zarga": {
@@ -520,7 +656,14 @@
     "lair": "The bones rattle near this place. Something dark is born in there.",
     "villain": "The villain walks the land. The bones have gone very quiet.",
     "dying": "The bones... they said... this...",
-    "hired": "The bones told me the old heroes would fall. And that I'd come."
+    "hired": "The bones told me the old heroes would fall. And that I'd come.",
+    "gate": "The bones said the gate would fall. Now they say run to the hall.",
+    "held": "They flee. The bones are pleased. So am I.",
+    "tower": "A tower falls. The bones saw that coming too.",
+    "start2": "The bones say fight. So, we fight.",
+    "easy2": "The bones yawned through that one.",
+    "hard2": "The bones warned me. I should listen more.",
+    "down2": "Not your time. The bones are very clear on that."
    }
   }
  },
@@ -554,7 +697,12 @@
   "heroesgrow",
   "newparty",
   "dawn",
-  "order"
+  "order",
+  "council",
+  "assault",
+  "lead",
+  "hold",
+  "tower"
  ],
  "villains": {
   "lich": {
@@ -641,7 +789,16 @@
     "order": "It shall be done.",
     "order2": "The dead walk where I will.",
     "order3": "Death goes where it pleases.",
-    "order4": "Patience. I am coming."
+    "order4": "Patience. I am coming.",
+    "council": "The week is done. My army waits at their gates. Shall we knock?",
+    "council2": "The living sleep behind their little wall. Wake them.",
+    "assault": "Take the town. Bring me its dead.",
+    "assault2": "At the gates, my servants. Tear them open.",
+    "lead": "I will lead them myself. Let Millbrook see death walking.",
+    "lead2": "Open the way. Their king of bones is coming.",
+    "hold": "Not yet. Let them count the days. Let them dread.",
+    "tower": "Their tower falls. So will they.",
+    "tower2": "One more stone in my graveyard."
    }
   },
   "dragon": {
@@ -729,7 +886,16 @@
     "order": "Where my shadow falls, I rule.",
     "order2": "I go where I please.",
     "order3": "Make way.",
-    "order4": "Hmm. A pleasant flight."
+    "order4": "Hmm. A pleasant flight.",
+    "council": "The week is spent. My hoard grows impatient. Shall we burn Millbrook?",
+    "council2": "My army smells their fear. Give the word.",
+    "assault": "Burn it! Burn every timber of that town!",
+    "assault2": "Over the walls, my brood. Bring me their gold.",
+    "lead": "I will darken their sky myself. Let them look up.",
+    "lead2": "Stand aside. I will melt their gate.",
+    "hold": "Patience. The fire is sweeter when it waits.",
+    "tower": "Their tower crumbles like a burnt log.",
+    "tower2": "Down it goes. How satisfying."
    }
   },
   "demon": {
@@ -817,7 +983,16 @@
     "order": "Oh, this will be fun.",
     "order2": "As I like it. I'm off.",
     "order3": "Hold my throne.",
-    "order4": "Somewhere to burn? Lovely."
+    "order4": "Somewhere to burn? Lovely.",
+    "council": "Week's over, darlings. Who wants to break a town?",
+    "council2": "They've had their little week of peace. How sweet.",
+    "assault": "Go, go, go! Smash it all and don't save me any!",
+    "assault2": "Knock on their door, my lovelies. Knock very, very hard.",
+    "lead": "Oh, I'm coming too. I wouldn't miss this for all the souls in the Pit.",
+    "lead2": "Make way! The Prince is going to the party!",
+    "hold": "Let them sweat another week. Anticipation is half the fun.",
+    "tower": "Oops! There goes their tower!",
+    "tower2": "Down it comes! Do it again!"
    }
   },
   "archmage": {
@@ -905,7 +1080,16 @@
     "order": "As I intended.",
     "order2": "I was going there anyway.",
     "order3": "Very well.",
-    "order4": "A sensible choice."
+    "order4": "A sensible choice.",
+    "council": "The week is complete. The assault is ready for my order.",
+    "council2": "Their defences are known to me. Shall we test them?",
+    "assault": "Commence the assault. Break the gate first.",
+    "assault2": "Attack. Exactly as planned.",
+    "lead": "I will conduct this personally. Precision is required.",
+    "lead2": "Clear the way. I will open their gate.",
+    "hold": "Not yet. The numbers are not in our favour. We wait.",
+    "tower": "One tower down. The rest will follow.",
+    "tower2": "Their tower has failed. As expected."
    }
   },
   "vampire": {
@@ -993,7 +1177,16 @@
     "order": "As you wish, my dear.",
     "order2": "A pleasant night for a walk.",
     "order3": "I was going there anyway.",
-    "order4": "Lead on, moonlight."
+    "order4": "Lead on, moonlight.",
+    "council": "Another week. My children grow thirsty at their gates.",
+    "council2": "Millbrook dreams behind its walls. Shall we wake it, my dear?",
+    "assault": "Go, my children. Feast.",
+    "assault2": "Their gate is only wood. Their blood is only waiting.",
+    "lead": "I think I shall attend this one myself.",
+    "lead2": "Open the door for me. I so dislike knocking.",
+    "hold": "Patience. A meal is better when it has been waiting.",
+    "tower": "Their tower falls. How very dramatic.",
+    "tower2": "One less candle in their window."
    }
   },
   "deathknight": {
@@ -1081,7 +1274,16 @@
     "order": "So be it.",
     "order2": "I march.",
     "order3": "My blade goes before me.",
-    "order4": "Another road. Another grave."
+    "order4": "Another road. Another grave.",
+    "council": "The week is done. The army stands ready. Give the order.",
+    "council2": "They hide behind stone. Stone breaks.",
+    "assault": "Forward. Take the walls.",
+    "assault2": "Break the gate. Leave nothing standing.",
+    "lead": "I lead the charge. Follow my blade.",
+    "lead2": "Stand aside. I will break the gate myself.",
+    "hold": "Not this week. We gather. We wait.",
+    "tower": "Their tower falls.",
+    "tower2": "Another stone in the dust."
    }
   }
  },
@@ -1090,7 +1292,8 @@
   "join",
   "refuse",
   "attack",
-  "kneel"
+  "kneel",
+  "charge"
  ],
  "monsters": {
   "goblin": {
@@ -1101,7 +1304,8 @@
     "join": "Okay, okay! We fight for you! We get shinies, yes?",
     "refuse": "No, no! Go away! We not listening!",
     "attack": "Get the big one! Stab, stab, stab!",
-    "kneel": "Mercy! Mercy! We serve! We serve!"
+    "kneel": "Mercy! Mercy! We serve! We serve!",
+    "charge": "Burn the houses! Grab the shinies! Go, go, go!"
    }
   },
   "bandit": {
@@ -1112,7 +1316,8 @@
     "join": "Your coin's as good as anyone's. We're in.",
     "refuse": "Nice story. Not buying it. Move along.",
     "attack": "Right, lads! Let's take everything they've got!",
-    "kneel": "All right, all right! We yield! We'll work for you!"
+    "kneel": "All right, all right! We yield! We'll work for you!",
+    "charge": "Over the walls, lads! Everything in that town is ours!"
    }
   },
   "orc": {
@@ -1123,7 +1328,8 @@
     "join": "Strong. You are strong. We follow strength. We march!",
     "refuse": "Words. Only words. Orcs do not follow words.",
     "attack": "Enough talk! Blood and iron! Crush them!",
-    "kneel": "You are stronger. We follow you now."
+    "kneel": "You are stronger. We follow you now.",
+    "charge": "Smash the gate! Burn the town! Blood and iron!"
    }
   },
   "ogre": {
@@ -1134,7 +1340,8 @@
     "join": "Okay! We go smash town! Is there food in town?",
     "refuse": "No. Me not like you. Me think hard about it.",
     "attack": "Me hungry! Me eat you now!",
-    "kneel": "Ow. Okay. Ogre on your side now. Ow."
+    "kneel": "Ow. Okay. Ogre on your side now. Ow.",
+    "charge": "Me smash wall! Then me eat town!"
    }
   },
   "wraith": {
@@ -1145,7 +1352,8 @@
     "join": "Yes... the living will pay for our suffering... we will follow...",
     "refuse": "Your words are empty, like us... leave...",
     "attack": "Then join us... in the cold...",
-    "kneel": "We fade... we yield... command us..."
+    "kneel": "We fade... we yield... command us...",
+    "charge": "The walls cannot keep out the cold..."
    }
   },
   "troll": {
@@ -1156,7 +1364,8 @@
     "join": "Meat in the town? Troll will go. Troll will eat.",
     "refuse": "Hrr. No. Troll likes it here. Go away.",
     "attack": "Troll smash! Troll eat bones after!",
-    "kneel": "Hrr... troll heals... then troll fights for you."
+    "kneel": "Hrr... troll heals... then troll fights for you.",
+    "charge": "Troll break wall! Troll find snacks inside!"
    }
   },
   "giant": {
@@ -1167,7 +1376,8 @@
     "join": "Ha! At last, someone who sees a giant's worth. We march!",
     "refuse": "Hmph. You do not speak to a giant like that.",
     "attack": "Then I will crush you under my heel, little one!",
-    "kneel": "Enough... you have earned my respect. My strength is yours."
+    "kneel": "Enough... you have earned my respect. My strength is yours.",
+    "charge": "Their little wall will not stop my heel!"
    }
   },
   "vampire": {
@@ -1178,7 +1388,8 @@
     "join": "Very well. Millbrook's blood will make a fine feast.",
     "refuse": "How terribly dull. We decline.",
     "attack": "How rude. We'll drink you dry for this.",
-    "kneel": "Enough! We yield. We are yours to command."
+    "kneel": "Enough! We yield. We are yours to command.",
+    "charge": "Open the gate, darlings. We're expected for supper."
    }
   },
   "dragon": {
@@ -1189,7 +1400,8 @@
     "join": "A worthy offer. I will burn Millbrook for you.",
     "refuse": "You bore me. Leave, before I grow hungry.",
     "attack": "Fool! You will burn for this insult!",
-    "kneel": "Enough! I yield. My fire is yours."
+    "kneel": "Enough! I yield. My fire is yours.",
+    "charge": "Burn the roofs! Burn the walls! Burn it all!"
    }
   }
  },

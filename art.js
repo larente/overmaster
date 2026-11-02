@@ -400,6 +400,27 @@ const Art = (() => {
     x.strokeStyle = 'rgba(190,220,210,0.3)'; x.lineWidth = 1; x.beginPath(); x.arc(cx + R * 0.15, cy - R * 0.05, R * 0.15, 0, 7); x.stroke();
     x.strokeStyle = 'rgba(120,130,60,0.9)'; x.lineWidth = 1.3; for (let i = 0; i < 4; i++) { const px = cx + (r() - 0.5) * R * 1.2, py = cy + (r() - 0.5) * R * 0.7; x.beginPath(); x.moveTo(px, py); x.lineTo(px + (r() - 0.5) * 3, py - R * 0.35); x.stroke(); }
   }
+  // 0.38: water, shallows and bridges, hills, ruins and low walls on the flat battle field
+  function hexAt(x, cx, cy, r) { x.beginPath(); for (let i = 0; i < 6; i++) { const a = Math.PI / 180 * (60 * i - 30); const px = cx + r * Math.cos(a), py = cy + r * Math.sin(a); if (i) x.lineTo(px, py); else x.moveTo(px, py); } x.closePath(); }
+  function water(x, cx, cy, R, kind, seed) {
+    const r = G.mulberry(seed | 0); const deep = kind !== 'ford';
+    hexAt(x, cx, cy, R * 1.01); const g = x.createRadialGradient(cx, cy - R * 0.2, R * 0.1, cx, cy, R);
+    g.addColorStop(0, deep ? '#3d7f9c' : '#7fb0bc'); g.addColorStop(1, deep ? '#1f4d64' : '#5a8a94'); x.fillStyle = g; x.fill();
+    x.strokeStyle = 'rgba(220,240,250,0.35)'; x.lineWidth = 1;
+    for (let i = 0; i < 3; i++) { const px = cx + (r() - 0.5) * R, py = cy + (r() - 0.5) * R * 0.8, w = R * (0.2 + r() * 0.25); x.beginPath(); x.moveTo(px - w, py); x.quadraticCurveTo(px, py - R * 0.08, px + w, py); x.stroke(); }
+    if (!deep) for (let i = 0; i < 4; i++) { x.fillStyle = i % 2 ? '#8a8578' : '#a39d90'; x.beginPath(); x.ellipse(cx + (r() - 0.5) * R * 1.1, cy + (r() - 0.5) * R * 0.9, R * 0.12, R * 0.08, 0, 0, 7); x.fill(); }
+    if (kind === 'bridge') {
+      for (let i = 0; i < 6; i++) { x.fillStyle = i % 2 ? '#8a6440' : '#6e4c2e'; x.fillRect(cx - R * 0.95, cy - R * 0.62 + i * R * 0.22, R * 1.9, R * 0.18); }
+      x.fillStyle = '#4e3420'; x.fillRect(cx - R * 0.95, cy - R * 0.72, R * 1.9, R * 0.08); x.fillRect(cx - R * 0.95, cy + R * 0.66, R * 1.9, R * 0.08);
+    }
+  }
+  function hill(x, cx, cy, R, terrain) {
+    const base = { snow: ['#f4f8fb', '#b8c4cc'], swamp: ['#86924e', '#4a5430'], waste: ['#86766a', '#463c36'], dirt: ['#bca06a', '#6e583a'] }[terrain] || ['#a6c45a', '#56742c'];
+    hexAt(x, cx, cy, R * 0.98); const g = x.createLinearGradient(cx - R, cy - R, cx + R, cy + R); g.addColorStop(0, base[0]); g.addColorStop(1, base[1]); x.fillStyle = g; x.fill();
+    x.strokeStyle = 'rgba(30,40,15,0.7)'; x.lineWidth = 1.5; hexAt(x, cx, cy, R * 0.98); x.stroke();
+    x.strokeStyle = 'rgba(30,40,15,0.45)'; x.lineWidth = 1.2; for (const k of [0.7, 0.42]) { hexAt(x, cx, cy - R * 0.08 * (1 - k), R * k); x.stroke(); }
+    x.fillStyle = 'rgba(255,255,230,0.25)'; hexAt(x, cx - R * 0.1, cy - R * 0.14, R * 0.25); x.fill();
+  }
   function spikes(x, cx, cy, R, revealed) {
     x.save();
     x.globalAlpha = revealed ? 1 : 0.55;
@@ -431,6 +452,29 @@ const Art = (() => {
       }
       return;
     }
+    if (kind === 'ruin') {
+      const r = G.mulberry((seed | 0) + 11);
+      x.fillStyle = 'rgba(0,0,0,0.3)'; x.beginPath(); x.ellipse(cx + 3, cy + R * 0.4, R * 0.8, R * 0.3, 0, 0, 7); x.fill();
+      const col = terrain === 'snow' ? ['#b4b2aa', '#8e8c84'] : terrain === 'waste' ? ['#6a605a', '#4a423e'] : ['#a09888', '#7a7266'];
+      for (let i = 0; i < 2; i++) { const w = R * (0.55 + r() * 0.35), h = R * (0.7 + r() * 0.6), bx = cx - R * 0.55 + i * R * 0.5, by = cy + R * 0.35;
+        x.fillStyle = col[1]; x.fillRect(bx, by - h, w, h); x.fillStyle = col[0]; x.fillRect(bx, by - h, w * 0.55, h);
+        x.fillStyle = col[1]; for (let j = 0; j < 3; j++) { const cw = w / 3; if (r() < 0.6) x.fillRect(bx + j * cw, by - h - R * 0.15, cw * 0.8, R * 0.15); }
+        if (r() < 0.6) { x.fillStyle = '#2a241e'; x.fillRect(bx + w * 0.35, by - h * 0.65, w * 0.25, h * 0.25); }
+        x.fillStyle = 'rgba(95,110,62,0.85)'; x.fillRect(bx, by - R * 0.12, w, R * 0.12); }
+      for (let i = 0; i < 3; i++) { x.fillStyle = col[i % 2]; x.fillRect(cx + (r() - 0.5) * R * 1.2, cy + R * 0.3 + r() * R * 0.2, R * 0.18, R * 0.12); }
+      return;
+    }
+    if (kind === 'barricade') {
+      x.fillStyle = 'rgba(0,0,0,0.28)'; x.beginPath(); x.ellipse(cx + 2, cy + R * 0.3, R * 0.35, R * 0.85, 0, 0, 7); x.fill();
+      const stone = terrain === 'snow' || terrain === 'waste' || terrain === 'dirt' || terrain === 'mount';
+      if (stone) { for (let i = 0; i < 5; i++) { const by = cy - R * 0.62 + i * R * 0.3; x.fillStyle = i % 2 ? '#8a8478' : '#a29c90'; x.fillRect(cx - R * 0.24, by - R * 0.16, R * 0.48, R * 0.3); x.strokeStyle = 'rgba(40,36,30,0.6)'; x.strokeRect(cx - R * 0.24, by - R * 0.16, R * 0.48, R * 0.3); } return; }
+      // a split-rail fence seen from above: two rails down the rows, posts along them, a sack or two
+      x.strokeStyle = '#8a6440'; x.lineWidth = Math.max(2, R * 0.09); x.lineCap = 'round';
+      for (const dx of [-0.12, 0.12]) { x.beginPath(); x.moveTo(cx + dx * R, cy - R * 0.8); x.lineTo(cx + dx * R * 0.8, cy + R * 0.8); x.stroke(); }
+      x.fillStyle = '#5a3c22'; for (let i = 0; i < 4; i++) { x.beginPath(); x.arc(cx, cy - R * 0.75 + i * R * 0.5, R * 0.11, 0, 7); x.fill(); }
+      x.fillStyle = '#c8b080'; x.beginPath(); x.ellipse(cx + R * 0.32, cy + R * 0.2, R * 0.16, R * 0.11, 0.3, 0, 7); x.fill();
+      x.lineCap = 'butt'; return;
+    }
     if (kind === 'tree') { if (terrain === 'snow') pine(x, cx, cy + R * 0.5, R * 1.3, true); else if (terrain === 'waste' || terrain === 'swamp') deadTree(x, cx, cy + R * 0.55, R * 1.1); else tree(x, cx, cy + R * 0.45, R * 0.55, r0); return; }
     x.fillStyle = 'rgba(0,0,0,0.3)'; x.beginPath(); x.ellipse(cx + 3, cy + R * 0.4, R * 0.75, R * 0.28, 0, 0, 7); x.fill();
     x.fillStyle = terrain === 'waste' ? '#3a2c2a' : '#7d756a'; x.beginPath();
@@ -440,5 +484,5 @@ const Art = (() => {
 
   const MINI = { grass: '#5c8a3a', dirt: '#97784e', forest: '#2f5a24', swamp: '#4e5d3c', snow: '#dfe6ec', waste: '#5a4038', water: '#2f5f8f', mount: '#6d6152' };
 
-  return { IMG, URI, ready, paintMap, paintField, obstacle, brush, bog, spikes, MINI, HEADS, heroHead, ensureHero, heroKey, portrait, medal, uri };
+  return { IMG, URI, ready, paintMap, paintField, obstacle, brush, bog, water, hill, spikes, MINI, HEADS, heroHead, ensureHero, heroKey, portrait, medal, uri };
 })();

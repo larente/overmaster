@@ -21,6 +21,9 @@ Run it in Terminal:
     python3 ~/Documents/bts-art/pixellab_gen.py moves           # 0.35: the six minions walking and building, in all 8 directions
     python3 ~/Documents/bts-art/pixellab_gen.py moves thrall    # just these (or: moves walk, moves build)
     python3 ~/Documents/bts-art/pixellab_gen.py objects relic   # 0.36: the relics' spot on the map
+    python3 ~/Documents/bts-art/pixellab_gen.py militia         # 0.38: Millbrook's militia (a new character)
+    python3 ~/Documents/bts-art/pixellab_gen.py acts            # 0.38: an idle loop and an attack for every monster, facing east
+    python3 ~/Documents/bts-art/pixellab_gen.py acts goblin wolf   # just these (or: acts idle, acts attack)
 
 It reads your PixelLab token from pixellab-token.txt (or the .rtf TextEdit makes) in this folder and
 never prints it. Each character's 8 directions are saved in out/<name>/. Progress goes to log.txt.
@@ -83,6 +86,8 @@ CAST = {
     'irongolem': ('Iron Golem', 'towering iron golem of riveted dark steel plates, glowing blue runes on the chest and arms, heavy square head with glowing slit eyes, huge fists'),
     'werewolf': ('Werewolf', 'hulking brown-grey werewolf standing on two legs, wolf head, long claws, torn trousers, muscular and hunched, feral yellow eyes'),
     'rider': ('Black Rider', 'cursed knight in black plate armor riding a black warhorse with glowing red eyes, long black lance, tattered dark cloak', 'horse'),
+    # 0.38: Millbrook's militia, who defend the walls in the weekly assault
+    'militia': ('Militia', 'medieval village militiaman, iron kettle helmet, padded red-brown gambeson, round wooden shield with a red stripe, long spear'),
     # villains
     'villain-lich': ('The Lich', 'skeletal lich sorcerer-king, cracked iron crown, tattered black and violet royal robes, skull-topped staff, green fire in the eye sockets'),
     'villain-dragon': ('The Ashen Wyrm', 'enormous ancient dragon, ash-grey scales with glowing ember cracks, wings spread', 'lion'),
@@ -1219,6 +1224,132 @@ def moves(tok, which):
     log('generations left: %s' % gens_left(tok))
     log('The moves are in out/<minion>/anim-walk and anim-build. All finished. Tell Claude in the chat.')
 
+# ---------------- 0.38: battle animations, side view only ----------------
+# an idle loop and an attack for every monster that fights in battles, facing east (the game mirrors it for west)
+ACTS = {
+    'goblin':   ('shifting from foot to foot, blade held low, glancing around nervously', 'lunging forward and stabbing with the rusty blade, then hopping back'),
+    'wolf':     ('standing and breathing, head low, tail swishing, growling', 'leaping forward and snapping its jaws in a vicious bite'),
+    'skeleton': ('standing guard, jaw rattling, shield raised, swaying slightly', 'stepping in and slashing down with the old sword behind the shield'),
+    'orc':      ('standing with the bow lowered, shoulders rising with each breath', 'drawing the bow to the cheek and loosing an arrow forward'),
+    'bandit':   ('standing in a ready crouch, tossing the short sword from hand to hand', 'dashing forward and slashing with the short sword'),
+    'ogre':     ('standing and breathing heavily, belly heaving, club resting on the shoulder', 'raising the huge club overhead and smashing it down in front'),
+    'troll':    ('hunched and swaying, long arms hanging, claws twitching', 'swiping forward with both clawed hands, one after the other'),
+    'wraith':   ('hovering and drifting gently, tattered cloth rippling, smoke trailing', 'surging forward and raking with a spectral clawed hand'),
+    'knight':   ('standing at guard behind the shield, blue light flickering in the helmet', 'stepping forward and cutting down hard with the longsword'),
+    'giant':    ('standing and breathing, club hanging at the side, beard stirring', 'heaving the stone club in a wide sweeping swing in front'),
+    'militia':  ('standing at guard, spear upright, shifting weight nervously behind the shield', 'thrusting the long spear forward behind the shield'),
+    'villain-lich':        ('hovering slightly, robes stirring, green fire flickering in the eyes and on the staff', 'thrusting the skull staff forward and blasting a bolt of green fire'),
+    'villain-dragon':      ('standing and breathing slowly, embers glowing in its cracks, wings shifting', 'rearing back and breathing a gout of fire forward'),
+    'villain-demon':       ('standing tall, flames licking over the armor, sword lowered and smouldering', 'swinging the flaming sword in a great downward arc'),
+    'villain-archmage':    ('floating slightly, spellbook circling, arcane light pulsing in the hands', 'thrusting both hands forward and hurling a crackling orb of arcane light'),
+    'villain-vampire':     ('standing with a cruel smile, coat stirring, flexing clawed fingers', 'lunging forward and slashing with clawed hand, coat flaring'),
+    'villain-deathknight': ('standing still behind the greatsword, red eyes glowing, cape stirring', 'swinging the greatsword in a heavy overhead cleave'),
+    'vampire':  ('standing with a sneer, coat stirring, fingers flexing', 'lunging forward and slashing with clawed fingers'),
+    'hydra':    ('heads weaving and swaying on their necks, tongues flicking', 'all heads striking forward in a snapping lunge'),
+    'demon':    ('standing tall, wings shifting, the flaming whip curling on the ground', 'cracking the flaming whip forward in a fiery lash'),
+    'dragon':   ('standing and breathing, smoke curling from the nostrils, tail swishing', 'lunging forward and breathing a short burst of fire'),
+    'colossus': ('standing and swaying, bones creaking, green glow pulsing in the ribs', 'smashing forward with a huge bone fist'),
+    'drake':    ('standing and breathing, wings twitching, tail swishing', 'lunging forward and snapping its jaws'),
+    'hellhound':('standing and panting, smoke rising, fire flickering in the cracks', 'pouncing forward with a burning bite'),
+    'irongolem':('standing still, runes pulsing, steam venting from the joints', 'punching forward with a huge iron fist'),
+    'werewolf': ('hunched and breathing hard, claws flexing, head twitching', 'lunging forward and slashing with both claws'),
+    'rider':    ('the warhorse stamping and tossing its head, lance raised', 'charging forward with the lance lowered'),
+}
+ACT_FRAMES = {'idle': 4, 'attack': 8}
+ACT_FLOOR = 8      # leave at least this many generations
+ACT_WORKERS = 3
+
+def act_one(tok, key, act):
+    folder = os.path.join(OUT, key, 'anim-' + act); ddir = os.path.join(folder, 'east')
+    if os.path.isdir(ddir) and len([f for f in os.listdir(ddir) if f.endswith('.png')]) >= 4 and not REDO[0]:
+        return 'had'
+    cid = char_id(key)
+    if not cid:
+        log('%s: no character id in out/%s, so no %s' % (key, key, act)); return 'no character'
+    body = {'character_id': cid, 'mode': 'v3', 'action_description': ACTS[key][0 if act == 'idle' else 1], 'frame_count': ACT_FRAMES[act],
+            'directions': ['east'], 'keep_first_frame': act == 'idle', 'animation_name': 'battle-' + act}
+    t0 = time.time()
+    while True:
+        code, b = http('POST', '/characters/animations', body, tok)
+        if code != 429 or time.time() - t0 > 60 * 60: break
+        time.sleep(20)
+    try:
+        resp = json.loads(b or b'{}')
+    except ValueError:
+        resp = {}
+    if code in (401, 402):
+        log('%s %s: STOP: %s %s' % (key, act, code, json.dumps(strip(resp))[:300])); return 'stop'
+    if code >= 400:
+        log('%s %s: refused (%s): %s' % (key, act, code, json.dumps(strip(resp))[:400])); return 'fail'
+    os.makedirs(ddir, exist_ok=True); save_json(folder, 'submit', resp)
+    ids = resp.get('background_job_ids') or []; gid = resp.get('animation_group_id')
+    final, t0 = None, time.time()
+    while ids and time.time() - t0 < 30 * 60:
+        time.sleep(8)
+        c2, b2 = http('GET', '/background-jobs/%s' % ids[0], None, tok)
+        if c2 != 200: continue
+        try:
+            f = json.loads(b2)
+        except ValueError:
+            continue
+        st = str(f.get('status', '')).lower()
+        if st in ('completed', 'failed', 'error', 'cancelled'):
+            final = (st, f); break
+    frames = []
+    c3, b3 = http('GET', '/characters/%s' % cid, None, tok)
+    if c3 == 200:
+        try:
+            d = json.loads(b3)
+            for g in d.get('animations') or []:
+                if gid and g.get('animation_group_id') != gid: continue
+                for dd in g.get('directions') or []:
+                    if dd.get('direction') == 'east' and dd.get('frames'):
+                        for u in dd['frames']:
+                            c4, raw = http('GET', u, None, None)
+                            if c4 == 200: frames.append(raw)
+        except ValueError:
+            pass
+    if not frames and final and final[0] == 'completed':
+        frames = pl_images(final[1])
+    for k, raw in enumerate(frames):
+        open(os.path.join(ddir, '%02d.png' % k), 'wb').write(raw)
+    if not frames:
+        log('  %s %s: nothing came back' % (key, act)); return 'fail'
+    return 'ok'
+
+def acts(tok, which):
+    picks = [w for w in which if w in ('idle', 'attack')] or ['idle', 'attack']
+    keys = [w for w in which if w in ACTS] or list(ACTS)
+    todo = [(k, a) for k in keys for a in picks]
+    log('--- %s: battle animations (side view): %s for %d characters' % (time.strftime('%Y-%m-%d %H:%M'), ', '.join(picks), len(keys)))
+    res = {}
+    # the first one alone, to see what one costs
+    g0 = gens_left(tok); first = todo.pop(0) if todo else None
+    if first:
+        r = act_one(tok, *first); res['%s %s' % first] = r; g1 = gens_left(tok)
+        if r == 'ok' and g0 is not None and g1 is not None:
+            per = g0 - g1; log('one animation cost %g generations; %d more to go, about %g in all; %g left' % (per, len(todo), per * len(todo), g1))
+        if r == 'stop': todo = []
+    while todo:
+        g = gens_left(tok)
+        if g is not None and g < ACT_FLOOR:
+            log('Only %d generations left, so I stopped here. The rest can be made later with the same command.' % g)
+            for kv in todo: res['%s %s' % kv] = 'skipped'
+            break
+        batch, todo = todo[:ACT_WORKERS], todo[ACT_WORKERS:]
+        with ThreadPoolExecutor(max_workers=ACT_WORKERS) as ex:
+            futs = {kv: ex.submit(act_one, tok, *kv) for kv in batch}
+            for kv, f in futs.items():
+                try:
+                    res['%s %s' % kv] = f.result()
+                except Exception as e:
+                    res['%s %s' % kv] = 'error'; log('%s %s: error %s' % (kv[0], kv[1], e))
+        if any(v == 'stop' for v in res.values()): break
+        log('  %d done, %d to go, %s generations left' % (len(res), len(todo), gens_left(tok)))
+    log('battle animations: ' + ', '.join('%s %s' % kv for kv in res.items()))
+    log('generations left: %s' % gens_left(tok))
+    log('The animations are in out/<name>/anim-idle and anim-attack. All finished. Tell Claude in the chat.')
+
 def main():
     args = sys.argv[1:] or ['test']
     if '--redo' in args:
@@ -1228,6 +1359,11 @@ def main():
         if not tok:
             sys.exit('No token found. Save it in %s/pixellab-token.txt' % HERE)
         return intro(tok, args[1:])
+    if args and args[0] == 'acts':
+        tok = read_token()
+        if not tok:
+            sys.exit('No token found. Save it in %s/pixellab-token.txt' % HERE)
+        return acts(tok, args[1:])
     if args and args[0] == 'moves':
         tok = read_token()
         if not tok:
