@@ -1209,14 +1209,15 @@
     minionTalk(m, b, sp, V, dur); kick(); return true;
   }
   // 0.39: while a minion you've selected speaks, its portrait in the action bar moves its mouth (when it has a talking portrait)
+  function abTalkCv() { if (!ui.abTalk) { const c = document.createElement('canvas'); c.className = 'abtalk'; c.width = 256; c.height = 256; c.setAttribute('aria-hidden', 'true'); ui.abTalk = c; } return ui.abTalk; }
   function minionTalk(m, b, sp, V, dur) {
     const T = ART.talk && ART.talk[sp.key]; if (!T || !T.strip) return;
     if (!T.imgs) { const im = new Image(); im.src = 'art/' + T.strip; T.imgs = [im]; }
     const t0 = performance.now();
     const step = () => {
-      const cv = document.querySelector('#abar .abtalk'); const live = ui.msay && ui.msay.get(m.id) === b && performance.now() < b.until;
-      const shown = live && cv && selMinions().some(z => z.id === m.id);
-      if (cv) cv.classList.toggle('on', !!shown);
+      const cv = abTalkCv(); const live = ui.msay && ui.msay.get(m.id) === b && performance.now() < b.until;
+      const shown = live && cv.isConnected && selMinions().some(z => z.id === m.id);
+      if (live || ui.abTalkFor === b) { cv.classList.toggle('on', !!shown); ui.abTalkFor = b; }
       if (!live) return;
       if (shown) {
         const im = T.imgs[0]; const nf = T.n || 7;
@@ -1225,8 +1226,7 @@
           let idx = T.rest || 0;
           if (talking && V && V.sync && b.voice) { for (const [i, until] of V.sync) if (t < until) { idx = i; break; } }
           else if (talking) idx = [T.rest || 0, 1, 2, 1][Math.floor(t * 8) % 4] % nf;
-          const fw = im.naturalWidth / nf; const c = cv.getContext('2d'); c.imageSmoothingEnabled = false; c.clearRect(0, 0, cv.width, cv.height);
-          c.drawImage(im, Math.min(nf - 1, idx) * fw, 0, fw, im.naturalHeight, 0, 0, cv.width, cv.height);
+          const fw = im.naturalWidth / nf; tokenDraw(cv.getContext('2d'), cv.width, im, Math.min(nf - 1, idx) * fw, 0, fw, im.naturalHeight);   // framed like its portrait
         }
       }
       requestAnimationFrame(step);
@@ -1377,7 +1377,7 @@
     const ms = selMinions(); const sel = ui.sel;
     if (ms.length) { const idle = ms.filter(m => !m.job).length;
       const one = ms.length === 1 && minionIdle(ms[0]);
-      return `<span class="abigw">${img(minionIcon(), 'abig')}<canvas class="abtalk" width="128" height="128" aria-hidden="true"></canvas></span><div><b>${ms.length > 1 ? `${ms.length} ${esc(MT().name)}` : esc(MT().one)}</b><small${one ? ' class="idletxt"' : ''}>${ms.length > 1 ? `${idle ? `<span class="idletxt">${idle} idle</span>, ` : ''}${ms.length - idle} busy.` : one ? 'Idle, waiting for orders. Gather, build or send it somewhere.' : minionJob(ms[0])}</small></div>`; }
+      return `<span class="abigw">${img(minionIcon(), 'abig')}</span><div><b>${ms.length > 1 ? `${ms.length} ${esc(MT().name)}` : esc(MT().one)}</b><small${one ? ' class="idletxt"' : ''}>${ms.length > 1 ? `${idle ? `<span class="idletxt">${idle} idle</span>, ` : ''}${ms.length - idle} busy.` : one ? 'Idle, waiting for orders. Gather, build or send it somewhere.' : minionJob(ms[0])}</small></div>`; }
     if (sel && sel.type === 'villain') { const V = S.villain; const hp = Math.round((V.hpFrac === undefined ? 1 : V.hpFrac) * 100);
       return `${img(vIcon(), 'abig')}<div><b>${esc(VN())} · Lv ${G.villainLevel(S)}</b><small>${villainLine()}${G.villainOnMap(S) ? ` Health ${hp}%.` : ''}</small></div>`; }
     if (sel && sel.type === 'node') { const n = S.nodes.find(z => z.id === sel.id); if (n) { const K = G.NODE_KINDS[n.kind]; const p = nodeProg(n);
@@ -1430,6 +1430,8 @@
     const on = !!(S && ui.active && !S.title && S.phase === 'map');
     el.hidden = !on; $('mapwrap').classList.toggle('hasbar', on); if (!on) return;
     el.innerHTML = `<div class="abin${ui.moving || ui.night ? ' busy' : ''}"><div class="aunits" role="group" aria-label="Your units">${abUnits()}</div><div class="acard">${abCard()}</div>${abCmds()}</div>`;
+    // the talking portrait's canvas lives on across re-renders, so a line in progress keeps moving its mouth
+    const w = el.querySelector('.abigw'); if (w) w.appendChild(abTalkCv());
   }
   // 0.35: every order gets an answer, in the minion's own voice: "As you command", "I was going there anyway", or a word about the job
   function minionAck(m, cat) { if (Math.random() < 0.5 && minionSay(m, 'ack')) return true; return minionSay(m, cat || 'ack') || minionSay(m, 'ack'); }
@@ -3051,6 +3053,17 @@
   // Sprites stand in the 3D world; portraits become the round tokens everywhere else. Anything missing keeps its stand-in.
   const ART = { asked: false, keys: {}, size: {} };
   const loadImg = src => new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = src; });
+  // 0.39: the same round token, drawn straight from part of a picture (a talking portrait's mouth shape) onto a canvas you already have
+  function tokenDraw(c, N, im, sx, sy, sw, sh) {
+    const R = N / 128; c.clearRect(0, 0, N, N); c.imageSmoothingEnabled = false;
+    c.save(); c.beginPath(); c.arc(N / 2, N / 2, N / 2 - 4 * R, 0, 7); c.clip();
+    const g = c.createRadialGradient(N / 2, N * 0.35, 4 * R, N / 2, N / 2, N / 2); g.addColorStop(0, '#3e3248'); g.addColorStop(1, '#120e16'); c.fillStyle = g; c.fillRect(0, 0, N, N);
+    let sc = Math.max(N / sw, N / sh); if (sc >= 1) sc = Math.ceil(sc - 0.001);
+    const w = sw * sc, h = sh * sc; c.drawImage(im, sx, sy, sw, sh, Math.round((N - w) / 2), Math.min(0, Math.round((N - h) * 0.3)), w, h);
+    c.restore();
+    c.lineWidth = 6 * R; c.strokeStyle = '#1a1208'; c.beginPath(); c.arc(N / 2, N / 2, N / 2 - 3 * R, 0, 7); c.stroke();
+    c.lineWidth = 3 * R; c.strokeStyle = '#d9b45e'; c.beginPath(); c.arc(N / 2, N / 2, N / 2 - 4 * R, 0, 7); c.stroke();
+  }
   function tokenFrom(im, pixel) {
     // pixel art gets a 256 px token, so it stays sharp on high-density screens
     const N = pixel ? 256 : 128; const R = N / 128; const cv = document.createElement('canvas'); cv.width = cv.height = N;
