@@ -256,7 +256,7 @@
     return Object.assign({ id, side: 'party', wild: true, structure: true, kind, icon: 'mb-' + kind, name: TOWER_NAME[kind] || kind, one: TOWER_NAME[kind] || kind, count: 1, hp: Math.max(1, Math.round(hp)), maxHp: Math.max(1, Math.round(hp)),
       hit: 0, ac, save: 0, dice: [0, 1, 0], extra: [], spd: 0, ranged: false, shots: 0, flyer: false, attacks: 1, alive: true, down: false, retal: false, defending: false, pos: 0, startCount: 1, turns: 0, inert: true }, extra || {});
   }
-  const militiaCount = s => AS.milBase + AS.milPer * townLv(s, 'walls') + AS.milYard * townLv(s, 'yard') + Math.floor(avgLevel(s) * AS.milLv);
+  const militiaCount = s => Math.round((AS.milBase + AS.milPer * townLv(s, 'walls') + AS.milYard * townLv(s, 'yard') + Math.floor(avgLevel(s) * AS.milLv)) * (1 - talentFx(s).militia));   // 0.39: Spies in Millbrook
   function assaultDefenders(s) {
     const T = s.town; const lv = k => townLv(s, k); const out = [];
     const wl = lv('walls'), wmax = WALL_HP[wl] || 0;
@@ -1507,15 +1507,15 @@
       else if (b.over === 'retreat' || b.over === 'tpk') { const left = sum(b.units.filter(u => u.side === 'dm' && !u.boss && u.src === 0 && u.alive), u => u.count); if (left) obj.count = left; else s.objects = s.objects.filter(o => o !== obj); }
     }
     // hard-won loot (0.16): a close fight often leaves a magic item among the fallen
-    if (won && !b.boss && (label === 'Tense' || label === 'Harrowing') && avgLevel(s) >= 3 && chance(label === 'Harrowing' ? LOOT.harrowing : LOOT.tense)) { const t = grantArtifact(s, randomArtifact(s)); say(s, 'Among the fallen they find ' + t, 'good'); }
+    if (won && !b.boss && (label === 'Tense' || label === 'Harrowing') && avgLevel(s) >= 3 && chance(label === 'Harrowing' ? LOOT.harrowing : LOOT.tense)) { const t = grantArtifact(s, randomArtifact(s)); if (t) say(s, 'Among the fallen they find ' + t, 'good'); }
     if (dungeon) {
       if (won && dungeon.mine) {
         // your lairs are wrecked, not erased: four days to dig out and start breeding again
         wreckLair(s, dungeon); questCheck(s, { kind: 'obj', id: dungeon.id });
-        if (chance(0.25)) { const t = grantArtifact(s, randomArtifact(s)); say(s, 'In the rubble they find ' + t, 'good'); }
+        if (chance(0.25)) { const t = grantArtifact(s, randomArtifact(s)); if (t) say(s, 'In the rubble they find ' + t, 'good'); }
       } else if (won) {
         s.objects = s.objects.filter(o => o !== dungeon);
-        if (chance(0.4)) { const t = grantArtifact(s, randomArtifact(s)); say(s, 'In the ruins they find ' + t, 'good'); }
+        if (chance(0.4)) { const t = grantArtifact(s, randomArtifact(s)); if (t) say(s, 'In the ruins they find ' + t, 'good'); }
         questCheck(s, { kind: 'obj', id: dungeon.id });
       } else if (b.over === 'retreat' || b.over === 'fled' || b.over === 'saved') {
         for (const t of Object.keys(dungeon.pool)) dungeon.pool[t] = sum(survivors.filter(x => x.type === t), x => x.count);

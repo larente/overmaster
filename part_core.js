@@ -432,7 +432,7 @@
     hold: { tree: 'brood', tier: 1, lair: true, needs: ['den'] },
     bonearmor: { tree: 'brood', tier: 2, ranks: 2, name: 'Bone Armour', text: 'Skeletons and wraiths: +1 AC and +15% hit points.', fx: { mod: { units: ['skeleton', 'wraith'], ac: 1, hp: 0.15 } } },
     keep: { tree: 'brood', tier: 2, lair: true, needs: ['barrow'] },
-    warbands: { tree: 'brood', tier: 2, name: 'War Bands', text: 'Each lair can have two waves on the road at once instead of one, and holds half as many monsters again at home.', fx: { bands: 1, cap: 0.5 } },
+    warbands: { tree: 'brood', tier: 2, name: 'Thick Hides', text: 'Every monster: +15% hit points.', fx: { mod: { units: 'all', hp: 0.15 } } },   // 0.39: more bands per lair moved to the Muster Field
     brutes: { tree: 'brood', tier: 3, ranks: 2, name: 'Brutes', text: 'Ogres, trolls and hill giants: +1 to hit and +2 damage.', fx: { mod: { units: BRUTES, hit: 1, dmg: 2 } } },
     bloodthirst: { tree: 'brood', tier: 3, name: 'Bloodthirst', text: 'Ogres, trolls and hill giants drink the life they spill: they heal when they hit.', fx: { mod: { units: BRUTES, drain: true } } },
     mire: { tree: 'brood', tier: 3, lair: true, needs: ['fens'] },
@@ -445,12 +445,12 @@
     veins: { tree: 'dominion', tier: 0, ranks: 2, name: 'Rich Veins', text: 'Your gold mines dig 1 more gold a night.', fx: { yield: { gold: 1 } } },
     hands: { tree: 'dominion', tier: 1, needs: ['masons'], name: 'Tireless Hands', text: '+1 gold, lumber or ore every night from each mine and camp you hold.', fx: { yield: { gold: 1, lumber: 1, ore: 1 } } },
     overseers: { tree: 'dominion', tier: 1, name: 'Overseers', text: 'Minions cost a third less gold to summon and walk a third farther a day.', fx: { summonCost: 1 / 3, minionMp: 1 / 3 } },
-    servant: { tree: 'dominion', tier: 0, name: 'A Third Servant', text: 'The tower can keep a third minion. (You start with two.)', fx: { minions: 1 } },
+    servant: { tree: 'dominion', tier: 0, name: 'Quartermasters', text: 'Buildings on the Grounds cost a fifth less.', fx: { groundsCost: 0.2 } },   // 0.39: more minions moved to the Servants' Quarters
     coffers: { tree: 'dominion', tier: 3, name: 'Coffers', text: '+2 gold to the tower every night.', fx: { nightly: { gold: 2 } } },
     tithe: { tree: 'dominion', tier: 1, name: 'Tithe of Fear', text: 'Every lair you\'ve built sends 1 gold to the tower each night.', fx: { perLair: { gold: 1 } } },
     warchest: { tree: 'dominion', tier: 2, name: 'War Chest', text: 'Levelling up a band costs a third less.', fx: { bandCost: 1 / 3 } },
     march: { tree: 'dominion', tier: 2, name: 'Forced March', text: 'Your waves march half again as far each night.', fx: { reach: 2 } },
-    spies: { tree: 'dominion', tier: 2, name: 'Spies', text: 'Your minions see 2 tiles farther, so the map clears faster.', fx: { sight: 2 } },
+    spies: { tree: 'dominion', tier: 2, name: 'Spies in Millbrook', text: 'Whispers and bribes: Millbrook musters a quarter fewer militia against your assaults.', fx: { militia: 0.25 } },   // 0.39: sight moved to the Black Obelisk
     vaults: { tree: 'dominion', tier: 3, name: 'Treasure Vaults', text: '+4 gold to the tower every night.', fx: { nightly: { gold: 4 } } },
     deep: { tree: 'dominion', tier: 3, name: 'Deep Mines', text: 'Lumber camps and ore mines yield 1 more a night.', fx: { yield: { lumber: 1, ore: 1 } } },
     empire: { tree: 'dominion', tier: 4, keystone: true, name: 'Dark Empire', text: 'Every lair goes up in a single night.', fx: { empire: true } },
@@ -476,7 +476,7 @@
     silver: { tree: 'wilds', tier: 0, name: 'Silver Tongue', text: '+2 to Intimidate, Persuade and Deceive.', fx: { social: 2 } },
     purse: { tree: 'wilds', tier: 1, name: 'Open Purse', text: 'Bands of the wilds take a quarter less gold to join you.', fx: { payCost: 0.25 } },
     stride: { tree: 'wilds', tier: 1, name: 'Long Stride', text: 'Your villain walks two fifths farther each night.', fx: { stride: 0.4 } },
-    banner: { tree: 'wilds', tier: 2, name: 'Wide Banner', text: 'One more band of the wilds can follow you at once.', fx: { banner: 1 } },
+    banner: { tree: 'wilds', tier: 2, name: 'Warlord', text: 'Your villain: +10% hit points and +1 to hit in every fight.', fx: { villain: { hp: 0.1, hit: 1 } } },   // 0.39: a bigger banner moved to the Muster Field
     feared: { tree: 'wilds', tier: 2, name: 'Feared Name', text: 'Bands your villain beats are half again as likely to kneel.', fx: { kneel: 0.5 } },
     surgeons: { tree: 'wilds', tier: 3, name: 'Field Surgeons', text: 'Bands that kneel heal in a day instead of two, and march at full strength.', fx: { surgeons: true } },
     champion: { tree: 'wilds', tier: 3, name: 'Champion of the Wilds', text: 'Fighting the wilds, your villain has a quarter more hit points and +2 to hit.', fx: { duel: { hp: 0.25, hit: 2 } } },
@@ -694,7 +694,7 @@
     const L0 = { seed, layout }; const town = siteOf(L0, 'town'), tower = siteOf(L0, 'tower');
     const s = {
       v: 16, layout, seed, mw: MW, mh: MH, week: 1, day: 1, name: String(opts.name || '').replace(/[<>]/g, '').trim().slice(0, 48) || `The Rise of ${vil.name}`, created: Date.now(), lore: 18, engagement: 60, railroad: 0, phase: 'map', result: null, infamyTotal: 0, wipes: 0, siegeCount: 0,
-      citadel: { built: { throne: 1 }, day: 0 }, base: { library: 0, libBuild: null }, summons: [], talents: newTalents(), town: newTown(), res: { gold: 20, lumber: 12, ore: 6 }, nodes: [], minions: [], unlocked: {}, attackDay: 0, seen: {}, march: null, finaleTries: 0,
+      citadel: { built: { throne: 1 }, day: 0 }, base: { library: 0, libBuild: null, g: {}, builds: [] }, summons: [], talents: newTalents(), town: newTown(), res: { gold: 20, lumber: 12, ore: 6 }, nodes: [], minions: [], unlocked: {}, attackDay: 0, seen: {}, march: null, finaleTries: 0,
       heroes: ids.map(id => heroFrom(ROSTER_BY[id], 1)), rosterUsed: ids.slice(),
       party: { x: town.x, y: town.y, prev: { x: town.x, y: town.y }, mp: MP_PER_DAY, path: [], target: null, intent: [] },
       objects: [], uid: 1, explored: new Array(MW * MH).fill(0), visited: {}, weekFx: 'party', omens: 0, crown: false, boots: false,
@@ -741,7 +741,7 @@
     if (gone.size) { s.objects = s.objects.filter(o => !gone.has(o.id)); for (const q of s.quests || []) if (q.status === 'open' && q.ref && q.ref.kind === 'obj' && gone.has(q.ref.id)) q.status = 'void'; }
     if (s.phase === 'encounter') s.phase = 'map';
     delete s.enc; delete s.townEvent;
-    relicInit(s);
+    relicInit(s); groundsInit(s);   // 0.39: the Grounds
     for (const o of s.objects || []) if (o.atGates) o.atGates = false;   // 0.37: waves camp at the gates now
     return s;
   }
@@ -1332,7 +1332,7 @@
   const minionCost = s => Math.round((minionType(s).perk === 'cheap' ? 8 : 12) * (1 - talentFx(s).summonCost));
   const maxMinions = s => MAX_MINIONS + talentFx(s).minions;
   const minionMpOf = s => (minionType(s).perk === 'fast' ? MINION_MP * 2 : MINION_MP) * (1 + talentFx(s).minionMp);   // a day's walk
-  const libraryLevel = s => (s.base && s.base.library) || 0;
+  const libraryLevel = s => Math.max((s.base && s.base.library) || 0, (s.base && s.base.g && s.base.g.library) || 0);   // 0.39: the Library is one of the Grounds
   // the old research keys still decide the finale's gate guards and the dark powers; now each means "you've built that lair"
   const TECH_LAIR = { barracks: 'camp', ossuary: 'bonecrypt', ogre: 'den', altar: 'barrow', troll: 'fens', giant: 'hold', blood: 'keep', mire: 'mire', roost: 'roost', gate: 'abyss', knights: 'keep' };
 
@@ -1383,12 +1383,12 @@
       for (let y = Math.max(0, Math.floor(cy - r)); y <= Math.min(MH - 1, Math.ceil(cy + r)); y++) for (let x = Math.max(0, Math.floor(cx - r)); x <= Math.min(MW - 1, Math.ceil(cx + r)); x++)
         if (Math.hypot(x - cx, y - cy) <= r + 0.25) v[y * MW + x] = 1;
     };
-    const tw = siteOf(s, 'tower'); mark(tw.x, tw.y, DM_SIGHT.tower);
+    const tw = siteOf(s, 'tower'); mark(tw.x, tw.y, DM_SIGHT.tower + talentFx(s).towerSight);   // 0.39: the Black Obelisk
     const ms = DM_SIGHT.minion + talentFx(s).sight;
     for (const m of s.minions || []) { const p = pos ? pos(m) : m; mark(p.x, p.y, ms); }
     for (const o of s.objects) if (o.kind === 'dungeon' && o.mine) mark(o.x, o.y, o.building ? 1 : DM_SIGHT.lair);
     for (const o of s.objects) if (o.kind === 'stack' && (o.lair || o.yours)) mark(o.x, o.y, DM_SIGHT.band);   // your own bands and waves
-    if (villainOnMap(s)) mark(s.villain.x, s.villain.y, DM_SIGHT.villain);
+    if (villainOnMap(s)) mark(s.villain.x, s.villain.y, DM_SIGHT.villain + talentFx(s).sight);
     return v;
   }
   function dmReveal(s) {
@@ -1426,8 +1426,8 @@
   function trainCheck(s) {
     if (s.phase !== 'map') return 'Not now.';
     const q = (s.summons || []).length;
-    if ((s.minions || []).length + q >= maxMinions(s)) return `You already command ${maxMinions(s)}. That's all the tower can feed${talentFx(s).minions ? '' : ': the talent A Third Servant, in Dominion, makes room for one more'}.`;
-    if (q >= MAX_SUMMONS) return `${MAX_SUMMONS} are already waiting to be summoned.`;
+    if ((s.minions || []).length + q >= maxMinions(s)) return `You already command ${maxMinions(s)}. That's all the tower can house${groundsLv(s, 'quarters') < GROUNDS.quarters.max ? ': build the Servants\' Quarters on the Grounds to make room for more' : ''}.`;
+    if (q >= maxSummons(s)) return `${maxSummons(s)} are already waiting to be summoned.`;
     if (resOf(s, 'gold') < minionCost(s)) return `Needs ${minionCost(s)} gold.`;
     return null;
   }
@@ -1443,13 +1443,17 @@
     const q = s.summons || []; i = i === undefined ? q.length - 1 : i; const it = q[i]; if (!it) return 'Nothing to cancel.';
     q.splice(i, 1); s.res.gold += it.cost || minionCost(s); return null;
   }
-  // each night the minion at the head of the queue takes shape; true when one steps out
+  // each night the minions at the head of the queue take shape (0.39: more than one in a wider circle); the first to step out
   function summonDay(s) {
     const q = s.summons || []; if (!q.length) return null;
-    q[0].days -= 1; if (q[0].days > 0) return null;
-    q.shift(); const m = spawnMinion(s);
-    say(s, `A new ${minionType(s).one.toLowerCase()} crawls out of the Dark Tower, ready to work.`, 'dm');
-    return m.id;
+    let first = null; const n = Math.min(q.length, summonPar(s));
+    for (let i = 0; i < n; i++) q[i].days -= 1;
+    for (let i = 0, k = 0; k < n; k++) {
+      if (q[i].days > 0) { i++; continue; }
+      q.splice(i, 1); const m = spawnMinion(s); if (!first) first = m.id;
+      say(s, `A new ${minionType(s).one.toLowerCase()} crawls out of the Dark Tower, ready to work.`, 'dm');
+    }
+    return first;
   }
   function orderWork(s, nodeId, minionId) {
     const n = (s.nodes || []).find(z => z.id === nodeId); if (!n) return 'No such site.';
@@ -1512,6 +1516,8 @@
     const D = DUNGEONS[k]; if (!D || !D.unit) return 'Unknown lair.';
     if (!lairKnown(s, k)) return `Research the ${D.name} at the Dark Tower first.`;
     const P = buildPrice(k); if (!canAfford(s, P)) return `Needs ${priceText(P)}.`;
+    const fu = foodUsed(s), fc = foodCap(s), fn = lairFood(k);   // 0.39: every lair eats
+    if (fu + fn > fc) return `Not enough food: a ${D.name} eats ${fn} and your lairs already eat ${fu} of ${fc}. Build up the Farm on the Grounds.`;
     return null;
   }
   function buildCheck(s, k, x, y, minionId) {
@@ -1552,18 +1558,9 @@
     say(s, `The ${DUNGEONS[o.dtype].name} is expanded. It raises more ${CREATURES[DUNGEONS[o.dtype].unit].name.toLowerCase()} and reaches farther.`, 'dm');
     return null;
   }
-  function libraryCheck(s) {
-    const lv = libraryLevel(s); if (lv >= 2) return 'Already expanded.';
-    if (s.base && s.base.libBuild) return `Your minions are still building it: ${s.base.libBuild.days} day${s.base.libBuild.days > 1 ? 's' : ''} to go.`;
-    const P = LIBRARY[lv + 1]; if (!canAfford(s, P)) return `Needs ${priceText(P)}.`;
-    return null;
-  }
-  function buildLibrary(s) {
-    const err = libraryCheck(s); if (err) return err; const lv = libraryLevel(s); pay(s, LIBRARY[lv + 1]);
-    s.base.libBuild = { days: LIBRARY_DAYS[lv + 1], total: LIBRARY_DAYS[lv + 1] };
-    say(s, lv ? `Your minions start a new wing on the Forbidden Library. Ready in ${LIBRARY_DAYS[lv + 1]} days.` : `Your minions start raising the Forbidden Library at the Dark Tower. Ready in ${LIBRARY_DAYS[lv + 1]} days.`, 'dm');
-    return null;
-  }
+  // 0.39: the Library is built like any other building on the Grounds (a minion walks home to raise it)
+  function libraryCheck(s) { const lv = libraryLevel(s); if (lv >= 2) return 'Already expanded.'; return groundsCheck(s, 'library'); }
+  function buildLibrary(s) { return orderGrounds(s, 'library'); }
   function libraryDay(s) {
     const B = s.base && s.base.libBuild; if (!B) return false;
     B.days -= 1; if (B.days > 0) return false;
@@ -1571,6 +1568,140 @@
     say(s, s.base.library > 1 ? 'The Forbidden Library\'s new wing is finished: one more talent point.' : 'The Forbidden Library is finished: a talent point to spend.', 'dm');
     return true;
   }
+
+  /* ================= the Grounds (0.39): buildings around the Dark Tower that raise your limits =================
+     Paid in gold, lumber and ore (mostly the last two: they pile up), raised by a minion who walks home and works
+     a few nights at the tower. Each level of each building counts toward the tower's own growth, and the tower's
+     stage opens the next levels. The Blacksmith's weapons and armour are forged there once it stands. */
+  const FOOD_BASE = 5;
+  const lairFood = k => { const t = (DUNGEONS[k] || {}).tier || 1; return t <= 1 ? 1 : t <= 3 ? 2 : 3; };
+  const GROUNDS = {
+    farm: { name: 'Farm', max: 4, stage: [1, 1, 2, 3], days: [2, 2, 3, 3], fx: { food: 5 },
+      price: [{ gold: 4, lumber: 10 }, { gold: 8, lumber: 20, ore: 4 }, { gold: 12, lumber: 35, ore: 12 }, { gold: 18, lumber: 55, ore: 24 }],
+      text: 'Grows food for your broods. Every lair eats: 1 food for a small one, 2 for a middling one, 3 for the greatest.', lv: n => `${FOOD_BASE + 5 * n} food` },
+    smith: { name: 'Blacksmith', max: 1, stage: [1], days: [2], fx: {}, price: [{ gold: 8, lumber: 12, ore: 10 }],
+      text: 'A forge for your monsters\' weapons and armour. Once it stands, forge upgrades for every monster you command.', lv: () => 'Forges weapons and armour' },
+    weapons: { name: 'Weapons', at: 'smith', needs: 'smith', max: 3, stage: [1, 2, 3], days: [2, 3, 3],
+      fxL: [{ mod: { units: 'all', hit: 1 } }, { mod: { units: 'all', dmg: 1 } }, { mod: { units: 'all', hit: 1, dmg: 1 } }],
+      price: [{ gold: 6, ore: 18 }, { gold: 12, ore: 40 }, { gold: 20, ore: 75 }],
+      text: 'Sharper blades for every monster you command, recruits included.', lv: n => ['', '+1 to hit', '+1 to hit, +1 damage', '+2 to hit, +2 damage'][n] },
+    armour: { name: 'Armour', at: 'smith', needs: 'smith', max: 3, stage: [1, 2, 3], days: [2, 3, 3],
+      fxL: [{ mod: { units: 'all', ac: 1 } }, { mod: { units: 'all', hp: 0.1 } }, { mod: { units: 'all', ac: 1 } }],
+      price: [{ gold: 6, lumber: 8, ore: 14 }, { gold: 12, lumber: 16, ore: 32 }, { gold: 20, lumber: 30, ore: 60 }],
+      text: 'Hides, shields and plates for every monster you command, recruits included.', lv: n => ['', '+1 AC', '+1 AC, +10% hit points', '+2 AC, +10% hit points'][n] },
+    quarters: { name: 'Servants\' Quarters', max: 3, stage: [1, 2, 3], days: [2, 3, 3], fx: { minions: 1 },
+      price: [{ gold: 10, lumber: 14 }, { gold: 16, lumber: 28, ore: 8 }, { gold: 24, lumber: 45, ore: 20 }],
+      text: 'Bunks for more minions. (You can keep two without it.)', lv: n => `Keep ${2 + n} minions` },
+    circle: { name: 'Summoning Circle', max: 2, stage: [2, 3], days: [2, 3], fx: { summonPar: 1, summonQ: 2 },
+      price: [{ gold: 10, ore: 12 }, { gold: 18, ore: 30 }],
+      text: 'A wider circle: more minions take shape at the same time.', lv: n => `${1 + n} at a time, ${4 + 2 * n} in the queue` },
+    muster: { name: 'Muster Field', max: 2, stage: [2, 3], days: [2, 3], fxL: [{ camp: 1, banner: 1 }, { bands: 1, banner: 1 }],
+      price: [{ gold: 8, lumber: 20, ore: 6 }, { gold: 16, lumber: 40, ore: 16 }],
+      text: 'Room to drill and gather an army: a bigger war camp, more bands out of each lair, and more bands of the wilds behind your villain.',
+      lv: n => ['', '3 waves per lair in the war camp, +1 band in your banner', '3 waves per lair in the camp, 2 on the road and 3 bands out of each lair, +2 bands in your banner'][n] },
+    stockade: { name: 'Stockade', max: 2, stage: [2, 3], days: [2, 3], fx: { cap: 0.25 },
+      price: [{ gold: 6, lumber: 24 }, { gold: 12, lumber: 48, ore: 10 }],
+      text: 'Pens and palisades: every lair keeps more monsters at home.', lv: n => `Lairs hold ${25 * n}% more` },
+    reliquary: { name: 'Reliquary', max: 2, stage: [2, 4], days: [3, 3], fx: { relics: 1 },
+      price: [{ gold: 14, lumber: 10, ore: 20 }, { gold: 24, lumber: 20, ore: 45 }],
+      text: 'An altar for the dark treasures your villain carries.', lv: n => `Wear ${3 + n} relics` },
+    storehouse: { name: 'Storehouse', max: 2, stage: [1, 3], days: [2, 3], fx: { store: 1 },
+      price: [{ gold: 4, lumber: 16 }, { gold: 10, lumber: 36, ore: 10 }],
+      text: 'Carts and sheds: your mines and camps keep filling when you\'re slow to collect.', lv: n => `Mines hold ${1 + n} loads` },
+    obelisk: { name: 'Black Obelisk', max: 2, stage: [1, 3], days: [2, 3], fx: { sight: 1, towerSight: 3 },
+      price: [{ gold: 6, ore: 14 }, { gold: 12, ore: 32 }],
+      text: 'A spire that watches for you: the tower sees far over the land, and your villain and minions see farther.', lv: n => `+${n} sight, the tower +${3 * n}` },
+    library: { name: 'Forbidden Library', max: 2, stage: [1, 2], days: LIBRARY_DAYS.slice(1), fx: {}, price: LIBRARY.slice(1),
+      text: 'Scholars of the forbidden: each level is a talent point to spend.', lv: n => `+${n} talent point${n > 1 ? 's' : ''}` }
+  };
+  const GROUNDS_ORDER = ['farm', 'quarters', 'smith', 'weapons', 'armour', 'storehouse', 'obelisk', 'library', 'circle', 'muster', 'stockade', 'reliquary'];
+  function groundsInit(s) {
+    const B = s.base = s.base || { library: 0 }; B.g = B.g || {}; B.builds = B.builds || [];
+    if (B.library && !B.g.library) B.g.library = B.library;
+    return B;
+  }
+  const groundsLv = (s, k) => (k === 'library' ? libraryLevel(s) : ((s.base && s.base.g) || {})[k] || 0);
+  const groundsLevels = s => GROUNDS_ORDER.reduce((t, k) => t + groundsLv(s, k), 0);
+  const groundsBuilds = s => (s.base && s.base.builds) || [];
+  const groundsBuild = (s, k) => groundsBuilds(s).find(b => b.k === k) || (k === 'library' && s.base && s.base.libBuild ? { id: 'lib', k, to: libraryLevel(s) + 1, days: s.base.libBuild.days, total: s.base.libBuild.total, old: true } : null);
+  // what a building's levels add up to, as talent-style effects (talentFx folds them in)
+  function groundsFx(s, k) {
+    const B = GROUNDS[k]; const n = groundsLv(s, k); const out = [];
+    if (k === 'library') return out;
+    for (let i = 0; i < n; i++) out.push(B.fxL ? B.fxL[i] : B.fx);
+    return out;
+  }
+  function groundsPrice(s, k) {
+    const B = GROUNDS[k]; const lv = groundsLv(s, k); const P = B.price[Math.min(lv, B.max - 1)] || {}; const cut = talentFx(s).groundsCost;
+    const out = {}; for (const r of Object.keys(P)) out[r] = Math.max(0, Math.round(P[r] * (1 - cut))); return out;
+  }
+  const groundsDays = (s, k) => { const B = GROUNDS[k]; return Math.max(1, B.days[Math.min(groundsLv(s, k), B.max - 1)] - (talentFx(s).groundsDays || 0)); };
+  const foodCap = s => FOOD_BASE + talentFx(s).food;
+  const foodUsed = s => myLairs(s).reduce((t, o) => t + lairFood(o.dtype), 0);
+  const groundsBuilders = (s, id) => (s.minions || []).filter(m => m.job && m.job.kind === 'grounds' && m.job.b === id);
+  // why a building can't go up (or its next level), or null
+  function groundsCheck(s, k, minionId, skipMinion) {
+    if (s.phase !== 'map') return 'Not now.';
+    const B = GROUNDS[k]; if (!B) return 'No such building.';
+    const lv = groundsLv(s, k); if (lv >= B.max) return 'Built in full.';
+    const cur = groundsBuild(s, k); if (cur) return `Already going up: ${cur.days} night${cur.days > 1 ? 's' : ''} of work left.`;
+    if (B.needs && !groundsLv(s, B.needs)) return `Build the ${GROUNDS[B.needs].name} first.`;
+    const st = towerStage(s); const need = B.stage[lv] || 1;
+    if (st.stage < need) return `Opens when the tower grows into the ${TOWER_STAGES[need - 1].name} (${TOWER_STAGES[need - 1].at} building levels; you have ${st.n}).`;
+    const P = groundsPrice(s, k); if (!canAfford(s, P)) return `Needs ${priceText(P)}.`;
+    if (!skipMinion && !(minionId ? (s.minions || []).some(m => m.id === minionId) : idleMinions(s).length)) return `No idle ${minionType(s).name.toLowerCase()} to build it. Call one off a job, or summon another.`;
+    return null;
+  }
+  function groundsSend(s, m, b) {
+    const tw = siteOf(s, 'tower'); const path = minionPath(s, m, tw.x, tw.y); if (!path) return 'Your minions can\'t get home.';
+    m.job = { kind: 'grounds', b: b.id }; m.path = path; m.trip = path.length; return null;
+  }
+  function orderGrounds(s, k, minionId) {
+    const err = groundsCheck(s, k, minionId); if (err) return err;
+    const B = GROUNDS[k]; const tw = siteOf(s, 'tower');
+    const m = minionId ? s.minions.find(z => z.id === minionId) : idleMinions(s).sort((a, b) => Math.hypot(a.x - tw.x, a.y - tw.y) - Math.hypot(b.x - tw.x, b.y - tw.y))[0];
+    if (!minionPath(s, m, tw.x, tw.y)) return 'Your minions can\'t get home.';
+    const P = groundsPrice(s, k); pay(s, P); const lv = groundsLv(s, k); const days = groundsDays(s, k);
+    const b = { id: 'g' + (s.uid++), k, to: lv + 1, days, total: days, paid: P }; groundsInit(s).builds.push(b);
+    groundsSend(s, m, b);
+    const what = B.at ? `${B.name} ${roman(lv + 1)} at the ${GROUNDS[B.at].name}` : lv ? `the ${B.name} up to level ${lv + 1}` : `a ${B.name}`;
+    say(s, `A ${minionType(s).one.toLowerCase()} ${m.x === tw.x && m.y === tw.y ? 'starts work on' : 'heads home to build'} ${what} at the Dark Tower: ${days} night${days > 1 ? 's' : ''} of work.`, 'dm');
+    return null;
+  }
+  // send another (or a fresh) minion to a building that's going up
+  function groundsHelp(s, id, minionId) {
+    const b = groundsBuilds(s).find(z => z.id === id); if (!b) return 'Nothing going up there.';
+    const tw = siteOf(s, 'tower');
+    const m = minionId ? (s.minions || []).find(z => z.id === minionId) : idleMinions(s).sort((a, c) => Math.hypot(a.x - tw.x, a.y - tw.y) - Math.hypot(c.x - tw.x, c.y - tw.y))[0];
+    if (!m) return `No idle ${minionType(s).name.toLowerCase()}.`;
+    return groundsSend(s, m, b);
+  }
+  function groundsCancel(s, id) {
+    const B = groundsInit(s); const b = B.builds.find(z => z.id === id); if (!b) return 'Nothing to cancel.';
+    for (const r of Object.keys(b.paid || {})) s.res[r] += Math.floor(b.paid[r] / 2);
+    B.builds = B.builds.filter(z => z !== b);
+    for (const m of groundsBuilders(s, id)) { m.job = null; m.path = []; }
+    return null;
+  }
+  // each night: builders at the tower put in a night's work (two, for minions born to build)
+  function groundsDay(s) {
+    const B = groundsInit(s); const tw = siteOf(s, 'tower'); const done = []; const T = minionType(s);
+    for (const b of B.builds.slice()) {
+      const bs = groundsBuilders(s, b.id).filter(m => !m.path.length && m.x === tw.x && m.y === tw.y);
+      if (!bs.length) continue;
+      b.days = Math.max(0, b.days - bs.length * (T.perk === 'build' ? 2 : 1));
+      if (b.days > 0) continue;
+      B.builds = B.builds.filter(z => z !== b); B.g[b.k] = b.to; if (b.k === 'library') B.library = b.to;
+      for (const m of bs) m.job = null;
+      done.push(b.k); const G0 = GROUNDS[b.k];
+      say(s, `${G0.at ? `${G0.name} ${roman(b.to)} forged at the ${GROUNDS[G0.at].name}` : b.to > 1 ? `The ${G0.name} reaches level ${b.to}` : `The ${G0.name} is finished`}: ${G0.lv(b.to)}.`, 'dm');
+    }
+    for (const m of s.minions || []) if (m.job && m.job.kind === 'grounds' && !B.builds.some(z => z.id === m.job.b)) m.job = null;
+    return done;
+  }
+  const relicSlots = s => RELIC_SLOTS + talentFx(s).relics;
+  const maxSummons = s => MAX_SUMMONS + talentFx(s).summonQ;
+  const summonPar = s => 1 + talentFx(s).summonPar;
 
   /* ================= Millbrook, the heroes' town (0.19) ================= */
   // each building has levels; each level costs the town's own gold, lumber and ore and takes days to raise, one at a time
@@ -1650,9 +1781,9 @@
   }
   // 0.20: each town's main building grows as the town does, every few levels of building (Millbrook) or research (the tower)
   const HALL_STAGES = [{ at: 0, name: 'Hamlet Hall' }, { at: 3, name: 'Village Hall' }, { at: 7, name: 'Town Hall' }, { at: 12, name: 'City Hall' }, { at: 18, name: 'Capitol' }];
-  const TOWER_STAGES = [{ at: 0, name: 'Watchtower' }, { at: 3, name: 'Dark Tower' }, { at: 7, name: 'Black Citadel' }, { at: 12, name: 'Dread Fortress' }, { at: 16, name: 'Throne of Night' }];
+  const TOWER_STAGES = [{ at: 0, name: 'Watchtower' }, { at: 3, name: 'Dark Tower' }, { at: 8, name: 'Black Citadel' }, { at: 14, name: 'Dread Fortress' }, { at: 20, name: 'Throne of Night' }];   // 0.39: building levels on the Grounds
   const townLevels = s => TOWN_ORDER.reduce((t, k) => t + townLv(s, k), 0);
-  const towerLevels = s => Math.round(talentSpent(s) * 0.7) + libraryLevel(s);
+  const towerLevels = s => groundsLevels(s);   // 0.39: the tower grows with what you build around it
   function stageOf(stages, n) {
     let i = 0; while (i + 1 < stages.length && n >= stages[i + 1].at) i++;
     const next = stages[i + 1];
@@ -1858,7 +1989,7 @@
   const waveAt = (s, o) => Math.max(1, Math.round(lairRate(s, o) * WAVE_NIGHTS));
   // 0.37: each lair keeps at most two waves' worth of its brood in the war camp; the rest stays home and guards it
   const campFrom = (s, o) => sum(s.objects.filter(z => z.kind === 'stack' && z.camp && z.lair === o.id), z => z.count);
-  const campRoom = (s, o) => campFrom(s, o) < waveAt(s, o) * AS.campWaves * wavesPerLair(s);
+  const campRoom = (s, o) => campFrom(s, o) < waveAt(s, o) * (AS.campWaves + talentFx(s).camp) * wavesPerLair(s);   // 0.39: the Muster Field makes room
   const atGates = (s, x, y) => { const tw = siteOf(s, 'town'); return Math.abs(x - tw.x) <= 1 && Math.abs(y - tw.y) <= 1 && !(x === tw.x && y === tw.y); };
   const partyHome = s => { const tw = siteOf(s, 'town'); return s.party.x === tw.x && s.party.y === tw.y && living(s).length > 0; };
   // 0.37: the war camp. Waves no longer throw themselves at the walls one by one: they camp within two tiles of
@@ -1994,11 +2125,12 @@
   // what all the learned talents add up to (recomputed only when the ranks change)
   const FX_MEMO = { key: null, fx: null };
   function talentFx(s) {
-    const r = (s.talents && s.talents.r) || {}; const worn = (s.villain && s.villain.relics && s.villain.relics.worn) || []; const key = JSON.stringify(r) + '|' + worn.join(',');
+    const r = (s.talents && s.talents.r) || {}; const worn = (s.villain && s.villain.relics && s.villain.relics.worn) || []; const gl = (s.base && s.base.g) || {}; const key = JSON.stringify(r) + '|' + worn.join(',') + '|' + JSON.stringify(gl);
     if (FX_MEMO.key === key) return FX_MEMO.fx;
     const fx = { mod: {}, modAll: { hp: 0, ac: 0, hit: 0, dmg: 0 }, rate: {}, rateAll: 0, yield: { gold: 0, lumber: 0, ore: 0 }, nightly: 0, perLair: 0, townTithe: 0, bandCost: 0, summonCost: 0, minions: 0,
       reach: 0, sight: 0, buildDays: 0, summonDays: 0, empire: false, warded: false, cap: 0, bands: 0, vets: 0, guards: 0, infamy: 0, villain: { hp: 0, hit: 0 }, points: 0,
-      minionMp: 0, wallDmg: 0, hallDmg: 0, plunder: 0, waveSize: 0, towers: 0, social: 0, payCost: 0, stride: 0, banner: 0, kneel: 0, surgeons: false, duel: { hp: 0, hit: 0 }, loot: 0, renown: false, recruitLv: 0, vheal: 0, fill: 0 };
+      minionMp: 0, wallDmg: 0, hallDmg: 0, plunder: 0, waveSize: 0, towers: 0, social: 0, payCost: 0, stride: 0, banner: 0, kneel: 0, surgeons: false, duel: { hp: 0, hit: 0 }, loot: 0, renown: false, recruitLv: 0, vheal: 0, fill: 0,
+      food: 0, relics: 0, summonPar: 0, summonQ: 0, camp: 0, store: 0, towerSight: 0, militia: 0, groundsCost: 0, groundsDays: 0 };   // 0.39: the Grounds' limits
     const addMod = (u, m, n) => { const t = u === 'all' ? fx.modAll : (fx.mod[u] = fx.mod[u] || { hp: 0, ac: 0, hit: 0, dmg: 0 }); for (const f of ['hp', 'ac', 'hit', 'dmg']) if (m[f]) t[f] += m[f] * n; if (m.regen) t.regen = true; if (m.drain) t.drain = true; };
     const add = (F, n) => {
       if (F.mod) for (const u of (F.mod.units === 'all' ? ['all'] : F.mod.units)) addMod(u, F.mod, n);
@@ -2008,14 +2140,16 @@
       if (F.perLair) fx.perLair += F.perLair.gold * n;
       if (F.villain) { fx.villain.hp += (F.villain.hp || 0) * n; fx.villain.hit += (F.villain.hit || 0) * n; }
       for (const f of ['townTithe', 'bandCost', 'summonCost', 'minions', 'reach', 'sight', 'buildDays', 'summonDays', 'cap', 'bands', 'vets', 'guards', 'infamy', 'points',
-        'minionMp', 'wallDmg', 'hallDmg', 'plunder', 'waveSize', 'towers', 'social', 'payCost', 'stride', 'banner', 'kneel', 'loot', 'recruitLv']) if (F[f]) fx[f] += F[f] * n;
+        'minionMp', 'wallDmg', 'hallDmg', 'plunder', 'waveSize', 'towers', 'social', 'payCost', 'stride', 'banner', 'kneel', 'loot', 'recruitLv',
+        'food', 'relics', 'summonPar', 'summonQ', 'camp', 'store', 'towerSight', 'militia', 'groundsCost', 'groundsDays']) if (F[f]) fx[f] += F[f] * n;
       if (F.duel) { fx.duel.hp += (F.duel.hp || 0) * n; fx.duel.hit += (F.duel.hit || 0) * n; }
       if (F.empire) fx.empire = true; if (F.warded) fx.warded = true; if (F.surgeons) fx.surgeons = true; if (F.renown) fx.renown = true;
       if (F.vheal) fx.vheal += F.vheal * n; if (F.fill) fx.fill += F.fill * n;
     };
     for (const k of Object.keys(r)) { const n = r[k] || 0; const F = TALENTS[k] && TALENTS[k].fx; if (n && F) add(F, n); }
     for (const id of worn) if (RELICS[id]) add(RELICS[id].fx, 1);   // 0.36: the relics your villain wears
-    fx.bandCost = Math.min(0.7, fx.bandCost); fx.summonCost = Math.min(0.7, fx.summonCost); fx.towers = Math.min(0.6, fx.towers); fx.payCost = Math.min(0.6, fx.payCost);
+    for (const k of GROUNDS_ORDER) for (const F of groundsFx(s, k)) add(F, 1);   // 0.39: the buildings on the Grounds
+    fx.bandCost = Math.min(0.7, fx.bandCost); fx.summonCost = Math.min(0.7, fx.summonCost); fx.towers = Math.min(0.6, fx.towers); fx.payCost = Math.min(0.6, fx.payCost); fx.groundsCost = Math.min(0.5, fx.groundsCost); fx.militia = Math.min(0.6, fx.militia);
     FX_MEMO.key = key; FX_MEMO.fx = fx; return fx;
   }
   // points: one to start, one for every level the villain gains, the Forbidden Library and some talents
@@ -2122,7 +2256,7 @@
     if (!n.dev) return { err: `The ${K.raw} isn't yours yet.` };
     if (nodeRaided(s, n)) return { err: `The heroes wrecked the ${K.name}.` };
     if (!nodeFull(s, n)) { const d = nodeDays(n, s) - (n.fill || 0); return { err: `The ${K.name} isn't full yet: ${d} more night${d > 1 ? 's' : ''}.` }; }
-    const amt = nodeStock(s, n); s.res[K.res] += amt; n.fill = 0; n.stock = 0;
+    const amt = nodeStock(s, n); s.res[K.res] += amt; n.fill = 0; n.stock = 0; n.next = 0;
     s.collected = s.collected || { gold: 0, lumber: 0, ore: 0 }; s.collected[K.res] += amt;
     return { res: K.res, amt, id: n.id };
   }
@@ -2378,7 +2512,12 @@
         say(s, `Your ${T.one.toLowerCase()} turns the ${K.raw} near ${regionName(s, n.x, n.y)} into a ${K.name}. It works on its own from now on: when it sparkles, click it to collect.`, 'dm'); continue;
       }
       // 0.35: it fills a night at a time, then waits for you to collect it before it starts again
-      if (nodeFull(s, n)) { out.full.push(n.id); continue; }
+      if (nodeFull(s, n)) {
+        // 0.39: with a Storehouse it keeps filling: another load every cycle, up to the Storehouse's limit
+        const room = 1 + talentFx(s).store; const L = nodeLoad(s, n);
+        if (room > 1 && (n.stock || 0) > 0 && (n.stock || 0) < room * L) { n.next = (n.next || 0) + 1; if (n.next >= nodeDays(n, s)) { n.next = 0; n.stock += L; out.filled.push(n.id); } }
+        out.full.push(n.id); continue;
+      }
       const was = n.fill || 0; n.fill = was + 1; out.fills.push([n.id, was, n.fill]);
       if (n.fill >= nodeDays(n, s)) { n.fill = nodeDays(n, s); n.stock = nodeLoad(s, n); out.filled.push(n.id); out.full.push(n.id); }
     }
@@ -2395,6 +2534,7 @@
     }
     // builders whose lair is gone stop working
     for (const m of s.minions || []) if (m.job && m.job.kind === 'build' && !myLairs(s).some(o => o.id === m.job.lair)) m.job = null;
+    out.grounds = groundsDay(s); if (out.grounds.indexOf('library') >= 0) out.library = true;   // 0.39
     return out;
   }
   // heroes who reach a worked site drive your minions off; about one in four doesn't make it home
@@ -2415,7 +2555,7 @@
     const K = NODE_KINDS[n.kind]; const h = byDriveLive(s, n.kind === 'gold' ? 'greed' : 'duty');
     const one = minionType(s).one.toLowerCase();
     // 0.35: whatever was piled up there goes with them
-    const took = nodeFull(s, n) ? nodeStock(s, n) : 0; n.fill = 0; n.stock = 0;
+    const took = nodeFull(s, n) ? nodeStock(s, n) : 0; n.fill = 0; n.stock = 0; n.next = 0;
     const loot = took ? ` They carry off ${took} ${K.res}.` : '';
     const m = w.length ? `The heroes storm the ${nodeName(n)} and drive off your ${one}${lost ? `. It doesn't make it home` : `, which flees back to the tower`}.${loot} It stops working for three days.` : `The heroes wreck the ${nodeName(n)}.${loot} It stops working for three days.`;
     say(s, m, 'big'); thrill(s, `Drove the villain's minions from the ${nodeName(n)}`, 2 + db(s, h, 1), h && h.id);
@@ -2805,7 +2945,7 @@
     s.objects = s.objects.filter(z => z !== o);
     if (!id || relicOwned(s, id)) { say(s, msg, 'big'); return null; }
     R.found.push(id);
-    if (R.worn.length < RELIC_SLOTS && !RELICS[id].cursed) { R.worn.push(id); syncTalents(s); msg += ' It is worn at once.'; } else R.bag.push(id);
+    if (R.worn.length < relicSlots(s) && !RELICS[id].cursed) { R.worn.push(id); syncTalents(s); msg += ' It is worn at once.'; } else R.bag.push(id);
     s.relicNews = (s.relicNews || []).concat([id]);
     say(s, msg, 'big');
     return id;
@@ -2813,7 +2953,7 @@
   function wearRelic(s, id) {
     const R = relicsOf(s); if (s.phase !== 'map') return 'Not in the middle of this.';
     if (R.bag.indexOf(id) < 0) return R.worn.indexOf(id) >= 0 ? 'Already worn.' : 'Not in the bag.';
-    if (R.worn.length >= RELIC_SLOTS) return `${capFirst(vP(s).he)} can wear ${RELIC_SLOTS} relics at once. Take one off first.`;
+    if (R.worn.length >= relicSlots(s)) return `${capFirst(vP(s).he)} can wear ${relicSlots(s)} relics at once. Take one off first${groundsLv(s, 'reliquary') < GROUNDS.reliquary.max ? ', or build the Reliquary on the Grounds' : ''}.`;
     R.bag = R.bag.filter(k => k !== id); R.worn.push(id); syncTalents(s); return null;
   }
   function removeRelic(s, id) {
@@ -3145,13 +3285,15 @@
     }
     // heirlooms (0.16): as their fame grows (party level 10, 12, 14, 16, 18) someone hands the heroes a magic item
     const L = avgLevel(s); s.heirloom = s.heirloom || 8;
-    while (s.heirloom < 18 && L >= s.heirloom + 2) { s.heirloom += 2; say(s, `Word of the heroes spreads. ${pick(HEIRLOOM_GIVERS)} gives them ${grantArtifact(s, randomArtifact(s))}`, 'good'); }
+    while (s.heirloom < 18 && L >= s.heirloom + 2) { s.heirloom += 2; const t = grantArtifact(s, randomArtifact(s)); if (t) say(s, `Word of the heroes spreads. ${pick(HEIRLOOM_GIVERS)} gives them ${t}`, 'good'); }
   }
   const HEIRLOOM_GIVERS = ['An old knight in Millbrook', 'A grateful merchant', 'The temple of Millbrook', 'A retired adventurer', 'A mysterious patron', 'The lord of the realm'];
-  function grantArtifact(s, a) {
-    const live = living(s);
+  function grantArtifact(s, a, also) {
+    if (!a) return null;   // 0.39: nothing left to give
+    const live = living(s).concat(also && living(s).indexOf(also) < 0 ? [also] : []);
     if (a.party) { if (a.id === 'crown') s.crown = true; if (a.id === 'boots') s.boots = true; return `the ${a.name}! ${a.text}.`; }
     const who = live.filter(h => a.for.indexOf(h.cls) >= 0).sort((x, y) => x.items.length - y.items.length)[0] || live[0];
+    if (!who) return null;   // 0.39: the whole party fell at once (an assault): the gift waits for no one
     for (const k of Object.keys(a.gear)) who.gear[k] = (who.gear[k] || 0) + a.gear[k];
     // recalcHero already adds the new max HP and mana to the current values
     who.items.push({ id: a.id, name: a.name, text: a.text }); recalcHero(who);
@@ -3246,7 +3388,7 @@
     }
     nh.xp = Math.max(XP_TABLE[h.level] || 0, h.xp); nh.status = 'waiting';
     s.heroes = s.heroes.map(x => x === h ? nh : x);
-    const gift = townLv(s, 'tavern') >= 2 ? grantArtifact(s, randomArtifact(s)) : null;
+    const gift = townLv(s, 'tavern') >= 2 ? grantArtifact(s, randomArtifact(s), nh) : null;
     say(s, `${nh.name}, a level ${nh.level} ${RACES[nh.race].label.toLowerCase()} ${c.label.toLowerCase()}, comes to the Millbrook tavern to take ${h.name}'s place${gift ? ', with a gift from the regulars: ' + gift : ', with no magic items.'}`, 'level');
     return nh;
   }

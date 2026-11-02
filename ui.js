@@ -884,6 +884,7 @@
     if (!m.job) return m.path.length ? `Heading back to the tower${away}.` : 'Idle, waiting for orders.';
     if (m.job.kind === 'work') { const n = S.nodes.find(z => z.id === m.job.node) || { kind: 'gold', x: m.x, y: m.y }; return `${m.path.length ? 'Walking to' : n.dev ? 'Working' : `Will ${G.NODE_KINDS[n.kind].sink} tonight at`} the ${esc(G.nodeName(n))} near ${esc(G.regionName(S, n.x, n.y))}${away}.`; }
     if (m.job.kind === 'build') { const o = S.objects.find(z => z.id === m.job.lair) || { dtype: 'warren' }; return `${m.path.length ? 'Walking to build' : 'Building'} the ${esc(G.DUNGEONS[o.dtype].name)}${away}.`; }
+    if (m.job.kind === 'grounds') { const b = G.groundsBuilds(S).find(z => z.id === m.job.b); const B = b && G.GROUNDS[b.k]; const nm = B ? (B.at ? `${B.name} ${G.roman(b.to)}` : `the ${B.name}`) : 'the Grounds'; return `${m.path.length ? 'Walking home to build' : 'Building'} ${esc(nm)} at the Dark Tower${b && !m.path.length ? `: ${b.days} night${b.days > 1 ? 's' : ''} left` : ''}.`; }
     if (m.job.kind === 'move') return `Walking to ${esc(G.regionName(S, m.job.x, m.job.y))}${away}.`;
     return 'Busy.';
   }
@@ -1266,17 +1267,17 @@
   }
   function relicsCard() {
     const R = G.relicsOf(S); const sel = ui.relSel && (R.worn.includes(ui.relSel) || R.bag.includes(ui.relSel)) ? ui.relSel : null;
-    const slots = []; for (let i = 0; i < G.RELIC_SLOTS; i++) slots.push(R.worn[i] ? relicTile(R.worn[i], 'worn') : '<div class="relic empty"><span>Empty</span></div>');
+    const slots = []; for (let i = 0; i < G.relicSlots(S); i++) slots.push(R.worn[i] ? relicTile(R.worn[i], 'worn') : '<div class="relic empty"><span>Empty</span></div>');
     let detail = '';
     if (sel) {
-      const X = G.RELICS[sel]; const worn = R.worn.includes(sel); const full = R.worn.length >= G.RELIC_SLOTS;
+      const X = G.RELICS[sel]; const worn = R.worn.includes(sel); const full = R.worn.length >= G.relicSlots(S);
       detail = `<div class="rdetail">${relicIcon(sel)}<div><h3>${esc(X.name)}</h3><p class="rtier t${X.tier}${X.cursed ? ' cursed' : ''}">${X.cursed ? 'Cursed · ' : ''}${TIER_NAME[X.tier]}</p><p class="hint">${esc(X.text)}</p>
         <ul class="plain rfx">${fxText(X.fx).map(t => `<li>${esc(t)}</li>`).join('')}</ul>
         <div class="row">${worn ? `<button class="btn sm" data-act="reloff" data-k="${sel}">Take it off</button>` : `<button class="btn sm primary" data-act="relon" data-k="${sel}"${full ? ' disabled' : ''}>Wear it</button>${full ? '<span class="hint">All three slots are taken: take one off first.</span>' : ''}`}</div></div></div>`;
     }
     const lying = S.objects.filter(o => o.kind === 'relic' && hasSeen(o.x, o.y)).length;
     return `<section class="tcard relics wide"><h2 class="cap">Relics</h2>
-      <p class="hint">${esc(VN())} can wear ${G.RELIC_SLOTS} at a time; the rest wait in the bag. They lie hidden around the map and glow where your servants have seen one${lying ? ` (<b>${lying}</b> seen now)` : ''}: select ${esc(VN())} and right-click one to go and claim it. ${esc(capWord(VP().he))} can seize the heroes' artifacts before they do, too.</p>
+      <p class="hint">${esc(VN())} can wear ${G.relicSlots(S)} at a time; the rest wait in the bag. They lie hidden around the map and glow where your servants have seen one${lying ? ` (<b>${lying}</b> seen now)` : ''}: select ${esc(VN())} and right-click one to go and claim it. ${esc(capWord(VP().he))} can seize the heroes' artifacts before they do, too.</p>
       <div class="rwrap"><div><h3 class="rsub">Worn</h3><div class="rslots">${slots.join('')}</div>
         <h3 class="rsub">Bag</h3><div class="rbag">${R.bag.length ? R.bag.map(k => relicTile(k, 'bag')).join('') : '<p class="hint">Empty.</p>'}</div></div>
         <div class="rside">${detail || '<p class="hint">Pick a relic to see what it does.</p>'}</div></div></section>`;
@@ -1301,7 +1302,7 @@
     const R = G.relicsOf(S); sfx('item', { vol: 0.9 });
     const rows = news.map(id => { const X = G.RELICS[id]; const worn = R.worn.includes(id);
       return `<div class="rfound">${relicIcon(id)}<div><h2 class="cap">${esc(X.name)}</h2><p class="rtier t${X.tier}${X.cursed ? ' cursed' : ''}">${X.cursed ? 'Cursed · ' : ''}${TIER_NAME[X.tier]}${worn ? ' · worn' : ' · in the bag'}</p><p class="hint">${esc(X.text)}</p><ul class="plain rfx">${fxText(X.fx).map(t => `<li>${esc(t)}</li>`).join('')}</ul>
-        ${!worn && R.worn.length < G.RELIC_SLOTS ? `<div class="row"><button class="btn sm primary" data-act="relon" data-k="${id}" data-close="1">Wear it</button></div>` : ''}</div></div>`; }).join('');
+        ${!worn && R.worn.length < G.relicSlots(S) ? `<div class="row"><button class="btn sm primary" data-act="relon" data-k="${id}" data-close="1">Wear it</button></div>` : ''}</div></div>`; }).join('');
     modal(`<p class="eyebrow">A relic</p>${rows}<div class="row end"><button class="btn" data-act="nav" data-k="relics">See the relics</button><button class="btn big" data-act="close">Good</button></div>`, null, 'relicnews');
     vsay('talent');
     return true;
@@ -1330,7 +1331,7 @@
     parley: '<svg viewBox="0 0 24 24"><path d="M4 6h12v8H9l-4 3v-3H4z" fill="#d0aaff" stroke="#140c04" stroke-width="1.2" stroke-linejoin="round"/><path d="M18 9h2v8h-1v3l-3-3h-5v-1" fill="none" stroke="#e8dcc0" stroke-width="1.4"/></svg>'
   };
   const plain = h => String(h).replace(/<[^>]+>/g, '');
-  const minionState = m => !m.job ? (m.path.length ? 'walk' : 'idle') : m.path.length ? 'walk' : { work: 'work', build: 'build', dance: 'dance' }[m.job.kind] || 'walk';
+  const minionState = m => !m.job ? (m.path.length ? 'walk' : 'idle') : m.path.length ? 'walk' : { work: 'work', build: 'build', grounds: 'build', dance: 'dance' }[m.job.kind] || 'walk';
   const STATE_TXT = { idle: 'idle', walk: 'walking', work: 'working', build: 'building', dance: 'dancing', home: 'at the tower', out: 'out on the map', rest: 'recovering' };
   function abBtn(o) {
     const hk = o.hk ? (o.hk === 'space' ? 'Spc' : o.hk.toUpperCase()) : '';
@@ -1364,7 +1365,7 @@
       B({ act: 'absub', k: '', label: 'Back', icon: ABI.back, tip: 'Back (Esc)' });
     } else if (ms.length && ui.abSub === 'build') {
       const known = G.lairsFor(S).filter(k => G.lairKnown(S, k));
-      known.forEach((k, i) => { const D = G.DUNGEONS[k]; const e = G.lairCheck(S, k); const cn = G.CREATURES[D.unit].name; B({ act: 'placelair', k, hk: i < 9 ? String(i + 1) : '', label: cn.length > 10 ? cn.split(' ').pop() : cn, icon: img('obj-' + k, 'aico'), on: !!(ui.place && ui.place.k === k), dis: !!e, cls: 'lair', tip: `${D.name}: raises ${G.CREATURES[D.unit].name.toLowerCase()}. ${G.priceText(G.buildPrice(k))}, ${G.lairDays(S, k)} days to build.${e ? ' ' + e : ''}` }); });
+      known.forEach((k, i) => { const D = G.DUNGEONS[k]; const e = G.lairCheck(S, k); const cn = G.CREATURES[D.unit].name; B({ act: 'placelair', k, hk: i < 9 ? String(i + 1) : '', label: cn.length > 10 ? cn.split(' ').pop() : cn, icon: img('obj-' + k, 'aico'), on: !!(ui.place && ui.place.k === k), dis: !!e, cls: 'lair', tip: `${D.name}: raises ${G.CREATURES[D.unit].name.toLowerCase()}. ${G.priceText(G.buildPrice(k))}, eats ${G.lairFood(k)} food, ${G.lairDays(S, k)} days to build.${e ? ' ' + e : ''}` }); });
       B({ act: 'tower', k: 'talents', label: 'More', icon: MICON.level, tip: 'Learn talents at the Dark Tower to raise more kinds of lair' });
       B({ act: 'absub', k: '', label: 'Back', icon: ABI.back, tip: 'Back (Esc)' });
     } else if (ms.length) {
@@ -1480,7 +1481,8 @@
   // the minions waiting to be summoned at the tower, the first one taking shape
   function summonQueue() {
     const q = S.summons || []; if (!q.length) return '';
-    return `<div class="squeue">${q.map((it, i) => `<div class="prow">${img(minionIcon(), 'ticon')}${pbar(i ? 0 : 1 - it.days / it.total, 'summon')}<small>${i ? 'waiting' : `${it.days} day${it.days > 1 ? 's' : ''} left`}</small><button class="lnk" data-act="unsummon" data-i="${i}" title="Cancel and get the gold back">cancel</button></div>`).join('')}</div>`;
+    const par = G.summonPar(S);   // 0.39: a wider circle summons more than one at a time
+    return `<div class="squeue">${q.map((it, i) => `<div class="prow">${img(minionIcon(), 'ticon')}${pbar(i >= par ? 0 : 1 - it.days / it.total, 'summon')}<small>${i >= par ? 'waiting' : `${it.days} day${it.days > 1 ? 's' : ''} left`}</small><button class="lnk" data-act="unsummon" data-i="${i}" title="Cancel and get the gold back">cancel</button></div>`).join('')}</div>`;
   }
   function dawn() {
     ui.moving = false; track('day');
@@ -1620,7 +1622,7 @@
       const allJob = k => ms.every(z => z.job && z.job.kind === k);
       const lairRows = ui.mbuild ? G.lairsFor(S).map(k => {
         const D = G.DUNGEONS[k]; const lock = !G.lairKnown(S, k); const e = G.lairCheck(S, k);
-        return `<div class="brow${lock ? ' locked' : ''}${ui.place && ui.place.k === k ? ' on' : ''}">${img('obj-' + k, 'ticon')}<span class="bname"><b>${esc(D.name)}</b><small>${lock ? `🔒 <button class="lnk" data-act="tower" data-k="talents">Talent in ${esc(lairTree(k))}</button>` : `${esc(G.CREATURES[D.unit].name)} · ${G.lairDays(S, k)} days to build`}</small><span class="prices">${priceChips(G.buildPrice(k))}</span></span>
+        return `<div class="brow${lock ? ' locked' : ''}${ui.place && ui.place.k === k ? ' on' : ''}">${img('obj-' + k, 'ticon')}<span class="bname"><b>${esc(D.name)}</b><small>${lock ? `🔒 <button class="lnk" data-act="tower" data-k="talents">Talent in ${esc(lairTree(k))}</button>` : `${esc(G.CREATURES[D.unit].name)} · ${G.lairDays(S, k)} days to build · eats ${G.lairFood(k)} food`}</small><span class="prices">${priceChips(G.buildPrice(k))}</span></span>
           <button class="btn sm" data-act="placelair" data-k="${k}"${e ? ' disabled' : ''}>Place</button></div>`;
       }).join('') : '';
       const trip = !many && m.path.length ? `<div class="prow">${pbar(1 - m.path.length / Math.max(m.trip || 0, m.path.length))}<small>on the way</small></div>` : '';
@@ -1637,7 +1639,7 @@
       const days = m && !err ? daysAway(m, sel.x, sel.y) : null; const terr = G.TERRAIN[G.terrainAt(S, sel.x, sel.y)].name;
       const rows = G.lairsFor(S).map(k => {
         const D = G.DUNGEONS[k]; const lock = !G.lairKnown(S, k); const e = G.buildCheck(S, k, sel.x, sel.y); const home = D.home.indexOf(G.terrainAt(S, sel.x, sel.y)) >= 0;
-        return `<div class="brow${lock ? ' locked' : ''}">${img('obj-' + k, 'ticon')}<span class="bname"><b>${esc(D.name)}</b><small>${lock ? `🔒 <button class="lnk" data-act="tower" data-k="talents">Talent in ${esc(lairTree(k))}</button>` : `${esc(G.CREATURES[D.unit].name)} · ${G.DUNGEONS[k].tier > 1 ? 'tier ' + D.tier + ' · ' : ''}${G.lairDays(S, k)} days to build${home ? ' · <i class="good">home ground</i>' : ''}`}</small><span class="prices">${priceChips(G.buildPrice(k))}</span></span>
+        return `<div class="brow${lock ? ' locked' : ''}">${img('obj-' + k, 'ticon')}<span class="bname"><b>${esc(D.name)}</b><small>${lock ? `🔒 <button class="lnk" data-act="tower" data-k="talents">Talent in ${esc(lairTree(k))}</button>` : `${esc(G.CREATURES[D.unit].name)} · ${G.DUNGEONS[k].tier > 1 ? 'tier ' + D.tier + ' · ' : ''}eats ${G.lairFood(k)} food · ${G.lairDays(S, k)} days to build${home ? ' · <i class="good">home ground</i>' : ''}`}</small><span class="prices">${priceChips(G.buildPrice(k))}</span></span>
           <button class="btn sm" data-act="buildlair" data-k="${k}"${e ? ' disabled' : ''}>Build</button></div>`;
       }).join('');
       return `<section class="panel sel buildspot"><div>${close}<h2 class="cap">Build a lair here</h2><p class="hint">${esc(terr)}, ${esc(G.regionName(S, sel.x, sel.y))}. ${err ? `<b class="warn">${esc(err)}</b>` : m ? `Your nearest idle ${esc(MT().one.toLowerCase())} can be here ${days ? `in ${days} day${days > 1 ? 's' : ''}` : 'today'}.` : `<b class="warn">No idle ${esc(MT().name.toLowerCase())}. Summon one at the tower or call one off a job.</b>`}</p>
@@ -1726,6 +1728,7 @@
   function renderBar() {
     if (!S) return;
     for (const k of G.RES_KEYS) { const e = $('b-' + k); if (e) e.textContent = Math.floor(S.res[k] || 0); const t = $('b-m' + k); if (t) t.textContent = Math.floor((S.town && S.town.res[k]) || 0); }
+    { const e = $('b-food'); if (e) { const fu = G.foodUsed(S), fc = G.foodCap(S); e.textContent = fu + '/' + fc; const w = $('b-foodw'); if (w) w.classList.toggle('full', fu >= fc); } }   // 0.39
     { const tp = $('b-tpic'); const key = siteIcon({ id: 'tower' }); if (tp && A.URI[key] && tp.dataset.k !== key) { tp.src = A.URI[key]; tp.dataset.k = key; } }
     { const tb = $('b-townbusy'); if (tb) { const B = S.town && S.town.build; tb.hidden = !B; if (B) tb.title = `Building: ${G.TOWN_B[B.k].name}, ${B.days} day${B.days > 1 ? 's' : ''} left`; } }
     { const L = G.villainLevel(S); const lo = G.VXP[L] || 0, hi = G.villainNext(S); const xp = S.villain.xp || 0;
@@ -1790,6 +1793,8 @@
     if (F.sight) return 'obj-lore';
     if (F.warded) return 'obj-wrecked';
     if (F.bands || F.cap || F.vets) return 'obj-den';
+    if (F.groundsCost) return 'obj-building';
+    if (F.militia) return 'unit-militia';
     if (F.points) return 'obj-lore';
     return 'obj-lore';
   }
@@ -1803,15 +1808,14 @@
   }
   function libraryCard() {
     const lib = G.libraryLevel(S); const lerr = G.libraryCheck(S);
-    return `<p class="hint">${lib ? `Your scholars have given you ${lib > 1 ? 'two talent points' : 'a talent point'}.` : 'Not built yet. Each level is one more talent point to spend.'}</p>
-        ${S.base.libBuild ? `<div class="prow">${pbar(1 - S.base.libBuild.days / S.base.libBuild.total, 'build')}<small>${lib ? 'New wing going up' : 'Going up'}: ${S.base.libBuild.days} day${S.base.libBuild.days > 1 ? 's' : ''} left</small></div>`
-          : lib < 2 ? `<div class="row"><button class="btn sm" data-act="library"${lerr ? ' disabled' : ''}>${lib ? 'Expand' : 'Build'} · +1 talent point · ${G.LIBRARY_DAYS[lib + 1]} nights</button>${priceChips(G.LIBRARY[lib + 1])}</div>` : '<p class="hint">Fully expanded.</p>'}`;
+    return `<p class="hint">${lib ? `Your scholars have given you ${lib > 1 ? 'two talent points' : 'a talent point'}.` : 'Not built yet. Each level is one more talent point to spend.'}</p>${gDetail('library', true)}`;   // 0.39: built like the rest of the Grounds
   }
   function towerHome() {
     const mt = MT(); const d = S.lastDay;
     return `<div class="tgrid">
       <section class="tcard"><h2 class="cap">${esc(mt.name)}</h2>${summonCard()}</section>
       <section class="tcard"><h2 class="cap">The Forbidden Library</h2>${libraryCard()}</section>
+      <section class="tcard"><h2 class="cap">The Grounds</h2><p class="hint">Buildings around the tower raise your limits: food for more lairs, room for more minions, weapons and armour for every monster. Your lairs eat <b>${G.foodUsed(S)}</b> of <b>${G.foodCap(S)}</b> food.${G.groundsBuilds(S).length ? ` Going up: ${G.groundsBuilds(S).map(b => esc(G.GROUNDS[b.k].name)).join(', ')}.` : ''}</p><div class="row"><button class="btn sm" data-act="ttab" data-k="view">Open the Grounds</button></div></section>
       ${d ? `<section class="tcard"><h2 class="cap">Last night</h2><p class="hint">${G.RES_KEYS.map(k => `+${d.res[k]} ${k}`).join(', ')}${d.raised && d.raised.length ? '. Your lairs raised ' + d.raised.map(([t, n]) => `${n} ${G.CREATURES[t].name.toLowerCase()}`).join(', ') : ''}.</p></section>` : ''}
     </div>`;
   }
@@ -1894,7 +1898,8 @@
       const st = o.building ? `<div class="prow">${pbar(1 - o.building / tot, 'build')}<small>going up, ${o.building} of ${tot} days left</small></div>` : wr ? `<p class="hint warn">Wrecked by the heroes: rebuilt in ${o.wrecked - G.dayIndex(S)} days.</p>` : `<p class="hint">${G.lairCount(o)} ${esc(G.CREATURES[D.unit].name.toLowerCase())} at home${G.wavesOf(S, o) ? ', a wave on the road' : ''}${bands - G.wavesOf(S, o) > 0 ? `, ${bands - G.wavesOf(S, o)} band${bands - G.wavesOf(S, o) > 1 ? 's' : ''} out` : ''}.${G.questOn(S, { kind: 'obj', id: o.id }) ? ' <b class="warn">Millbrook has a bounty on it.</b>' : ''}</p>`;
       return `<div class="lcard">${img(o.building ? 'obj-building' : wr ? 'obj-wrecked' : 'obj-' + o.dtype, 'licon')}<div><b>${esc(D.name)}${(o.level || 1) > 1 ? ' II' : ''}</b><small>${esc(G.regionName(S, o.x, o.y))}</small>${st}</div><button class="btn sm" data-act="sellair" data-id="${o.id}">Show</button></div>`;
     }).join('');
-    return `<section class="tcard"><h2 class="cap">Your lairs</h2><p class="hint">To build one, select a minion on the map and pick Build. New kinds of lair come from talents: The Brood, and your villain's own path.</p>${rows ? `<div class="lcards">${rows}</div>` : '<p class="hint">No lairs yet.</p>'}</section>`;
+    const fu = G.foodUsed(S), fc = G.foodCap(S);
+    return `<section class="tcard"><h2 class="cap">Your lairs</h2><p class="hint">To build one, select a minion on the map and pick Build. New kinds of lair come from talents: The Brood, and your villain's own path.</p><p class="${fu >= fc ? 'warn' : 'hint'}">${img('obj-food', 'ric')} Your lairs eat <b>${fu}</b> of the <b>${fc}</b> food your Farm grows (1 for a small lair, 2 for a middling one, 3 for the greatest). <button class="lnk" data-act="gsel" data-k="farm">The Farm</button></p>${rows ? `<div class="lcards">${rows}</div>` : '<p class="hint">No lairs yet.</p>'}</section>`;
   }
   function towerVillain() {
     const T = VT(); const est = ui.finaleEst; const V = S.villain;
@@ -1953,11 +1958,22 @@
   function levelArt(base, lv, standIn) { for (let l = lv; l >= 2; l--) if (hasArt(base + '-' + l)) return { art: base + '-' + l, own: true }; return hasArt(base) ? { art: base, own: lv <= 1 } : { art: standIn, own: false }; }
    // their own pictures are drawn a little smaller than the town's buildings, so the front of the valley isn't crowded
   // the Dark Tower: the tower in the middle, its works around a dark yard
-  const DT_AT = { library: [4.3, 3.3, 2.9], vigor: [6.1, 7.5, 1.9], raise: [14.8, 3.5, 2.9], dread: [2.4, 6.3, 1.3], ritual: [11.8, 6.0, 1.6], masons: [3.3, 9.2, 2.8], hands: [15.6, 9.1, 2.3] };
+  // 0.39: the Grounds: every building has its plot around the tower (the Blacksmith's weapons and armour are forged inside it)
+  const DT_AT = { library: [4.3, 3.3, 2.9], farm: [6.3, 7.6, 2.4], quarters: [14.8, 3.5, 2.9], obelisk: [2.4, 6.3, 1.3], reliquary: [11.8, 6.0, 1.6],
+    storehouse: [15.6, 9.1, 2.3], smith: [3.2, 9.3, 2.5], muster: [16.9, 6.3, 2.4], stockade: [1.4, 2.6, 2.0] };
   const DT_MAIN = [9, 3.3], TOWER_W = [2.5, 2.9, 3.3, 3.7, 4.1], DT_CIRCLE = [13.4, 7.2], DT_TREASURY = [12.0, 9.6];
-  const DT_STAND = { library: 'keep', vigor: 'abyss', raise: 'camp', dread: 'omen', ritual: 'artifact', masons: 'building', hands: 'node-ore' };
-  const DT_NAME = { library: 'Forbidden Library', vigor: 'Blood Fountain', raise: 'Barracks', dread: 'Black Obelisk', ritual: 'Ritual Altar', masons: "Masons' Yard", hands: 'Storehouse' };
-  const DT_RES = { vigor: 'vigor', raise: 'raise', dread: 'dread', ritual: 'ritual', masons: 'masons', hands: 'hands' };
+  // [its own picture (g-<key>, from pixellab_gen.py grounds), the stand-in until then]
+  const DT_ART = { farm: ['g-farm', 'den'], smith: ['g-smith', 't-ironworks'], quarters: ['g-quarters', 't-raise'], obelisk: ['g-obelisk', 't-dread'], reliquary: ['g-reliquary', 't-ritual'],
+    storehouse: ['g-storehouse', 't-hands'], muster: ['g-muster', 'camp'], stockade: ['g-stockade', 't-walls'], library: ['t-library', 'library'] };
+  const DT_STAND = { library: 'keep' };
+  // the picture for a building at a level (the Blacksmith grows with what's been forged there)
+  function gArt(k, lv) {
+    const [own, stand] = DT_ART[k] || ['g-' + k, 'building'];
+    if (k === 'smith') { const f = G.groundsLv(S, 'weapons') + G.groundsLv(S, 'armour'); lv = 1 + (f >= 2 ? 1 : 0) + (f >= 5 ? 1 : 0); if (!hasArt(own)) return { art: f >= 5 && hasArt('t-ironworks-3') ? 't-ironworks-3' : f >= 2 && hasArt('t-ironworks-2') ? 't-ironworks-2' : 't-ironworks', own: true }; }
+    if (k === 'library') return levelArt('t-library', lv, hasArt('library') ? 'library' : 'keep');
+    return levelArt(own, lv, hasArt(stand) ? stand : 'building');
+  }
+  const gIcon = k => { const B = G.GROUNDS[k]; if (B && B.at) return k === 'weapons' ? 'unit-orc' : 'unit-knight'; if (k === 'circle') return minionIcon(); const a = gArt(k, Math.max(1, G.groundsLv(S, k))); return 'obj-' + a.art; };
   const VPAL = { lich: { glow: '#7dff8a', pool: '#1f5a2a', fog: '#1c2620', sun: '#d0ffd8', cloth: '#2e6a3a' }, dragon: { glow: '#ff8a2a', pool: '#c84a10', fog: '#2a1a14', sun: '#ffb070', cloth: '#8a2a12' },
     demon: { glow: '#ff3a2a', pool: '#a01a10', fog: '#281414', sun: '#ff9a80', cloth: '#7a1414' }, archmage: { glow: '#6ab4ff', pool: '#1c3c8a', fog: '#161e2c', sun: '#c0d8ff', cloth: '#24408a' },
     vampire: { glow: '#ff2a5a', pool: '#6a0a1a', fog: '#22141a', sun: '#ffa8b8', cloth: '#6a0a22' }, deathknight: { glow: '#9ab0c8', pool: '#20262e', fog: '#1a1c22', sun: '#d8e0ec', cloth: '#2a3040' } };
@@ -1980,15 +1996,13 @@
     const st = G.towerStage(S); const vt = (S.villain && S.villain.type) || 'lich';
     const base = hasArt('tower-' + vt) ? 'tower-' + vt : 'tower'; const ma = levelArt('tower-' + vt, st.stage, base);
     add({ id: 'main', mode: 'built', art: ma.art, x: DT_MAIN[0], z: DT_MAIN[1], w: TOWER_W[st.stage - 1] });
-    const lib = G.libraryLevel(S), LB = S.base && S.base.libBuild;
-    { const [x, z, w0] = DT_AT.library; const lv = LB ? lib + 1 : Math.max(1, lib); const a = levelArt('t-library', lv, hasArt('library') ? 'library' : DT_STAND.library); const w = a.own ? w0 : w0 * (1 + 0.12 * (lv - 1));
-      if (LB) add({ id: 'library', mode: 'site', art: a.art, x, z, w, p: 1 - LB.days / LB.total }); else add({ id: 'library', mode: lib ? 'built' : 'plot', art: a.art, x, z, w }); }
-    for (const k of Object.keys(DT_RES)) {
-      const [x, z, w0] = DT_AT[k]; const rk = DT_RES[k]; const done = G.researched(S, rk);
-      const lv = Math.max(1, done); const a = levelArt('t-' + k, lv, DT_STAND[k]); const w = a.own ? w0 : w0 * (STAND_W[a.art] || 1) * (1 + 0.12 * (lv - 1));
-      add({ id: k, mode: done ? 'built' : 'plot', art: a.art, x, z, w });
+    // 0.39: the Grounds: built, going up (out of its scaffolding) or an empty plot
+    for (const k of Object.keys(DT_AT)) {
+      const [x, z, w0] = DT_AT[k]; const lv = G.groundsLv(S, k); const b = G.groundsBuild(S, k);
+      const a = gArt(k, Math.max(1, b ? b.to : lv)); const big = 1 + 0.1 * (Math.max(1, b ? b.to : lv) - 1); const w = (a.own ? w0 : w0 * (STAND_W[a.art] || 1)) * (k === 'smith' ? 1 : big);
+      if (b) add({ id: k, mode: 'site', art: a.art, x, z, w, p: 1 - b.days / b.total }); else add({ id: k, mode: lv ? 'built' : 'plot', art: a.art, x, z, w });
     }
-    add({ id: 'summon', mode: 'plot', art: null, x: DT_CIRCLE[0], z: DT_CIRCLE[1], w: G.researched(S, 'swift') ? 3.4 : 2.8, ring: '#b468ff' });
+    add({ id: 'summon', mode: 'plot', art: null, x: DT_CIRCLE[0], z: DT_CIRCLE[1], w: 2.8 + 0.4 * G.groundsLv(S, 'circle'), ring: '#b468ff' });
     { const own = hasArt('t-treasury'); const g = S.res.gold || 0;   // its own picture is a vault, already heaped with gold: it grows less
       add({ id: 'treasury', mode: 'built', art: own ? 't-treasury' : 'dep-gold', x: DT_TREASURY[0], z: DT_TREASURY[1], w: own ? 1.3 + Math.min(0.5, g / 400) : 0.9 + Math.min(1.5, g / 100) }); }
     // 0.35: the avenue of monster banners up the road is gone (too pixelated, and in the way)
@@ -1999,7 +2013,7 @@
     homeM.forEach((m, i) => { const a = now * 0.22 + i * 2.4, r = 1.6 + (i % 3) * 0.7; const cx = 9 + (i % 2 ? 2.6 : -2.6), cz = 7.2; const x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r * 0.45; figs.push({ id: 'm-' + m.id, key: minionIcon(), tok: minionIcon(), x, z, s: 1.25, face: Math.atan2(-Math.sin(a) * r, Math.cos(a) * r * 0.45), bob: true }); });
     const sm = (S.summons || []).length ? S.summons[0] : null;
     if (sm) figs.push({ id: 'summoning', key: minionIcon(), x: DT_CIRCLE[0], z: DT_CIRCLE[1] + 0.1, s: 1.1 + 0.3 * (1 - sm.days / sm.total), ghost: 0.5 + 0.4 * (1 - sm.days / sm.total), face: now });
-    return { items, figs, circle: { x: DT_CIRCLE[0], z: DT_CIRCLE[1], on: !!sm, r: G.researched(S, 'swift') ? 2.8 : 2.2, color: vpal().glow } };
+    return { items, figs, circle: { x: DT_CIRCLE[0], z: DT_CIRCLE[1], on: !!sm, r: 2.2 + 0.3 * G.groundsLv(S, 'circle'), color: vpal().glow } };
   }
   /* --- what a hover tip and a click card say --- */
 
@@ -2008,33 +2022,63 @@
     if (id === 'main') { const st = G.towerStage(S); return `${st.name} · stage ${st.stage} of ${st.of}`; }
     if (id === 'summon') { const n = (S.summons || []).length; return n ? `Summoning circle · ${n} being summoned` : `Summoning circle · summon ${MT().name.toLowerCase()} here`; }
     if (id === 'treasury') return `Treasury · ${Math.floor(S.res.gold)} gold`;
-    if (id === 'library') { const lib = G.libraryLevel(S); return S.base.libBuild ? 'Forbidden Library · going up' : lib ? `Forbidden Library${lib > 1 ? ' II' : ''} · ${lib > 1 ? 'two talent points' : 'a talent point'}` : 'Empty plot · build the Forbidden Library'; }
-    const rk = DT_RES[id]; const done = G.researched(S, rk);
-    return done ? `${DT_NAME[id]} · ${tLabel(rk, done)}` : `Empty plot · learn ${G.talentName(rk)} to raise the ${DT_NAME[id]}`;
+    const B = G.GROUNDS[id]; if (!B) return '';
+    const lv = G.groundsLv(S, id); const b = G.groundsBuild(S, id);
+    return b ? `${B.name} · going up, ${b.days} night${b.days > 1 ? 's' : ''} left` : lv ? `${B.name} · level ${lv} of ${B.max} · ${B.lv(lv)}` : `Empty plot · build a ${B.name}`;
   }
   function viewCard(id) {
     const head = (art, title, sub) => `<div class="tvc-h">${art ? img(art, 'licon') : ''}<div><h3>${esc(title)}</h3>${sub ? `<p class="hint">${sub}</p>` : ''}</div></div>`;
     const stageTxt = (st, what) => `<p>${st.next !== null ? `Grows into the <b>${esc(st.nextName)}</b> at ${st.next} ${what} (now ${st.n}).` : `Fully grown (${st.n} ${what}).`}</p>`;
     if (id === 'main') { const st = G.towerStage(S);
-      return head(vIcon(), st.name, `${esc(VF())}'s seat · stage ${st.stage} of ${st.of}`) + stageTxt(st, 'talent points and Library levels') + `<p class="hint">${V_HOME()}</p><div class="row"><button class="btn sm" data-act="ttab" data-k="talents">Talents</button><button class="btn sm" data-act="ttab" data-k="villain">The villain</button></div>`; }
-    if (id === 'summon') return head(minionIcon(), 'Summoning circle', esc(MT().name)) + summonCard();
-    if (id === 'library') return head(hasArt('library') ? 'obj-library' : 'obj-lore', 'The Forbidden Library', '') + libraryCard();
+      return head(vIcon(), st.name, `${esc(VF())}'s seat · stage ${st.stage} of ${st.of}`) + stageTxt(st, 'building levels on the Grounds') + '<p class="hint">Every level of every building around the tower counts, and each stage opens new buildings and levels.</p>' + `<p class="hint">${V_HOME()}</p><div class="row"><button class="btn sm" data-act="ttab" data-k="talents">Talents</button><button class="btn sm" data-act="ttab" data-k="villain">The villain</button></div>`; }
+    if (id === 'summon') return head(minionIcon(), 'Summoning circle', esc(MT().name)) + summonCard() + `<div class="gsub"><h4>Widen the circle</h4>${gRow('circle')}${gDetail('circle')}</div>`;
     if (id === 'treasury') { const d = S.lastDay; return head('obj-res-gold', 'Treasury', 'The tower\'s purse') + `<p>${purseHtml('tower')}</p>${d ? `<p class="hint">Last night: ${G.RES_KEYS.map(k => `+${d.res[k]} ${k}`).join(', ')}.</p>` : ''}<p class="hint">Your minions bring it in from the mines and camps, and the tower adds 2 gold a day.</p>`; }
-    const rk = DT_RES[id]; if (!rk) return '';
-    const I = tInfo(rk); const done = G.researched(S, rk); const tr = G.TREES[G.TALENTS[rk].tree].name;
-    const btn = I.st === 'avail' ? `<button class="btn sm" data-act="talent" data-k="${rk}">Learn · 1 point</button>` : '';
-    return head(talentIcon(rk), DT_NAME[id], esc(tLabel(rk, done)) + ` · ${esc(tr)}`) + `<p>${esc(G.talentText(rk))}</p><p class="hint">${I.st === 'maxed' ? 'Learned in full.' : done ? `Rank ${done} of ${I.max}. ${esc(I.err || '')}` : esc(I.err || 'Ready to learn.')}</p><div class="row">${btn}<button class="btn sm" data-act="ttab" data-k="talents">Talents</button></div>`;
+    const B = G.GROUNDS[id]; if (!B) return '';
+    const lv = G.groundsLv(S, id);
+    let extra = '';
+    if (id === 'farm') { const fu = G.foodUsed(S), fc = G.foodCap(S); extra = `<p class="${fu >= fc ? 'warn' : 'hint'}">Your lairs eat <b>${fu}</b> of <b>${fc}</b> food.${fu >= fc ? ' No room for another lair until the Farm grows.' : ''}</p>`; }
+    if (id === 'smith' && lv) extra = `<div class="gsub"><h4>Forge</h4>${gRow('weapons', true)}${gDetail('weapons')}${gRow('armour', true)}${gDetail('armour')}</div>`;
+    if (id === 'library') extra = `<p class="hint">${lv ? `Your scholars have given you ${lv > 1 ? 'two talent points' : 'a talent point'}.` : 'Each level is one more talent point to spend.'}</p>`;
+    return head(gIcon(id), B.name, `Level ${lv} of ${B.max}`) + `<p>${esc(B.text)}</p>` + extra + gDetail(id, id !== 'smith');
+  }
+  // 0.39: a building's row in the Grounds list: picture, level, what it does now, and its button
+  function gRow(k, sub) {
+    const B = G.GROUNDS[k]; const lv = G.groundsLv(S, k); const b = G.groundsBuild(S, k);
+    const pips = `<span class="gpips">${Array.from({ length: B.max }, (_, i) => `<i class="${i < lv ? 'on' : b && i === lv ? 'up' : ''}"></i>`).join('')}</span>`;
+    let act;
+    if (b) act = `<span class="gstat">${pbar(1 - b.days / b.total, 'build')}<small>${b.days} night${b.days > 1 ? 's' : ''}</small></span>`;
+    else if (lv >= B.max) act = '<span class="gstat done">Done</span>';
+    else { const e = G.groundsCheck(S, k); const lock = e && /^(Opens|Build the)/.test(e); act = `<button class="btn sm${lock ? ' lock' : ''}" data-act="gbuild" data-k="${k}"${e ? ` disabled title="${esc(e)}"` : ''}>${lock ? '🔒' : lv ? 'Upgrade' : 'Build'}</button>`; }
+    return `<div class="grow${sub ? ' sub' : ''}${ui.tvSel === k ? ' on' : ''}" data-act="gsel" data-k="${k}">${img(gIcon(k), 'gico')}<span class="gname"><b>${esc(B.name)}</b>${pips}<small>${esc(lv ? B.lv(lv) : b ? 'Going up' : 'Not built')}</small></span>${act}</div>`;
+  }
+  // what the next level does, what it costs, and the buttons (or how the work's going)
+  function gDetail(k, full) {
+    const B = G.GROUNDS[k]; const lv = G.groundsLv(S, k); const b = G.groundsBuild(S, k);
+    if (b) {
+      const nb = b.old ? 1 : G.groundsBuilders(S, b.id).length; const home = nb && G.groundsBuilders(S, b.id).some(m => !m.path.length);
+      return `<div class="gdet"><p>Level ${b.to}: <b>${esc(B.lv(b.to))}</b></p><div class="prow">${pbar(1 - b.days / b.total, 'build')}<small>${b.days} night${b.days > 1 ? 's' : ''} of work left · ${nb ? (home || b.old ? `${nb} at work` : 'your minion is on the way home') : '<b class="warn">no one is working on it</b>'}</small></div>
+        ${b.old ? '' : `<div class="row">${!nb ? `<button class="btn sm" data-act="ghelp" data-id="${b.id}"${G.idleMinions(S).length ? '' : ' disabled title="No idle minion"'}>Send a minion</button>` : ''}<button class="btn sm ghost" data-act="gcancel" data-id="${b.id}" title="Half the cost comes back">Call it off</button></div>`}</div>`;
+    }
+    if (lv >= B.max) return full ? '<p class="hint">Built in full.</p>' : '';
+    const e = G.groundsCheck(S, k); const P = G.groundsPrice(S, k); const d = G.groundsDays(S, k);
+    return `<div class="gdet"><p>${lv ? 'Next' : 'Build it'}: <b>${esc(B.lv(lv + 1))}</b></p><div class="row"><button class="btn sm" data-act="gbuild" data-k="${k}"${e ? ' disabled' : ''}>${lv ? 'Upgrade' : 'Build'} · ${d} night${d > 1 ? 's' : ''}</button>${priceChips(P)}</div>${e ? `<p class="hint">${esc(e)}</p>` : `<p class="hint">A ${esc(MT().one.toLowerCase())} walks home and works on it.</p>`}</div>`;
+  }
+  // the list along the side of the Grounds: everything you can build, in the order you'll want it
+  function groundsList() {
+    const st = G.towerStage(S); const fu = G.foodUsed(S), fc = G.foodCap(S);
+    const rows = G.GROUNDS_ORDER.filter(k => k !== 'weapons' && k !== 'armour').map(k => gRow(k) + (k === 'smith' && G.groundsLv(S, 'smith') ? gRow('weapons', true) + gRow('armour', true) : '')).join('');
+    return `<header><h3>The Grounds</h3><p class="hint">${esc(st.name)} · ${st.n} building level${st.n === 1 ? '' : 's'}${st.next !== null ? ` · the ${esc(st.nextName)} at ${st.next}` : ''}</p><p class="gfood${fu >= fc ? ' full' : ''}">${img('obj-food', 'ric')} Food <b>${fu}/${fc}</b></p></header><div class="glist">${rows}</div>`;
   }
   const V_HOME = () => S.villain && S.villain.state === 'lair' ? `${esc(VN())} is at home on the throne.` : `${esc(VN())} is out in the world.`;
   /* --- the view's own element, kept across re-renders so the 3D canvas never leaves it --- */
   function tviewEl() {
     if (ui.tview) return ui.tview;
     const el = document.createElement('div'); el.className = 'tview'; el.id = 'tview';
-    el.innerHTML = '<div class="tvtip" hidden></div><aside class="tvcard" hidden></aside><p class="tvhint"></p>';
-    el.addEventListener('pointermove', e => { if (e.target.closest('.tvcard')) { setViewHover(null); return; } const id = pickView(e.clientX, e.clientY); setViewHover(id, e); });
+    el.innerHTML = '<div class="tvtip" hidden></div><aside class="tvlist"></aside><aside class="tvcard" hidden></aside><p class="tvhint"></p>';
+    el.addEventListener('pointermove', e => { if (e.target.closest('.tvcard, .tvlist')) { setViewHover(null); return; } const id = pickView(e.clientX, e.clientY); setViewHover(id, e); });
     el.addEventListener('pointerleave', () => setViewHover(null));
     el.addEventListener('click', e => {
-      if (e.target.closest('.tvcard')) return;
+      if (e.target.closest('.tvcard, .tvlist')) return;
       const id = pickView(e.clientX, e.clientY);
       if (id) sfx('click', { vol: 0.6 });
       ui.tvSel = id && id !== ui.tvSel ? id : null; updateViewCard();
@@ -2052,7 +2096,10 @@
     const el = ui.tview; if (!el) return;
     const card = el.querySelector('.tvcard'); const html = ui.tvSel ? viewCard(ui.tvSel) : '';
     card.hidden = !html; card.innerHTML = html ? `<button class="xbtn" data-act="tvclose" title="Close">×</button>${html}` : '';
-    el.querySelector('.tvhint').textContent = ui.tvSel ? '' : 'Click a building to run it. Your talents raise new ones around the tower.';
+    el.querySelector('.tvhint').textContent = ui.tvSel ? '' : 'Click a building or a plot. Build around the tower to raise your limits, and the tower grows with them.';
+    const L = el.querySelector('.tvlist'); if (L && ui.viewKind === 'tower') { const sc = (L.querySelector('.glist') || {}).scrollTop || 0; L.innerHTML = groundsList(); const g = L.querySelector('.glist'); if (g) g.scrollTop = sc; } else if (L) L.innerHTML = '';
+    // the 3D picture moves over to make room for the list (on a narrow screen the list sits along the bottom instead)
+    if (ui.r3d && W3 && W3.setTownInset) W3.setTownInset(L && L.innerHTML && L.offsetHeight && el.clientWidth > 760 ? L.offsetWidth + 12 : 0);
     if (!ui.r3d) kickView();
   }
   // which thing the pointer is over
@@ -2068,6 +2115,7 @@
   function unmountView() {
     if (!ui.viewKind) return;
     ui.viewKind = null; ui.tvSel = null; ui.tvHover = null;
+    if (ui.r3d && W3 && W3.setTownInset) W3.setTownInset(0);
     if (ui.r3d && W3 && W3.ready) { W3.exitTown(); W3.attach($('mapwrap'), $('map')); W3.setMode('map'); }
     if (ui.tv2d && ui.tv2d.parentElement) ui.tv2d.parentElement.removeChild(ui.tv2d);
   }
@@ -2143,7 +2191,7 @@
     const vkind = ui.screen === 'tower' && (ui.towerTab || 'view') === 'view' ? 'tower' : null;
     const head = ui.screen === 'chronicle' ? ['Chronicle', 'Everything that has happened in this campaign, newest first.'] : ['The Dark Tower', `Your seat of power: summon ${MT().name.toLowerCase()}, study dark secrets and watch over your lairs.`];
     el.hidden = false;
-    if (vkind) { const st = G.towerStage(S); head[1] = `${st.name}, stage ${st.stage} of ${st.of}. ${st.next !== null ? `Grows into the ${st.nextName} at ${st.next} ${vkind === 'town' ? 'building levels' : 'talent points'} (now ${st.n}).` : 'Fully grown.'}`; }
+    if (vkind) { const st = G.towerStage(S); head[1] = `${st.name}, stage ${st.stage} of ${st.of}. ${st.next !== null ? `Grows into the ${st.nextName} at ${st.next} building levels (now ${st.n}).` : 'Fully grown.'}`; }
     el.innerHTML = `<div class="scr solo"><div class="scbody${vkind ? ' vmode' : ''}" id="scbody"><header class="schd"><div class="schd-t"><h1 class="dtitle">${esc(head[0])}</h1><p>${esc(head[1])}</p></div>${ui.screen === 'chronicle' ? '' : purseHtml(ui.screen === 'town' ? 'town' : 'tower')}<button class="btn" data-act="closescreen" title="Back to the map (Esc)">Back to the map</button></header>${body}</div></div>`;
     const nb = $('scbody'); if (nb) nb.scrollTop = keep;
     // the view keeps one element (and the 3D canvas inside it) for as long as it's open
@@ -2374,6 +2422,7 @@
         <li><b>Your eyes are your minions.</b> You start with two ${esc(mt.name.toLowerCase())} at the tower. The map stays dark where none of them have been; you see what your tower, your lairs, your bands, your minions and your villain see. <b>The heroes walk in the fog:</b> you only see them where one of yours can. You know roughly where Millbrook lies (the gold ring) until one of yours sees it.</li>
         <li><b>Gather.</b> Your units sit in the <b>action bar</b> along the bottom of the map: click one (Shift-click for more, <b>I</b> for the next idle minion) and give it an order there, or with its key: <b>M</b> move, <b>G</b> gather, <b>B</b> build, <b>H</b> home, <b>X</b> stop. Send a minion to a gold deposit, timber stand or ore deposit (or right-click it): it spends a day sinking a mine or clearing a camp, then the minion is free and the site works on its own. <b>A site fills over a few nights</b> (a gold mine in three) and then waits, sparkling, until you <b>click it to collect</b>; only then does it start again. Press <b>C</b> to jump to the next full one. You start with two minions; the talent A Third Servant (in Dominion) lets you keep a third. The heroes wreck mines they reach, and carry off whatever was piled up there.</li>
         <li><b>Build lairs.</b> Pick <b>Build</b>, choose a lair and click explored ground the heroes can't see. Each lair breeds one kind of monster every night. <b>When it's full, a wave marches to your war camp outside Millbrook on its own.</b> A lair near the town reinforces the camp quickly; one far away is harder for the heroes to find.</li>
+        <li><b>Build up the Grounds.</b> The Dark Tower's <b>Grounds</b> tab (or the food counter in the bottom bar) lists the buildings you can raise around the tower with gold, lumber and ore; a minion walks home and works a few nights on each. They raise your limits: the <b>Farm</b> grows the food your lairs eat (1 to 3 each, so you can't keep more lairs than it feeds), the <b>Servants' Quarters</b> house more minions, the <b>Blacksmith</b> forges weapons and armour for every monster, and the Storehouse, Black Obelisk, Library, Summoning Circle, Muster Field, Stockade and Reliquary do the rest. Every level counts toward the tower's growth, and each stage of the tower opens more.</li>
         <li><b>The war camp and the weekly assault.</b> Your waves and the bands that join you gather in a war camp just outside Millbrook; the heroes leave it alone. <b>When the week ends, you hold a war council</b>: attack, lead the assault yourself, or hold back a week. The assault is a battle against Millbrook's gate, towers, militia and town hall (and the heroes, if they're home). Break the gate or a tower to get in; every tower that falls loses Millbrook a level of it; whatever gets inside damages the hall, plunders gold and burns buildings. <b>Bring the hall down and Millbrook is yours.</b> Your villain hits hardest of all, but if ${esc(VP().he)} falls below half health ${esc(VP().he)} flees to the tower for 3 days.</li>
         <li><b>Infamy.</b> Hurting and killing heroes, breaking into Millbrook, plunder and every lair you keep standing earn Infamy. Infamy levels up your villain: stronger on the throne, a new power at levels 6, 11 and 16, and a talent point every level. Spend talents at the Dark Tower on the talent web: six regions around your sigil (The Brood, Dominion, Siegecraft, Dread, ${esc(VN())}'s own path with a monster only ${esc(VP().he)} can raise, and the Wilds for recruiting). Each talent you take has to join one you already have, so every campaign walks its own path.</li>
         <li><b>Your villain walks the map.</b> Click ${esc(VN())} in the sidebar, then right-click a band of the wilds to go and win it over: <b>pay</b> it, <b>talk</b> (Intimidate, Persuade or Deceive, a d20 each), or <b>fight</b> it alone. Every wild band shows its level next to ${esc(VP().his)}: a band four levels above ${esc(VP().him)} only fights. Bands that join you march on Millbrook; your banner holds 1 band plus 1 for every ${G.CMD_PER} levels at a time. Beaten, a band may kneel (or buy its life, if your banner is full) and march once it has healed; one that fights to the last leaves its hoard. Lose, and ${esc(VN())} limps home to recover.</li>
@@ -3199,7 +3248,10 @@
         case 'expand': { const err = G.expandLair(S, d.id); if (err) { toast(err, 'bad'); return; } ui.reachCache = null; toast('The lair is expanded.', 'good'); commit(); return; }
         case 'train': { const err = G.trainMinion(S); if (err) { toast(err, 'bad'); return; } sfx('summon'); vsay('summon'); const w = S.summons.reduce((t, q) => t + q.days, 0); toast(`Summoning a ${MT().one.toLowerCase()} at the tower: ready in ${w} days.`, 'good'); commit(); return; }
         case 'unsummon': { sfx('coins'); const err = G.cancelSummon(S, +d.i); if (err) { toast(err, 'bad'); return; } toast('Summoning cancelled. The gold is back in your coffers.', 'sys'); commit(); return; }
-        case 'library': { const err = G.buildLibrary(S); if (err) { toast(err, 'bad'); return; } sfx('build'); toast(`Your ${MT().name.toLowerCase()} start on the ${G.libraryLevel(S) ? "Library's new wing" : 'Forbidden Library'}: ${S.base.libBuild.days} days.`, 'good'); commit(); return; }
+        case 'library': case 'gbuild': { const k = act === 'library' ? 'library' : d.k; const err = G.orderGrounds(S, k); if (err) { toast(err, 'bad'); return; } sfx('build'); const b = G.groundsBuild(S, k); toast(`A ${MT().one.toLowerCase()} heads home to build ${G.GROUNDS[k].at ? G.GROUNDS[k].name + ' ' + G.roman(b.to) : 'the ' + G.GROUNDS[k].name}: ${b.days} night${b.days > 1 ? 's' : ''} of work.`, 'good'); commit(); return; }
+        case 'gsel': { if (ui.screen !== 'tower' || ui.towerTab !== 'view') { ui.towerTab = 'view'; openScreen('tower'); } ui.tvSel = d.k; updateViewCard(); return; }
+        case 'ghelp': { const err = G.groundsHelp(S, d.id); if (err) { toast(err, 'bad'); return; } commit(); return; }
+        case 'gcancel': { G.groundsCancel(S, d.id); toast('Building called off. Half the cost comes back.', 'sys'); commit(); return; }
         case 'sellair': case 'selnode': { const o = act === 'sellair' ? S.objects.find(z => z.id === d.id) : S.nodes.find(z => z.id === d.id); if (!o) return; closeScreen(); ui.sel = { type: act === 'sellair' ? 'lair' : 'node', id: o.id, x: o.x, y: o.y }; centerOn(o.x, o.y); ui.scrollTo = 'sel'; renderSide(); drawMap(); return; }
         case 'chronicle': closeModal(); openScreen('chronicle'); return;
         case 'scoutfinale': { el.disabled = true; el.textContent = 'Scouting…'; setTimeout(() => { ui.finaleEst = G.simulateFinale(S, 16); renderSide(); }, 30); return; }

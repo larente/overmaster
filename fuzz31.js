@@ -94,8 +94,10 @@ for (let i = 0; i < N; i++) {
     if (R() < 0.02 && !G.resetTalents(s)) c.resets = (c.resets || 0) + 1;
     if ((s.summons || []).length && R() < 0.08) { const g0 = s.res.gold; if (!G.cancelSummon(s, Math.floor(R() * s.summons.length)) && s.res.gold > g0) c.cancels++; }
     for (let k = 0; k < 3; k++) if (R() < 0.6 && !G.orderWork(s, pickA(s.nodes).id)) c.works++;
+    const fu0 = G.foodUsed ? G.foodUsed(s) : 0;
     for (let k = 0; k < 2; k++) { const x = Math.floor(R() * G.MW), y = Math.floor(R() * G.MH); if (!G.orderBuild(s, pickA(G.lairsFor(s)), x, y)) c.builds++; }
     if (R() < 0.5) { const sp = G.lairSpots(s, 'warren', 3); if (sp.length && !G.orderBuild(s, pickA(G.lairsFor(s)), sp[0].x, sp[0].y)) c.builds++; }
+    if (G.foodUsed && G.foodUsed(s) > fu0 && G.foodUsed(s) > G.foodCap(s)) throw new Error('lair built past the food cap ' + G.foodUsed(s) + '/' + G.foodCap(s));
     for (const o of G.myLairs(s)) { if (R() < 0.15 && !G.expandLair(s, o.id)) c.expands++; if (o.building && R() < 0.05 && !G.cancelBuild(s, o.id)) c.cancels++; }
     if (R() < 0.2 && s.minions.length) { if (!G.recallMinion(s, pickA(s.minions).id)) c.recalls++; }
     if (R() < 0.2 && !G.recallFrom(s, pickA(s.nodes).id)) c.recalls++;
@@ -133,6 +135,17 @@ for (let i = 0; i < N; i++) {
     for (const n of s.nodes) { const f = n.fill || 0; if (f < 0 || f > G.NODE_KINDS[n.kind].days || (!n.dev && f) || (n.stock && !n.dev)) throw new Error('site fill out of range ' + JSON.stringify(n)); }
     for (const m of s.minions) { if (m.job && m.job.kind === 'move' && !m.path.length) throw new Error('arrived walker still busy'); if (m.job && m.job.kind === 'work' && !s.nodes.some(n => n.id === m.job.node)) throw new Error('work at nothing'); }
     if (R() < 0.1) G.buildLibrary(s);
+    // 0.39: the Grounds: build, help, call off; the food cap and the limits must hold
+    if (G.GROUNDS) {
+      if (R() < 0.3) { s.res.lumber += 20; s.res.ore += 20; }
+      if (R() < 0.35 && !G.orderGrounds(s, pickA(G.GROUNDS_ORDER))) c.grounds = (c.grounds || 0) + 1;
+      if (R() < 0.05 && G.groundsBuilds(s).length) { G.groundsCancel(s, pickA(G.groundsBuilds(s)).id); c.gcancel = (c.gcancel || 0) + 1; }
+      if (R() < 0.1 && G.groundsBuilds(s).length) G.groundsHelp(s, pickA(G.groundsBuilds(s)).id);
+      for (const k of G.GROUNDS_ORDER) if (G.groundsLv(s, k) > G.GROUNDS[k].max) throw new Error('grounds over max ' + k);
+      if ((s.summons || []).length > G.maxSummons(s)) throw new Error('summon queue over max');
+      if (s.villain.relics && s.villain.relics.worn.length > G.relicSlots(s)) throw new Error('relics over slots');
+      for (const b of G.groundsBuilds(s)) if (!(b.days > 0)) throw new Error('finished build left in the list');
+    }
     // 0.19: Millbrook
     c.sieges = (c.sieges || 0) + ((s.lastDay && s.lastDay.sieges) || []).length;
     if (R() < 0.3) { const t = pickA(s.objects.concat([null])); const ref = t ? { kind: 'obj', id: t.id } : R() < 0.5 ? { kind: 'villain', id: 'villain' } : { kind: 'site', id: pickA(G.sitesOf(s)).id };

@@ -2123,9 +2123,13 @@ const World3D = (() => {
   }
   function fitTownCamera() {
     const cam = TWN.camera; if (!cam) return;
-    const pitch = 0.74, vf = cam.fov * Math.PI / 180 / 2, hfv = Math.atan(Math.tan(vf) * cam.aspect);
+    // 0.39: a panel down the left side (the Grounds list) covers part of the picture: fit the town into what's left, and shift it over
+    const cw = (canvas && canvas.clientWidth) || 1, ch = (canvas && canvas.clientHeight) || 1; const inset = Math.min(TWN.inset || 0, cw * 0.45);
+    const aEff = inset ? (cw - inset) / ch : cam.aspect;
+    if (inset) cam.setViewOffset(cw, ch, -inset / 2, 0, cw, ch); else if (cam.view) cam.clearViewOffset();
+    const pitch = 0.74, vf = cam.fov * Math.PI / 180 / 2, hfv = Math.atan(Math.tan(vf) * aEff);
     // on a tall, narrow screen show the middle of the town larger rather than all of it tiny
-    const hw = cam.aspect < 1.2 ? 6.2 : TFW / 2 - 0.6;
+    const hw = aEff < 1.2 ? 6.2 : TFW / 2 - 0.6;
     const dW = hw / Math.tan(hfv), dH = (TFH / 2 + 2.2) / Math.tan(vf) * Math.sin(pitch) * 0.95;
     TWN.d = Math.max(dW, dH) * 0.97; TWN.pitch = pitch;
     placeTownCam(0);
@@ -2266,5 +2270,6 @@ const World3D = (() => {
     TWN.scene = null; TWN.items = new Map(); TWN.figs = new Map(); TWN.circle = null; TWN.water = null; TWN.poolLight = null; TWN.pops = new Map(); TWN.live = false;
   }
 
-  return { _map: () => MAP, _bat: () => BAT, _spec: () => spec, _fn: () => frameNo, _mode: () => mode, _pause: v => { paused = !!v; }, supported, init, attach, resize, setMode, buildMap, setMapSpec, setSprites, setArt, setAnim, refreshFigures, spritesOn: () => SPR.on, _spr: () => SPR, pickTile, pickMinion, inView, frameTiles, camState, camTo, dragStart, dragMove, dragEnd, zoomAt, pan, centerOn, ensureVisible, viewQuad: minimapInfo, enterBattle, exitBattle, pickHexPx, fitBattleCamera, enterTown, exitTown, pickTown, townScreen, _town: () => TWN, get canvas() { return canvas; }, get ready() { return !!renderer; } };
+  function setTownInset(px) { px = Math.round(px || 0); if ((TWN.inset || 0) === px) return; TWN.inset = px; if (TWN.camera) fitTownCamera(); }
+  return { setTownInset, _map: () => MAP, _bat: () => BAT, _spec: () => spec, _fn: () => frameNo, _mode: () => mode, _pause: v => { paused = !!v; }, supported, init, attach, resize, setMode, buildMap, setMapSpec, setSprites, setArt, setAnim, refreshFigures, spritesOn: () => SPR.on, _spr: () => SPR, pickTile, pickMinion, inView, frameTiles, camState, camTo, dragStart, dragMove, dragEnd, zoomAt, pan, centerOn, ensureVisible, viewQuad: minimapInfo, enterBattle, exitBattle, pickHexPx, fitBattleCamera, enterTown, exitTown, pickTown, townScreen, _town: () => TWN, get canvas() { return canvas; }, get ready() { return !!renderer; } };
 })();
