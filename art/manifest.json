@@ -610,6 +610,41 @@
    "pixel": true,
    "sprite": "objects/obj-fens.webp"
   },
+  "obj-g-farm": {
+   "icon": "objects/obj-g-farm.webp",
+   "pixel": true,
+   "sprite": "objects/obj-g-farm.webp"
+  },
+  "obj-g-muster": {
+   "icon": "objects/obj-g-muster.webp",
+   "pixel": true,
+   "sprite": "objects/obj-g-muster.webp"
+  },
+  "obj-g-smith": {
+   "icon": "objects/obj-g-smith.webp",
+   "pixel": true,
+   "sprite": "objects/obj-g-smith.webp"
+  },
+  "obj-g-smith-2": {
+   "icon": "objects/obj-g-smith-2.webp",
+   "pixel": true,
+   "sprite": "objects/obj-g-smith-2.webp"
+  },
+  "obj-g-smith-3": {
+   "icon": "objects/obj-g-smith-3.webp",
+   "pixel": true,
+   "sprite": "objects/obj-g-smith-3.webp"
+  },
+  "obj-g-stockade": {
+   "icon": "objects/obj-g-stockade.webp",
+   "pixel": true,
+   "sprite": "objects/obj-g-stockade.webp"
+  },
+  "obj-g-stockade-2": {
+   "icon": "objects/obj-g-stockade-2.webp",
+   "pixel": true,
+   "sprite": "objects/obj-g-stockade-2.webp"
+  },
   "obj-hideout": {
    "icon": "objects/obj-hideout.webp",
    "pixel": true,
@@ -1620,6 +1655,20 @@
    "rest": 0,
    "strip": "talk/aelith.webp"
   },
+  "bandit": {
+   "n": 7,
+   "order": [
+    "rest",
+    "closed",
+    "small_open",
+    "medium_open",
+    "wide_open",
+    "round",
+    "teeth"
+   ],
+   "rest": 0,
+   "strip": "talk/bandit.webp"
+  },
   "brakka": {
    "n": 7,
    "order": [
@@ -1648,6 +1697,20 @@
    "rest": 0,
    "strip": "talk/bramble.webp"
   },
+  "dragon": {
+   "n": 7,
+   "order": [
+    "rest",
+    "closed",
+    "small_open",
+    "medium_open",
+    "wide_open",
+    "round",
+    "teeth"
+   ],
+   "rest": 0,
+   "strip": "talk/dragon.webp"
+  },
   "durgan": {
    "n": 7,
    "order": [
@@ -1675,6 +1738,34 @@
    ],
    "rest": 0,
    "strip": "talk/esk.webp"
+  },
+  "giant": {
+   "n": 7,
+   "order": [
+    "rest",
+    "closed",
+    "small_open",
+    "medium_open",
+    "wide_open",
+    "round",
+    "teeth"
+   ],
+   "rest": 0,
+   "strip": "talk/giant.webp"
+  },
+  "goblin": {
+   "n": 7,
+   "order": [
+    "rest",
+    "closed",
+    "small_open",
+    "medium_open",
+    "wide_open",
+    "round",
+    "teeth"
+   ],
+   "rest": 0,
+   "strip": "talk/goblin.webp"
   },
   "grukka": {
    "n": 7,
@@ -1745,6 +1836,34 @@
    ],
    "rest": 0,
    "strip": "talk/nilsa.webp"
+  },
+  "ogre": {
+   "n": 7,
+   "order": [
+    "rest",
+    "closed",
+    "small_open",
+    "medium_open",
+    "wide_open",
+    "round",
+    "teeth"
+   ],
+   "rest": 0,
+   "strip": "talk/ogre.webp"
+  },
+  "orc": {
+   "n": 7,
+   "order": [
+    "rest",
+    "closed",
+    "small_open",
+    "medium_open",
+    "wide_open",
+    "round",
+    "teeth"
+   ],
+   "rest": 0,
+   "strip": "talk/orc.webp"
   },
   "orrin": {
    "n": 7,
@@ -1830,6 +1949,20 @@
    "rest": 0,
    "strip": "talk/tobias.webp"
   },
+  "troll": {
+   "n": 7,
+   "order": [
+    "rest",
+    "closed",
+    "small_open",
+    "medium_open",
+    "wide_open",
+    "round",
+    "teeth"
+   ],
+   "rest": 0,
+   "strip": "talk/troll.webp"
+  },
   "ushka": {
    "n": 7,
    "order": [
@@ -1843,6 +1976,20 @@
    ],
    "rest": 0,
    "strip": "talk/ushka.webp"
+  },
+  "vampire": {
+   "n": 7,
+   "order": [
+    "rest",
+    "closed",
+    "small_open",
+    "medium_open",
+    "wide_open",
+    "round",
+    "teeth"
+   ],
+   "rest": 0,
+   "strip": "talk/vampire.webp"
   },
   "vex": {
    "n": 7,
@@ -1941,6 +2088,20 @@
    ],
    "rest": 0,
    "strip": "talk/villain-vampire.webp"
+  },
+  "wraith": {
+   "n": 7,
+   "order": [
+    "rest",
+    "closed",
+    "small_open",
+    "medium_open",
+    "wide_open",
+    "round",
+    "teeth"
+   ],
+   "rest": 0,
+   "strip": "talk/wraith.webp"
   },
   "wren": {
    "n": 7,

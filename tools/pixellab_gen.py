@@ -680,14 +680,14 @@ OBJECTS = {
     't-hands': ('dark storehouse: a sturdy black timber storehouse with an iron-banded door, carts heaped with ore and gold, sacks and barrels', 144),
     # 0.39: the Grounds: buildings around the Dark Tower that the other works don't already picture (the farm first: it's the one you'll build most)
     'g-farm': ('a grim farm for a dark lord: a black timber barn with a sagging roof, fenced pens of black pigs and goats, a patch of sickly purple crops, a scarecrow, red lanterns', 160),
-    'g-farm-2': ('a bigger grim dark-lord farm: a black timber barn and a silo, wide fenced fields of sickly purple crops, pens full of black pigs, a scarecrow, red lanterns', 176),
-    'g-farm-3': ('a vast grim dark-lord farmstead: two black barns, a stone granary, rows of purple crop fields, slaughter pens, smoking chimneys, red lanterns', 192),
+    'g-farm-2': ('a bigger grim farm seen from above at an angle: a black timber barn with a tall round dark silo beside it, a fenced field of purple crops, black pigs in a pen, red lanterns', 160),
+    'g-farm-3': ('a large grim farmstead seen from above at an angle: two black timber barns and a round stone granary, fenced purple crop fields and pig pens, smoking chimney, red lanterns', 176),
     'g-smith': ('a dark blacksmith: a black stone forge with a roaring red fire, an anvil, racks of crude spiked weapons and shields, a smoking chimney', 144),
     'g-smith-2': ('a bigger dark blacksmith: two black stone forges with roaring red fires, a water wheel, racks of spiked axes and black armour on stands', 160),
     'g-smith-3': ('a huge dark armoury-foundry: tall black stone smelting furnaces pouring molten metal, anvils, racks of spiked weapons and black plate armour, chimneys belching smoke', 176),
     'g-muster': ('a muster field for a dark army: a trampled dirt drill ground ringed by a black spiked palisade, war banners, weapon racks and training dummies, red torches', 160),
-    'g-muster-2': ('a great muster field for a dark army: a large dirt drill ground with black tents, many tattered war banners, weapon racks, a war drum and a watch platform, red torches', 176),
-    'g-stockade': ('a dark stockade: a ring of sharpened black logs around a muddy pen with iron cages, chains and red torches', 144),
+    'g-muster-2': ('a large muster field seen from above at an angle: a big round trampled-dirt drill ground ringed by a black spiked palisade with a gate, rows of black war tents, tattered red banners, weapon racks, red torches', 176),
+    'g-stockade': ('a dark stockade seen from above at an angle: a ring of tall sharpened black logs with a heavy spiked gate, a muddy pen inside with iron beast cages and chains, red torches', 144),
     'g-stockade-2': ('a larger dark stockade: a double ring of sharpened black log palisades with a spiked gate, iron beast cages and chains, red torches', 160),
     't-treasury': ("the villain's treasury: an iron-bound vault door set in black rock with heaps of gold coins and jewels spilling out in front", 144),
     # resources: the raw spot, then the working site
