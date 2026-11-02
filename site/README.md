@@ -93,6 +93,8 @@ Players sign in with Google first, with email as a backup.
 
 While Google's consent screen is in **Testing**, only the test users you list can sign in. Publish it (**Audience → Publish app**) when you're ready for everyone. Basic sign-in (name and email) doesn't need Google's full app review, but Google may check your app name and logo.
 
+**While you're setting up.** `wip: { login: true, shop: true }` in `config.js` labels sign-in and the shop WORK IN PROGRESS for testers, and greys out the Google button. Set `login` to `false` once Google sign-in works, and `shop` to `false` once a test purchase unlocks (step 6).
+
 ## Step 6: The shop (Stripe)
 
 The shop sells the four paid villains ($2.99 CAD each, or $7.99 for all four). Two small server functions do the work: `checkout` opens Stripe's payment page, and `stripe-webhook` hears back from Stripe and unlocks the villains. Everything below starts in Stripe's **test mode**, where only test cards work and no real money moves.
