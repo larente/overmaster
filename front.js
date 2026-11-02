@@ -16,6 +16,10 @@ const Front = (() => {
   }
   const heroKey = h => 'unit-hero-' + (h.rid || h.id);
   const LOCK = '<svg class="lk" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 7V5a3.5 3.5 0 0 1 7 0v2" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="3" y="7" width="10" height="7.5" rx="1.4" fill="currentColor"/></svg>';
+  // 0.39: parts still being set up carry a WORK IN PROGRESS label (config.js: wip.login, wip.shop)
+  const WIP = (window.BTS_CONFIG && window.BTS_CONFIG.wip) || {};
+  const wipTag = what => WIP[what] ? '<i class="wiptag">Work in progress</i>' : '';
+  const wipBan = (what, text) => WIP[what] ? `<p class="wipban"><b>WORK IN PROGRESS</b><span>${text}</span></p>` : '';
   const GLOGO = '<svg class="glogo" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>';
   const skuName = sku => { const c = Shop.CATALOG[sku]; return !c ? 'that' : c.villain ? 'the ' + c.name : c.name; };
   const ssx = {
@@ -137,7 +141,7 @@ const Front = (() => {
     const u = Store.user();
     if (!Store.cloudReady()) return `<p class="acct-note">Saves stay in this browser. Export a save file from the menu to move it to another computer.</p>`;
     if (u) return `<div class="acct"><span class="av" aria-hidden="true">${esc((u.name || '?').charAt(0).toUpperCase())}</span><span class="awho"><b>${esc(u.name)}</b><small>Saves go to your account</small></span><button class="lnk" data-fx="account">Account</button></div>`;
-    return `<div class="acct guest"><span class="awho"><b>Playing as a guest</b><small>Saves stay in this browser</small></span><button class="btn sm" data-fx="account">Sign in</button></div>`;
+    return `<div class="acct guest"><span class="awho"><b>Playing as a guest${wipTag('login')}</b><small>Saves stay in this browser</small></span><button class="btn sm" data-fx="account">Sign in</button></div>`;
   }
   function renderTitle() {
     const L = F.latest;
@@ -149,7 +153,7 @@ const Front = (() => {
           ${cont}
           <button class="tbtn${L ? '' : ' primary'}" data-fx="new"><span>New campaign</span>${L ? '' : '<small>Pick a villain and a party of four</small>'}</button>
           <button class="tbtn" data-fx="load"><span>Load game</span></button>
-          ${Shop.enabled() ? `<button class="tbtn" data-fx="shop"><span>Shop</span>${Shop.paidVillains().every(Shop.owns) ? '' : '<small>Unlock more villains</small>'}</button>` : ''}
+          ${Shop.enabled() ? `<button class="tbtn" data-fx="shop"><span>Shop${wipTag('shop')}</span>${Shop.paidVillains().every(Shop.owns) ? '' : '<small>Unlock more villains</small>'}</button>` : ''}
           <button class="tbtn" data-fx="howto"><span>How to play</span></button>
           <button class="tbtn" data-fx="settings"><span>Settings</span></button>
         </nav>
@@ -363,9 +367,9 @@ const Front = (() => {
         <label class="fld" for="acc-email"><span>Email</span><input id="acc-email" type="email" required autocomplete="email"></label>
         <label class="fld" for="acc-pw"><span>Password${mode === 'signup' ? ' (at least 8 characters)' : ''}</span><input id="acc-pw" type="password" minlength="${mode === 'signup' ? 8 : 1}" required autocomplete="${mode === 'signup' ? 'new-password' : 'current-password'}"></label>`;
     const extra = mode === 'signin' ? `<div class="row alt"><button type="button" class="lnk" data-fx="magic">Email me a sign-in link instead</button><button type="button" class="lnk" data-fx="forgot">Forgot your password?</button></div>` : '';
-    const google = Store.google && mode !== 'reset' ? `<button type="button" class="btn wide gbtn" data-fx="google">${GLOGO}Continue with Google</button><div class="or"><span>or use email</span></div>` : '';
+    const google = Store.google && mode !== 'reset' ? (WIP.login ? `<button type="button" class="btn wide gbtn" disabled title="Google sign-in is still being set up">${GLOGO}Continue with Google (coming soon)</button><div class="or"><span>use email for now</span></div>` : `<button type="button" class="btn wide gbtn" data-fx="google">${GLOGO}Continue with Google</button><div class="or"><span>or use email</span></div>`) : '';
     const lead = note || (Shop.enabled() ? 'An account keeps your saves and unlocks in the cloud, so you can pick up a campaign on any device.' : 'An account keeps your saves in the cloud, so you can pick up a campaign on any device.');
-    UI.modal(`<h1 class="dtitle">${mode === 'reset' ? 'Set a new password' : 'Your account'}</h1>${mode === 'reset' ? '' : `<p class="hint${note ? ' note' : ''}">${esc(lead)}</p>`}${google}${tabs}
+    UI.modal(`<h1 class="dtitle">${mode === 'reset' ? 'Set a new password' : 'Your account'}</h1>${mode === 'reset' ? '' : wipBan('login', 'Accounts are still being set up. Google sign-in is coming soon, and emails (confirmations, sign-in links, password resets) may not arrive yet. You can keep playing as a guest: your saves stay in this browser.')}${mode === 'reset' ? '' : `<p class="hint${note ? ' note' : ''}">${esc(lead)}</p>`}${google}${tabs}
       <form class="form" id="acc-form" data-form="${mode}">${body}<p class="msg" id="acc-msg" role="status"></p>
       <div class="row end"><button type="button" class="btn" data-act="close">Cancel</button><button type="submit" class="btn big">${mode === 'signup' ? 'Create account' : mode === 'reset' ? 'Save password' : 'Sign in'}</button></div>${extra}</form>`);
   }
@@ -405,7 +409,7 @@ const Front = (() => {
       return `<div class="sitem${Shop.owns(sku) ? ' have' : ''}"><img src="${A.URI[vIcon(k)]}" data-icon="${vIcon(k)}" alt=""><div><b>${esc(T.label)}</b><small>${esc(T.blurb)}</small></div>${btn(sku)}</div>`; }).join('');
     const stack = vs.map(sku => { const k = Shop.CATALOG[sku].villain; return `<img src="${A.URI[vIcon(k)]}" data-icon="${vIcon(k)}" alt="">`; }).join('');
     const save = Shop.price(bundle) && Shop.price(bundle) < vs.filter(v => !Shop.owns(v)).length * 299 ? ` <em>Save ${esc(Shop.money(vs.filter(v => !Shop.owns(v)).length * 299 - Shop.price(bundle)))}</em>` : '';
-    UI.modal(`<h1 class="dtitle">Shop</h1>
+    UI.modal(`<h1 class="dtitle">Shop</h1>${wipBan('shop', 'The shop isn\'t taking payments yet. Beta testers: sign in and redeem your code to unlock the villains.')}
       <p class="hint">Overmaster is free to play, and the Lich and the Ancient Dragon are always free. Unlock the other villains once and they're yours on every device you sign in on.</p>
       <div class="shoplist">
         <div class="sitem bundle${Shop.ownsAll(bundle) ? ' have' : ''}"><span class="stack">${stack}</span><div><b>${esc(Shop.CATALOG[bundle].name)}${save}</b><small>${esc(Shop.CATALOG[bundle].blurb)}</small></div>${btn(bundle)}</div>
@@ -609,7 +613,7 @@ const Front = (() => {
         ${s && s.phase !== 'battle' ? '<button class="tbtn" data-fx="chronicle"><span>Chronicle</span><small>Everything that has happened</small></button>' : ''}
         <button class="tbtn" data-fx="settings"><span>Settings</span></button>
         <button class="tbtn" data-fx="feedback"><span>Send feedback</span></button>
-        ${Store.cloudReady() ? `<button class="tbtn" data-fx="account"><span>${u ? 'Account' : 'Sign in'}</span><small>${u ? esc(u.name) : 'Keep saves in the cloud'}</small></button>` : ''}
+        ${Store.cloudReady() ? `<button class="tbtn" data-fx="account"><span>${u ? 'Account' : 'Sign in'}${u ? '' : wipTag('login')}</span><small>${u ? esc(u.name) : 'Keep saves in the cloud'}</small></button>` : ''}
         <button class="tbtn" data-fx="exit"><span>Exit to title</span><small>Your progress is saved</small></button>
       </nav><div class="row end"><button class="btn" data-act="close">Back to the game</button></div>`);
   }

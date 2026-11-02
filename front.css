@@ -296,3 +296,8 @@ ul.pw { display: grid; gap: 6px; }
 .intro.cinefirst .i-press { animation: ifade 1s ease 2.2s forwards, ipulse 2.2s ease-in-out 3.2s infinite; }
 .intro.cinefirst .i-pres { animation-name: ipresstay; }
 @keyframes ipresstay { 0% { opacity: 0; transform: translateY(6px); } 30%, 100% { opacity: 1; transform: none; } }
+/* 0.39: WORK IN PROGRESS labels on parts still being set up (config.js: wip) */
+.wiptag { display: inline-block; margin-left: 8px; padding: 1px 6px; border: 1px solid #e8a83a; border-radius: 3px; background: rgba(90,50,10,.55); color: #ffcf6a; font: 700 10px/1.45 system-ui, sans-serif; font-style: normal; letter-spacing: .08em; text-transform: uppercase; vertical-align: middle; white-space: nowrap; }
+.wipban { display: flex; gap: 10px; align-items: baseline; margin: 0 0 10px; padding: 8px 12px; border: 1px dashed #e8a83a; border-radius: 4px; background: rgba(90,50,10,.35); color: #f2d8b0; font-size: 14px; line-height: 1.35; }
+.wipban b { flex: none; color: #ffcf6a; letter-spacing: .1em; font-size: 12px; }
+.gbtn[disabled] { opacity: .55; cursor: not-allowed; }

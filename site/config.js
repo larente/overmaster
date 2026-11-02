@@ -14,5 +14,8 @@ window.BTS_CONFIG = {
   feedbackEmail: '',
   // Set to true once Stripe and the two shop functions are set up (site/README.md, "The shop").
   // While false, every villain is unlocked and there's no Shop.
-  store: true
+  store: true,
+  // Shows a WORK IN PROGRESS label on sign-in and the shop while they're being set up. Sign-in's label also
+  // greys out the Google button. Set each to false when it's done (see the setup guide).
+  wip: { login: true, shop: true }
 };
