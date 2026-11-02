@@ -3424,7 +3424,7 @@
       const lp = lairsProduce(s);
       // 0.30: every lair standing (and not wrecked) spreads dread through the countryside
       { const n = builtLairs(s).filter(o => !lairWrecked(s, o)).length; if (n) addInfamy(s, 0.5 * n, 'Your lairs spread dread'); }
-      s.lastDay = { res: md.res, built: md.built, opened: md.opened, yields: md.yields, fills: md.fills, filled: md.filled, full: md.full, plot: md.plot, raised: lp, released: lp.released, summoned: md.summoned, library: md.library, researched: md.researched, camped, town: s.townToday || null, sieges: s.nightSieges || [], level: villainLevel(s) > lv0 ? villainLevel(s) : 0 };
+      s.lastDay = { res: md.res, built: md.built, opened: md.opened, yields: md.yields, fills: md.fills, filled: md.filled, full: md.full, plot: md.plot, raised: lp, released: lp.released, summoned: md.summoned, library: md.library, grounds: md.grounds || [], researched: md.researched, camped, town: s.townToday || null, sieges: s.nightSieges || [], level: villainLevel(s) > lv0 ? villainLevel(s) : 0 };
       dmReveal(s);
     }
     townQuests(s);

@@ -29,7 +29,7 @@ It reads your PixelLab token from pixellab-token.txt (or the .rtf TextEdit makes
 never prints it. Each character's 8 directions are saved in out/<name>/. Progress goes to log.txt.
 Only needs the Python that comes with macOS.
 """
-import base64, json, os, re, ssl, subprocess, sys, tempfile, threading, time
+import base64, json, os, re, shutil, ssl, subprocess, sys, tempfile, threading, time
 import urllib.error, urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
@@ -878,7 +878,13 @@ def talk(tok, which):
     # 0.31: the villains (their portraits are out/villain-<type>) and the monsters of the wilds talk too
     groups = {'heroes': {k: h for k, h in data['heroes'].items()},
               'villains': {v.get('key', 'villain-' + t): v for t, v in data.get('villains', {}).items()},
-              'monsters': {t: m for t, m in data.get('monsters', {}).items()}}
+              'monsters': {t: m for t, m in data.get('monsters', {}).items()},
+              # 0.39: the minions talk too; their portraits are out/<look>/portrait.png, their voices out-voice/minion-<look>
+              'minions': {m.get('key', 'minion-' + t): m for t, m in data.get('minions', {}).items()}}
+    for t, m in data.get('minions', {}).items():
+        k = m.get('key', 'minion-' + t); src = os.path.join(OUT, t, 'portrait.png'); dst = os.path.join(OUT, k, 'portrait.png')
+        if os.path.exists(src) and not os.path.exists(dst):
+            os.makedirs(os.path.dirname(dst), exist_ok=True); shutil.copyfile(src, dst)
     H = {}
     for g in groups.values(): H.update(g)
     keys = []

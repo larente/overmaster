@@ -120,6 +120,7 @@
     floats: () => S.phase === 'battle' ? ui.floats : ui.floats.filter(f => !f.battle).map(f => { if (!f.id) f.id = Math.random().toString(36).slice(2); return { id: f.id, t0: f.t0, text: f.text, color: f.color, x: f.x / TILE - 0.5, y: f.y / TILE - 0.75 }; }),
     view: () => ui.view, fx: () => ui.fx, bspec: () => ui.bspec,
     minionBubble: m => minionBubble(m),
+    minionIdle: m => minionIdle(m),   // 0.39: Zz over an idle minion
     minionPos: m => { const p = minionTile(m); const d = (ui.mspots && ui.mspots.get(m.id)) || { dx: 0, dy: 0 }; return { x: p.x + d.dx, y: p.y + d.dy, moving: minionWalking(m), dance: !!(m.job && m.job.kind === 'dance' && !minionWalking(m)), work: minionWorking(m) }; },
     nodeLook: n => (nodeShownDev(n) ? 'node-' : 'dep-') + n.kind,
     fog: () => fogNow(),
@@ -320,6 +321,9 @@
         if (ph > 0.92 || ph < 0.08) { c.fillStyle = 'rgba(230,214,184,0.7)'; for (let i = 0; i < 3; i++) { c.beginPath(); c.arc(cx + 10 + i * 4 - 4, by - 2 - i, 2 + i * 0.6, 0, 7); c.fill(); } }
         kick();
       } else c.drawImage(A.IMG['unit-m-' + look], cx - 13, by - 22, 26, 26);
+      // 0.39: an idle minion snores (Zz) until it gets an order
+      if (!minionBubble(m) && minionIdle(m)) { const t = now / 1000 + m.x * 0.7; const bob = Math.sin(t * 2.4) * 2.5; c.save(); c.font = 'bold 13px Alegreya, Georgia, serif'; c.textAlign = 'center'; c.lineWidth = 3; c.strokeStyle = 'rgba(20,14,8,0.9)';
+        c.strokeText('Z', cx + 9, by - 26 + bob); c.fillStyle = '#ffd36a'; c.fillText('Z', cx + 9, by - 26 + bob); c.font = 'bold 10px Alegreya, Georgia, serif'; c.strokeText('z', cx + 16, by - 34 + bob * 0.7); c.fillText('z', cx + 16, by - 34 + bob * 0.7); c.restore(); kick(); }
       // 0.33: its words in a bubble
       { const say = minionBubble(m); if (say) { c.save(); c.font = 'italic 12px Alegreya, Georgia, serif'; const w = c.measureText(say).width + 14; const bx = cx - w / 2, byy = by - 48;
         c.fillStyle = 'rgba(20,14,8,0.92)'; c.strokeStyle = '#c8a050'; c.lineWidth = 1; c.beginPath(); c.roundRect(bx, byy, w, 20, 6); c.fill(); c.stroke();
@@ -1202,7 +1206,32 @@
     for (const [id, b] of ui.msay) if (b.voice && b.voice.stop) b.voice.stop();
     ui.msay.clear(); const b = { text: M.lines[key], until: now + dur * 1000 + 900 }; ui.msay.set(m.id, b);
     if (V && window.SND) SND.voice('voice/' + V.file.replace(/^voice\//, ''), V.at, V.dur).then(p => { if (ui.msay.get(m.id) === b && p) b.voice = p; else if (p && p.stop) p.stop(); });
-    kick(); return true;
+    minionTalk(m, b, sp, V, dur); kick(); return true;
+  }
+  // 0.39: while a minion you've selected speaks, its portrait in the action bar moves its mouth (when it has a talking portrait)
+  function minionTalk(m, b, sp, V, dur) {
+    const T = ART.talk && ART.talk[sp.key]; if (!T || !T.strip) return;
+    if (!T.imgs) { const im = new Image(); im.src = 'art/' + T.strip; T.imgs = [im]; }
+    const t0 = performance.now();
+    const step = () => {
+      const cv = document.querySelector('#abar .abtalk'); const live = ui.msay && ui.msay.get(m.id) === b && performance.now() < b.until;
+      const shown = live && cv && selMinions().some(z => z.id === m.id);
+      if (cv) cv.classList.toggle('on', !!shown);
+      if (!live) return;
+      if (shown) {
+        const im = T.imgs[0]; const nf = T.n || 7;
+        if (im.complete && im.naturalWidth) {
+          const t = b.voice && b.voice.now ? b.voice.now() : (performance.now() - t0) / 1000; const talking = t >= 0 && t < dur;
+          let idx = T.rest || 0;
+          if (talking && V && V.sync && b.voice) { for (const [i, until] of V.sync) if (t < until) { idx = i; break; } }
+          else if (talking) idx = [T.rest || 0, 1, 2, 1][Math.floor(t * 8) % 4] % nf;
+          const fw = im.naturalWidth / nf; const c = cv.getContext('2d'); c.imageSmoothingEnabled = false; c.clearRect(0, 0, cv.width, cv.height);
+          c.drawImage(im, Math.min(nf - 1, idx) * fw, 0, fw, im.naturalHeight, 0, 0, cv.width, cv.height);
+        }
+      }
+      requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
   }
   /* ============ 0.36: relics: what your villain finds on the map, carries and wears ============ */
   const TIER_NAME = ['', 'Lesser relic', 'Greater relic', 'Legendary relic'];
@@ -1341,20 +1370,21 @@
     const V = S.villain; const vsel = ui.sel && ui.sel.type === 'villain'; const msel = new Set(selMinions().map(m => m.id));
     const vst = V.state === 'banished' ? 'rest' : G.villainOnMap(S) ? (V.path && V.path.length ? 'walk' : 'out') : 'home';
     let h = `<button class="aunit v${vsel ? ' on' : ''}" data-act="vsel" title="${esc(VN())}, ${STATE_TXT[vst]} (V)">${img(vIcon(), 'aport')}<i class="ast ${vst}"></i></button>`;
-    for (const m of S.minions || []) { const st = minionState(m); h += `<button class="aunit${msel.has(m.id) ? ' on' : ''}" data-act="abm" data-id="${m.id}" title="${esc(MT().one)}: ${plain(minionJob(m))} Shift-click to add.">${img(minionIcon(), 'aport')}<i class="ast ${st}"></i></button>`; }
+    for (const m of S.minions || []) { const st = minionState(m); const idle = st === 'idle'; h += `<button class="aunit${msel.has(m.id) ? ' on' : ''}${idle ? ' idle' : ''}" data-act="abm" data-id="${m.id}" title="${esc(MT().one)}: ${plain(minionJob(m))} Shift-click to add.">${img(minionIcon(), 'aport')}${idle ? '<i class="azz" aria-label="idle">Zz</i>' : `<i class="ast ${st}"></i>`}</button>`; }
     return h;
   }
   function abCard() {
     const ms = selMinions(); const sel = ui.sel;
     if (ms.length) { const idle = ms.filter(m => !m.job).length;
-      return `${img(minionIcon(), 'abig')}<div><b>${ms.length > 1 ? `${ms.length} ${esc(MT().name)}` : esc(MT().one)}</b><small>${ms.length > 1 ? `${idle ? idle + ' idle, ' : ''}${ms.length - idle} busy.` : minionJob(ms[0])}</small></div>`; }
+      const one = ms.length === 1 && minionIdle(ms[0]);
+      return `<span class="abigw">${img(minionIcon(), 'abig')}<canvas class="abtalk" width="128" height="128" aria-hidden="true"></canvas></span><div><b>${ms.length > 1 ? `${ms.length} ${esc(MT().name)}` : esc(MT().one)}</b><small${one ? ' class="idletxt"' : ''}>${ms.length > 1 ? `${idle ? `<span class="idletxt">${idle} idle</span>, ` : ''}${ms.length - idle} busy.` : one ? 'Idle, waiting for orders. Gather, build or send it somewhere.' : minionJob(ms[0])}</small></div>`; }
     if (sel && sel.type === 'villain') { const V = S.villain; const hp = Math.round((V.hpFrac === undefined ? 1 : V.hpFrac) * 100);
       return `${img(vIcon(), 'abig')}<div><b>${esc(VN())} · Lv ${G.villainLevel(S)}</b><small>${villainLine()}${G.villainOnMap(S) ? ` Health ${hp}%.` : ''}</small></div>`; }
     if (sel && sel.type === 'node') { const n = S.nodes.find(z => z.id === sel.id); if (n) { const K = G.NODE_KINDS[n.kind]; const p = nodeProg(n);
       return `${img('obj-' + (n.dev ? 'node-' : 'dep-') + n.kind, 'abig')}<div><b>${esc(G.nodeName(n))}</b><small>${G.nodeRaided(S, n) ? 'Wrecked by the heroes.' : p === null ? 'Not yours yet. Send a minion to work it.' : p >= 1 ? `Full: ${G.nodeStock(S, n)} ${K.res}. Click it to collect.` : `${Math.round(p * 100)}% full. ${nodeLeft(n)} more night${nodeLeft(n) > 1 ? 's' : ''}.`}</small>${p !== null && p < 1 ? pbar(p, 'fill ' + n.kind) : ''}</div>`; } }
     const b = selBand(); if (b) { const C = G.CREATURES[b.type]; return `${img('unit-' + b.type, 'abig')}<div><b>${b.count} ${esc(C.name)}</b><small>${b.camp ? 'In the war camp outside Millbrook.' : b.wave ? 'Marching to the war camp.' : b.patrol ? 'On patrol.' : 'Holding their ground.'}</small></div>`; }
     const idle = G.idleMinions(S).length;
-    return `<div><b>Your servants</b><small>Click a ${esc(MT().one.toLowerCase())} or ${esc(VN())} to give orders.${idle ? ` ${idle} idle: press I.` : ''}</small></div>`;
+    return `<div><b>Your servants</b><small>Click a ${esc(MT().one.toLowerCase())} or ${esc(VN())} to give orders.${idle ? ` <span class="idletxt">${idle} idle: press I.</span>` : ''}</small></div>`;
   }
   function abCmds() {
     const ms = selMinions(); const sel = ui.sel; const out = []; const B = o => out.push(abBtn(o));
@@ -1391,7 +1421,7 @@
       const n = S.nodes.find(z => z.id === sel.id); if (n && G.nodeFull(S, n) && !G.nodeRaided(S, n)) B({ act: 'collect', id: n.id, hk: 'space', label: 'Collect', icon: img('obj-res-' + n.kind, 'aico'), cls: 'hot', tip: `Collect ${G.nodeStock(S, n)} ${G.NODE_KINDS[n.kind].res}` });
     }
     const nf = G.fullNodes(S).filter(n => hasSeen(n.x, n.y)).length; const ni = G.idleMinions(S).length;
-    const tail = [abBtn({ act: 'nextidle', hk: 'i', label: ni ? `Idle ${ni}` : 'Idle', icon: ABI.idle, dis: !ni, tip: `Next idle ${MT().one.toLowerCase()}; Shift for all of them` }),
+    const tail = [abBtn({ act: 'nextidle', hk: 'i', label: ni ? `Idle ${ni}` : 'Idle', icon: ABI.idle, dis: !ni, cls: ni ? 'hot idle' : '', tip: `Next idle ${MT().one.toLowerCase()}; Shift for all of them` }),
       abBtn({ act: 'nextfull', hk: 'c', label: nf ? `Full ${nf}` : 'Full', icon: ABI.full, dis: !nf, cls: nf ? 'hot' : '', tip: 'Next full mine or camp, ready to collect' })];
     return `<div class="acmds" style="--cols:${Math.max(1, Math.ceil(out.length / 2))}">${out.join('')}</div><div class="atail">${tail.join('')}</div>`;
   }
@@ -1403,6 +1433,8 @@
   }
   // 0.35: every order gets an answer, in the minion's own voice: "As you command", "I was going there anyway", or a word about the job
   function minionAck(m, cat) { if (Math.random() < 0.5 && minionSay(m, 'ack')) return true; return minionSay(m, cat || 'ack') || minionSay(m, 'ack'); }
+  // 0.39: idle means no job and standing still (one walking home with no job will be idle when it arrives)
+  const minionIdle = m => !!m && !m.job && !minionWalking(m);
   const minionBubble = m => { const b = ui.msay && ui.msay.get(m.id); if (!b) return null; if (performance.now() > b.until) { ui.msay.delete(m.id); return null; } return b.text; };
   // after anything that might have handed a hero a magic item, the one who got it says so
   function lootCheck(quiet) {
@@ -1500,6 +1532,8 @@
       if (n.town && n.town.built) { const B = G.TOWN_B[n.town.built]; const l = G.townLv(S, n.town.built); toast(`Millbrook's ${B.name}${l > 1 ? ' ' + G.roman(l) : ''} is ${l > 1 ? 'enlarged' : 'finished'}: ${B.levels ? B.levels[l - 1] : '+' + G.priceText(B.income[l - 1]) + ' a day'}.`, 'good'); }
       if ((n.summoned || []).length) toast(`A new ${MT().one.toLowerCase()} crawls out of the Dark Tower, ready to work.`, 'good');
       if (n.library) toast(G.libraryLevel(S) > 1 ? "The Forbidden Library's new wing is finished: one more talent point." : 'The Forbidden Library is finished: a talent point to spend.', 'good');
+      for (const k of (n.grounds || []).filter(k => k !== 'library')) { const B = G.GROUNDS[k]; const lv = G.groundsLv(S, k); toast(`${B.at ? `${B.name} ${G.roman(lv)} forged` : lv > 1 ? `The ${B.name} reaches level ${lv}` : `The ${B.name} is finished`}: ${B.lv(lv)}.`, 'good'); }   // 0.39
+      { const idl = (S.minions || []).filter(minionIdle).length; if (idl) toast(`${idl === 1 ? `A ${MT().one.toLowerCase()} is` : `${idl} ${MT().name.toLowerCase()} are`} idle, waiting for orders. Press I to find ${idl === 1 ? 'it' : 'them'}.`, 'idle', 6000); }   // 0.39
       // 0.30: the night's sieges, and what Millbrook is up to
       for (const r of n.sieges || []) { toast(r.text, r.breached ? 'good' : 'sys'); if (r.breached) later('coins'); }
       if ((n.camped || []).length) { const c = G.campCount(S); toast(`${n.camped.length > 1 ? 'More of your monsters reach' : `${G.bandName(S.objects.find(z => z.id === n.camped[0]) || { type: 'goblin', count: 1 })} reach`} the war camp outside Millbrook. ${c} wait for the assault at the end of the week.`, 'good'); }

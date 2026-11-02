@@ -854,3 +854,23 @@ ul.log small { color: #8a7a60; margin-right: 4px; }
 @media (max-width: 760px) { .tview .tvlist { width: auto; right: 12px; top: auto; bottom: 44px; max-height: 42%; } }
 /* 0.39: the food counter needs room in the bottom bar: a little tighter on mid-size screens so it stays one row */
 @media (max-width: 1600px) { .bar { gap: 6px 9px; } .bar .gauge .track { width: 62px; } .bar .purse .res { gap: 2px; } .campchip .cx, .bar .lvl .k { display: none; } }
+/* 0.39: idle minions: a Zz badge and an amber ring in the action bar, Zz over their heads on the map, an amber Idle button */
+.aunit.idle { box-shadow: 0 0 0 2px #e8a83a, 0 0 9px rgba(232,168,58,.55); animation: aidlering 1.6s ease-in-out infinite; }
+.aunit.idle.on { box-shadow: 0 0 0 2px #9cf08a, 0 0 0 4px #e8a83a, 0 0 10px rgba(232,168,58,.6); }
+@keyframes aidlering { 0%, 100% { filter: none; } 50% { filter: brightness(1.25); } }
+.azz { position: absolute; right: -6px; top: -7px; padding: 0 3px; border-radius: 6px; background: #2a1a08; border: 1px solid #e8a83a; color: #ffd36a; font: bold 10px/13px Alegreya, Georgia, serif; font-style: normal; letter-spacing: -.5px; box-shadow: 0 0 4px rgba(0,0,0,.8); pointer-events: none; animation: azz 2.2s ease-in-out infinite; }
+@keyframes azz { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+.abtn.hot.idle { border-color: #e8a83a; box-shadow: 0 0 0 1px #e8a83a, 0 0 10px rgba(232,168,58,.5); }
+.abtn.hot.idle span { color: #ffd36a; }
+.idletxt { color: #ffb547 !important; }
+.toast.idle { border-color: #e8a83a; color: #ffe2a8; }
+.l3.l-idle { z-index: 2; pointer-events: none; }
+.l3.l-idle .lc { display: inline-block; transform: translate(-50%, -100%); color: #ffd36a; font: bold 15px Alegreya, Georgia, serif; text-shadow: 0 0 3px #000, 0 1px 2px #000, 0 0 6px rgba(0,0,0,.8); animation: lzz 2.2s ease-in-out infinite; }
+.l3.l-idle .lc i { font-size: 11px; font-style: normal; position: relative; top: -7px; margin-left: 1px; }
+@keyframes lzz { 0%, 100% { transform: translate(-50%, -100%); opacity: .85; } 50% { transform: translate(-50%, calc(-100% - 4px)); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .aunit.idle, .azz, .l3.l-idle .lc { animation: none; } }
+/* 0.39: a minion's talking portrait over its picture in the action bar while it speaks */
+.abigw { position: relative; flex: none; display: inline-block; line-height: 0; }
+.abtalk { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; pointer-events: none; display: none; }
+.abtalk.on { display: block; }
+.abigw:has(.abtalk.on) .abig { visibility: hidden; }
