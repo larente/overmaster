@@ -30,7 +30,7 @@ game_scripts() {
   echo '<title>Overmaster</title>'
   echo '<meta name="claude:viewport-fit-sides" content="cover">'
   echo "$FONTS"
-  echo "<style>"; cat style.css front.css screens.css ui-assets.css skin.css loop.css; echo "</style>"
+  echo "<style>"; cat style.css front.css screens.css ui-assets.css skin.css loop.css mobile.css; echo "</style>"
   cat shell.html
   game_scripts '<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>'
 } > dist/behind-the-screen.html
@@ -45,8 +45,10 @@ cp dist/behind-the-screen.html behind-the-screen.html
   echo '<meta name="description" content="Overmaster, by Alex Larente: a turn-based game where you are the villain. Rise from level 1 in the Dark Tower, raise lairs that send waves of monsters to burn the heroes'"'"' town, and stay ahead of four heroes who grow stronger every day.">'
   echo '<meta property="og:title" content="Overmaster"><meta property="og:description" content="Be the villain. The heroes are coming. A turn-based dark-lord game by Alex Larente."><meta property="og:type" content="website">'
   echo '<meta name="theme-color" content="#08111f"><link rel="icon" href="favicon.svg" type="image/svg+xml">'
+  echo '<link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-180.png">'
+  echo '<meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Overmaster">'
   echo "$FONTS"
-  echo "<style>"; cat style.css front.css screens.css ui-assets.css skin.css loop.css; echo "</style>"
+  echo "<style>"; cat style.css front.css screens.css ui-assets.css skin.css loop.css mobile.css; echo "</style>"
   echo '</head><body>'
   cat shell.html
   echo '<script src="config.js"></script>'
@@ -57,6 +59,6 @@ cp dist/behind-the-screen.html behind-the-screen.html
 cp vendor/three.min.js vendor/supabase.js dist/site/vendor/
 # painted art (sprites and portraits) listed in art/manifest.json
 rm -rf dist/site/art && mkdir -p dist/site/art && cp -r art/. dist/site/art/
-cp site/config.js site/favicon.svg site/README.md site/netlify.toml site/_headers dist/site/
+cp site/config.js site/favicon.svg site/manifest.webmanifest site/icon-180.png site/icon-512.png site/README.md site/netlify.toml site/_headers dist/site/
 cp site/schema.sql dist/site/supabase/schema.sql
 echo "built: dist/behind-the-screen.html ($(wc -c < dist/behind-the-screen.html) bytes), dist/site ($(du -sh dist/site | cut -f1))"

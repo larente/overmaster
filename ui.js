@@ -525,7 +525,7 @@
     const el = $('minimap'); if (!el) return;
     if (on === undefined) on = el.classList.contains('off');
     el.classList.toggle('off', !on); const b = $('minitog'); if (b) { b.textContent = on ? '–' : '▸'; b.title = on ? 'Hide the minimap' : 'Show the minimap'; b.setAttribute('aria-pressed', on ? 'true' : 'false'); }
-    try { localStorage.setItem('bts-mini', on ? '1' : '0'); } catch (e) { /* storage unavailable */ }
+    try { localStorage.setItem(isPhone() ? 'bts-mini-p' : 'bts-mini', on ? '1' : '0'); } catch (e) { /* storage unavailable */ }
     if (on) drawMini();
   }
 
@@ -537,19 +537,92 @@
     if (x < 0 || y < 0 || x >= G.MW || y >= G.MH) return null;
     return { x, y };
   }
+  /* ============ 0.40: phones on their side ============ */
+  // a phone held sideways: the panel is a drawer, two fingers pinch to zoom, press and hold to give an order
+  const PHONE = typeof matchMedia === 'function' ? matchMedia('(orientation: landscape) and (max-height: 540px)') : { matches: false };
+  const isPhone = () => PHONE.matches;
+  const drawerOpen = () => { const a = $('app'); return !!a && a.classList.contains('drawer'); };
+  function setDrawer(on, auto) {
+    const app = $('app'); if (!app) return; on = !!on;
+    if (on === drawerOpen()) { if (!on) ui.drawerAuto = false; return; }
+    app.classList.toggle('drawer', on); ui.drawerAuto = on && !!auto;
+    const b = $('drawbtn'); if (b) { b.setAttribute('aria-expanded', on ? 'true' : 'false'); b.setAttribute('aria-label', on ? 'Hide the panel' : 'Show the panel'); }
+    if (on && ui.sel) keepClear(ui.sel.x, ui.sel.y);
+  }
+  // with the drawer open, glide the camera so the thing you picked isn't hidden behind it
+  function keepClear(x, y) {
+    if (!S || x === undefined || !isPhone()) return;
+    const dw = ($('sidebody') || {}).offsetWidth || 0; const p = tileScreen(x, y); const r = mapCv().getBoundingClientRect();
+    const room = r.right - dw - 24; if (p.x < room && p.x > r.left + 24) return;
+    const want = (r.left + room) / 2;
+    if (ui.r3d) { const a = W3.pickTile(r.left + r.width / 2, r.top + r.height / 2), b = W3.pickTile(r.left + r.width / 2 + 160, r.top + r.height / 2); const tpp = a && b ? Math.max(0.01, (b.x - a.x) / 160) : 0.02; W3.pan((p.x - want) * tpp, 0); }
+    else { ui.cam.x += p.x - want; clampCam(); }
+    drawMap();
+  }
+  // after every render: a pick with no orders of its own (a lair, a mine, a band of the wilds, the town) opens the drawer
+  const DRAWER_SEL = new Set(['lair', 'node', 'obj', 'site', 'party']);
+  function phoneSync() {
+    if (!isPhone() || !S || S.title) return;
+    if (S.phase !== 'map' || ui.place || ui.mode) { if (drawerOpen()) setDrawer(false); return; }
+    const sel = ui.sel; const key = sel ? `${sel.type}:${sel.id || ''}:${sel.x},${sel.y}` : '';
+    if (key === ui.drawerKey) return; ui.drawerKey = key;
+    const b = selBand(); if (sel && DRAWER_SEL.has(sel.type) && !(b && (b.lair || b.yours))) setDrawer(true, true);
+    else if (ui.drawerAuto) setDrawer(false);
+  }
+  // the right-click orders, for a mouse or a long press
+  function rightAt(ev) {
+    if (ui.place || ui.mode) { ui.place = null; ui.mode = null; renderSide(); drawMap(); return; }
+    if (S && S.phase === 'map' && !ui.moving && selMinions().length) { const t = tileAt(ev); if (t) giveOrder(t); return; }
+    if (S && S.phase === 'map' && !ui.moving && selBand()) { const t = tileAt(ev); if (t) patrolTo(t); return; }
+    if (S && S.phase === 'map' && !ui.moving && ui.sel && ui.sel.type === 'villain') { const t = tileAt(ev); if (t) sendVillain(t.x, t.y); return; }
+    if (ui.sel) { ui.sel = null; renderSide(); drawMap(); }
+  }
   function bindMap() {
     const cv = mapCv();
-    cv.addEventListener('pointerdown', e => { if (e.button === 2) return; try { cv.setPointerCapture(e.pointerId); } catch (err) { /* synthetic pointer */ } ui.drag = { x: e.clientX, y: e.clientY, cx: ui.cam.x, cy: ui.cam.y, moved: false }; if (ui.r3d) W3.dragStart(e.clientX, e.clientY); });
+    const fingers = new Map();
+    const mid = () => { const [a, b] = [...fingers.values()]; return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, d: Math.hypot(a.x - b.x, a.y - b.y) }; };
+    const dropPress = () => { if (ui.press) { clearTimeout(ui.press); ui.press = null; } };
+    const endFinger = e => {
+      if (!fingers.delete(e.pointerId)) return;
+      if (!fingers.size) { ui.pinch = null; dropPress(); return; }
+      if (ui.pinch && fingers.size < 2) {   // one finger left after a pinch: it drags from where it is
+        ui.pinch = null; const [f] = [...fingers.values()];
+        ui.drag = { x: f.x, y: f.y, cx: ui.cam.x, cy: ui.cam.y, moved: true }; if (ui.r3d) W3.dragStart(f.x, f.y);
+      }
+    };
+    cv.addEventListener('pointerdown', e => {
+      if (e.button === 2) return; try { cv.setPointerCapture(e.pointerId); } catch (err) { /* synthetic pointer */ }
+      if (e.pointerType === 'touch') {
+        fingers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (fingers.size === 2) { dropPress(); if (ui.drag) { ui.drag.moved = true; if (ui.r3d) W3.dragEnd(); } ui.pinch = mid(); return; }
+        if (fingers.size > 2) return;
+        // press and hold: what a right-click does (walk there, patrol there, call off a build order)
+        dropPress(); const at = { clientX: e.clientX, clientY: e.clientY };
+        ui.press = setTimeout(() => { ui.press = null; const d = ui.drag; if (!d || d.moved || ui.pinch) return; d.moved = true; d.held = true; if (navigator.vibrate) try { navigator.vibrate(12); } catch (err) { /* no buzz */ } rightAt(at); }, 480);
+      }
+      ui.drag = { x: e.clientX, y: e.clientY, cx: ui.cam.x, cy: ui.cam.y, moved: false }; if (ui.r3d) W3.dragStart(e.clientX, e.clientY);
+    });
     cv.addEventListener('pointermove', e => {
+      if (e.pointerType === 'touch' && fingers.has(e.pointerId)) {
+        fingers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (ui.pinch && fingers.size >= 2) {
+          const m = mid(), p = ui.pinch; if (ui.night) ui.night.keepCam = true;
+          if (ui.r3d) { W3.dragStart(p.x, p.y); W3.dragMove(m.x, m.y); W3.dragEnd(); if (p.d > 8 && m.d > 8) W3.zoomAt(Math.log(p.d / m.d) / 0.0012, m.x, m.y); }
+          else { ui.cam.x -= m.x - p.x; ui.cam.y -= m.y - p.y; clampCam(); }
+          ui.pinch = m; drawMap(); return;
+        }
+      }
       if (ui.drag) {
         const dx = e.clientX - ui.drag.x, dy = e.clientY - ui.drag.y;
-        if (Math.abs(dx) + Math.abs(dy) > 6) ui.drag.moved = true;
+        if (Math.abs(dx) + Math.abs(dy) > (e.pointerType === 'touch' ? 10 : 6)) { ui.drag.moved = true; dropPress(); }
         if (ui.drag.moved) { if (ui.night) ui.night.keepCam = true; if (ui.r3d) W3.dragMove(e.clientX, e.clientY); else { ui.cam.x = ui.drag.cx - dx; ui.cam.y = ui.drag.cy - dy; clampCam(); } cv.style.cursor = 'grabbing'; cv.dataset.cur = 'grabbing'; drawMap(); return; }
       }
       const t = tileAt(e); const hm = e.pointerType === 'touch' ? null : minionAtPx(e);
       if (!t || !ui.hover || t.x !== ui.hover.x || t.y !== ui.hover.y || hm !== ui.hoverMin) { ui.hover = t; ui.hoverMin = hm; drawMap(); status(); setCur(cv, mapCursor(t)); }
     });
+    cv.addEventListener('pointercancel', e => { endFinger(e); ui.drag = null; if (ui.r3d) W3.dragEnd(); });
     cv.addEventListener('pointerup', e => {
+      const many = fingers.size > 1; endFinger(e); if (many) return;
       const d = ui.drag; ui.drag = null; cv.dataset.cur = ''; setCur(cv, mapCursor(ui.hover)); if (ui.r3d) W3.dragEnd();
       if (!d || d.moved || !S || S.phase !== 'map' || ui.moving) return;
       const t = tileAt(e);
@@ -561,15 +634,14 @@
       // on a touch screen there's no right-click: tapping a site, a half-built lair or the tower gives the order
       if (t && e.pointerType === 'touch' && selMinions().length) { const o = orderAt(t); if (o.kind === 'work' || o.kind === 'help' || o.kind === 'home') { giveOrder(t); return; } }
       if (t) clickTile(t, e.shiftKey);
+      // a tap on the map that picks nothing puts the drawer away
+      if (isPhone() && drawerOpen() && !ui.sel && !ui.place && !ui.mode) setDrawer(false);
     });
     cv.addEventListener('pointerleave', () => { ui.hover = null; ui.hoverMin = null; drawMap(); status(); });
     cv.addEventListener('contextmenu', e => {
       e.preventDefault();
-      if (ui.place || ui.mode) { ui.place = null; ui.mode = null; renderSide(); drawMap(); return; }
-      if (S && S.phase === 'map' && !ui.moving && selMinions().length) { const t = tileAt(e); if (t) giveOrder(t); return; }
-      if (S && S.phase === 'map' && !ui.moving && selBand()) { const t = tileAt(e); if (t) patrolTo(t); return; }
-      if (S && S.phase === 'map' && !ui.moving && ui.sel && ui.sel.type === 'villain') { const t = tileAt(e); if (t) sendVillain(t.x, t.y); return; }
-      if (ui.sel) { ui.sel = null; renderSide(); drawMap(); }
+      if (fingers.size || e.pointerType === 'touch') return;   // a phone's own long-press menu: the press timer gives the order
+      rightAt(e);
     });
     cv.addEventListener('wheel', e => { e.preventDefault(); if (ui.night) ui.night.keepCam = true; if (ui.r3d) { W3.zoomAt(e.deltaY * (e.deltaMode === 1 ? 30 : 1), e.clientX, e.clientY); drawMap(); return; } ui.cam.x += e.deltaX || (e.shiftKey ? e.deltaY : 0); ui.cam.y += e.shiftKey ? 0 : e.deltaY; clampCam(); drawMap(); }, { passive: false });
     const mini = $('mini'); if (!mini) return;
@@ -721,6 +793,8 @@
     away: '<svg viewBox="0 0 24 24"><path d="M4 12h12" stroke="#c8b898" stroke-width="2.6" stroke-linecap="round"/><path d="M12 6l6 6-6 6" fill="none" stroke="#c8b898" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M20 4v16" stroke="#c8b898" stroke-width="2" opacity=".6"/></svg>'
   };
   const TOUCHY = () => { try { return matchMedia('(hover: none)').matches; } catch (e) { return false; } };
+  // 0.40: on a touch screen the right-click is a long press
+  const RCLK = cap => TOUCHY() ? (cap ? 'Press and hold' : 'press and hold') : (cap ? 'Right-click' : 'right-click');
   const ORDER_COL = { work: '#ffd36a', help: '#78dc78', home: '#c9a2ff', move: '#e8d4ff', no: '#dc3c28' };
   // what a right-click on this tile would tell the selected minions to do
   function orderAt(t) {
@@ -1306,7 +1380,7 @@
     }
     const lying = S.objects.filter(o => o.kind === 'relic' && hasSeen(o.x, o.y)).length;
     return `<section class="tcard relics wide"><h2 class="cap">Relics</h2>
-      <p class="hint">${esc(VN())} can wear ${G.relicSlots(S)} at a time; the rest wait in the bag. They lie hidden around the map and glow where your servants have seen one${lying ? ` (<b>${lying}</b> seen now)` : ''}: select ${esc(VN())} and right-click one to go and claim it. ${esc(capWord(VP().he))} can seize the heroes' artifacts before they do, too.</p>
+      <p class="hint">${esc(VN())} can wear ${G.relicSlots(S)} at a time; the rest wait in the bag. They lie hidden around the map and glow where your servants have seen one${lying ? ` (<b>${lying}</b> seen now)` : ''}: select ${esc(VN())} and ${RCLK()} one to go and claim it. ${esc(capWord(VP().he))} can seize the heroes' artifacts before they do, too.</p>
       <div class="rwrap"><div><h3 class="rsub">Worn</h3><div class="rslots">${slots.join('')}</div>
         <h3 class="rsub">Bag</h3><div class="rbag">${R.bag.length ? R.bag.map(k => relicTile(k, 'bag')).join('') : '<p class="hint">Empty.</p>'}</div></div>
         <div class="rside">${detail || '<p class="hint">Pick a relic to see what it does.</p>'}</div></div></section>`;
@@ -1615,7 +1689,7 @@
       return `<section class="panel sel vpanel">${img(vIcon(), 'selimg')}<div>${close}<h2 class="cap">${esc(VN())} <span class="lv">Lv ${G.villainLevel(S)}</span></h2>
         <p>${villainLine()}${out ? ` Health ${hp}%.` : ''}</p>
         ${meet ? '<div class="row"><button class="btn sm" data-act="vmeet">Hold the audience</button></div>' : ''}
-        <p class="hint">${V.state === 'banished' ? 'Beaten and resting. Back on the road soon.' : `<b>Right-click</b> a band of the wilds to go and win it over, anywhere else to walk there, or the Dark Tower to come home. ${esc(VP().he[0].toUpperCase() + VP().he.slice(1))} walks about ${Math.round(G.VILLAIN_DAY_MP / 10)} tiles a night, around the heroes, and heals a quarter a night.`}</p>
+        <p class="hint">${V.state === 'banished' ? 'Beaten and resting. Back on the road soon.' : `<b>${RCLK(1)}</b> a band of the wilds to go and win it over, anywhere else to walk there, or the Dark Tower to come home. ${esc(VP().he[0].toUpperCase() + VP().he.slice(1))} walks about ${Math.round(G.VILLAIN_DAY_MP / 10)} tiles a night, around the heroes, and heals a quarter a night.`}</p>
         <div class="row">${out ? '<button class="btn sm" data-act="vhome">Return to the tower</button>' : ''}${out && V.path && V.path.length ? '<button class="btn sm" data-act="vstop">Stop</button>' : ''}</div></div></section>`;
     }
     if (sel.type === 'node') {
@@ -1667,7 +1741,7 @@
       const modeHint = ui.place ? `<b>Click open ground</b> you've explored, out of the heroes' sight (the dashed ring), to place the ${esc(G.DUNGEONS[ui.place.k].name)}.` : ui.mode === 'move' ? '<b>Click where to go.</b> A deposit, mine or camp puts them to work there; a half-built lair, to building.' : '';
       return `<section class="panel sel mpanel${ui.place || ui.mode ? ' placing' : ''}">${img(minionIcon(), 'selimg')}<div>${close}<h2 class="cap">${many ? `${ms.length} ${esc(MT().name)}` : esc(MT().one)}</h2>${list}
         <div class="mmenu three">${act('move', 'Move', ui.mode === 'move', 'M: click where to go')}${act('build', 'Build', ui.mbuild, 'B: build a lair')}${act('dance', 'Dance', allJob('dance'), 'Dance')}</div>
-        ${modeHint ? `<p class="hint placehint">${modeHint} Right-click or Esc to cancel.</p>` : `<p class="hint mhint">${TOUCHY() ? 'Tap a deposit, mine or camp to put them to work.' : '<b>Right-click</b> is a shortcut: a deposit, mine or camp to work it (one minion each), a half-built lair to help, the tower to go home, anywhere else to walk there.'}</p>`}
+        ${modeHint ? `<p class="hint placehint">${modeHint} ${TOUCHY() ? 'Press and hold to cancel.' : 'Right-click or Esc to cancel.'}</p>` : `<p class="hint mhint">${TOUCHY() ? 'Tap a deposit, mine or camp to put them to work. Press and hold anywhere else to walk there.' : '<b>Right-click</b> is a shortcut: a deposit, mine or camp to work it (one minion each), a half-built lair to help, the tower to go home, anywhere else to walk there.'}</p>`}
         ${ui.mbuild ? `<div class="blist">${lairRows}</div>` : ''}</div></section>`;
     }
     if (sel.type === 'spot') {
@@ -1695,8 +1769,8 @@
         const thr = th ? `<p class="threat t-${esc(String(th.label).toLowerCase())}"><b>Against the heroes now: ${esc(th.label)}.</b> ${th.avg !== undefined ? `They'd lose about ${Math.round(Math.min(1, th.avg) * 100)}% of their health.` : ''}</p><p class="hint">${esc(THREAT_TXT[th.label] || '')}</p>` : '<p class="hint">Sizing them up against the heroes…</p>';
         return `<section class="panel sel bpanel${ui.mode === 'patrol' ? ' placing' : ''}">${img('unit-' + o.type, 'selimg')}<div>${close}<h2 class="cap">${esc(G.bandName(o))}${L > 1 ? ` <span class="lv">Lv ${L}</span>` : ''}</h2>
           <p>${from} ${doing}${o.known ? ' The heroes know they\'re here.' : ''}</p>${siege}${thr}${wildBlock(o)}
-          <div class="mmenu"><button class="mbtn${ui.mode === 'patrol' ? ' on' : ''}" data-act="bpatrol" title="${o.wave ? 'Leave the war camp. Click a spot: they patrol between here and there instead' : 'Click a spot: they walk back and forth between here and there'}">${MICON.patrol}<span>Patrol</span></button><button class="mbtn" data-act="blevel"${lerr ? ` disabled title="${esc(lerr)}"` : ` title="+2 to hit, +1 AC, +30% hit points, +1 damage, and a fifth more of them"`}>${MICON.level}<span>Level up${lc ? ` · ${lc.gold} gold` : ''}</span></button><button class="mbtn" data-act="bcamp"${o.wave ? ' disabled' : ''} title="March to the war camp outside Millbrook and join the next assault">${img('unit-mb-gate', 'aico')}<span>To camp</span></button><button class="mbtn" data-act="baway" title="They leave the map for good">${MICON.away}<span>Go away</span></button></div>
-          ${ui.mode === 'patrol' ? `<p class="hint placehint"><b>Click where they should patrol to</b> (explored ground within ${G.PATROL_RANGE} tiles).${o.wave ? ' They stop marching on Millbrook.' : ''} Right-click or Esc to cancel.</p>` : o.patrol ? '<div class="row"><button class="btn sm" data-act="bhold">Stop patrolling</button></div>' : o.wave ? '<p class="hint">Level them up to hit harder, or right-click the map to make them patrol instead.</p>' : '<p class="hint">Right-click the map to set a patrol.</p>'}${bountyRow({ kind: 'obj', id: o.id })}</div></section>`;
+          <div class="mmenu"><button class="mbtn${ui.mode === 'patrol' ? ' on' : ''}" data-act="bpatrol" title="${o.wave ? 'Leave the war camp. Click a spot: they patrol between here and there instead' : `${TOUCHY() ? 'Tap' : 'Click'} a spot: they walk back and forth between here and there`}">${MICON.patrol}<span>Patrol</span></button><button class="mbtn" data-act="blevel"${lerr ? ` disabled title="${esc(lerr)}"` : ` title="+2 to hit, +1 AC, +30% hit points, +1 damage, and a fifth more of them"`}>${MICON.level}<span>Level up${lc ? ` · ${lc.gold} gold` : ''}</span></button><button class="mbtn" data-act="bcamp"${o.wave ? ' disabled' : ''} title="March to the war camp outside Millbrook and join the next assault">${img('unit-mb-gate', 'aico')}<span>To camp</span></button><button class="mbtn" data-act="baway" title="They leave the map for good">${MICON.away}<span>Go away</span></button></div>
+          ${ui.mode === 'patrol' ? `<p class="hint placehint"><b>Click where they should patrol to</b> (explored ground within ${G.PATROL_RANGE} tiles).${o.wave ? ' They stop marching on Millbrook.' : ''} ${TOUCHY() ? 'Press and hold to cancel.' : 'Right-click or Esc to cancel.'}</p>` : o.patrol ? '<div class="row"><button class="btn sm" data-act="bhold">Stop patrolling</button></div>' : o.wave ? `<p class="hint">Level them up to hit harder, or ${RCLK()} the map to make them patrol instead.</p>` : `<p class="hint">${RCLK(1)} the map to set a patrol.</p>`}${bountyRow({ kind: 'obj', id: o.id })}</div></section>`;
       }
       if (o.kind === 'relic') {
         const out = G.villainOnMap(S); const busy = S.villain.state === 'banished' || S.march;
@@ -1737,7 +1811,7 @@
         <div class="phead">${shown || S.march ? `<p class="heading" title="${esc(P.intent.join(' '))}"><span class="k">Heading for</span> <b>${esc(goal)}</b></p>` : `<p class="heading" title="The heroes walk in the fog: you only see them where your tower, minions, lairs, bands or villain can."><span class="k">In the fog</span> <b>${esc(lastSeenText())}</b></p>`}<button class="partybtn" data-act="party" title="All four heroes side by side: health, damage, skills and artifacts (P)">Party<kbd>P</kbd></button></div>
         ${waiting.length ? `<p class="hint">${waiting.map(h => esc(h.name)).join(' and ')} wait${waiting.length > 1 ? '' : 's'} at the Millbrook tavern to join the party.</p>` : ''}</section>
       <div id="selwrap">${selPanel()}</div>
-      <button class="vilbtn${S.villain.meet ? ' hot' : ''}" data-act="vsel" title="Your villain on the map (V). Select ${esc(VN())}, then right-click a band of the wilds to win it over, or anywhere to walk there.">${img(vIcon(), 'cicon')}<span><b>${esc(VN())} · Lv ${G.villainLevel(S)}</b><small>${villainLine()}</small><small class="vban" title="How many bands of the wilds follow you at once. One more every ${G.CMD_PER} levels.">Banner ${G.commanded(S)} of ${G.commandCap(S)}</small>${relicStrip()}</span><kbd>V</kbd></button>
+      <button class="vilbtn${S.villain.meet ? ' hot' : ''}" data-act="vsel" title="Your villain on the map (V). Select ${esc(VN())}, then ${RCLK()} a band of the wilds to win it over, or anywhere to walk there.">${img(vIcon(), 'cicon')}<span><b>${esc(VN())} · Lv ${G.villainLevel(S)}</b><small>${villainLine()}</small><small class="vban" title="How many bands of the wilds follow you at once. One more every ${G.CMD_PER} levels.">Banner ${G.commanded(S)} of ${G.commandCap(S)}</small>${relicStrip()}</span><kbd>V</kbd></button>
       <button class="towerbtn" data-act="tower">${img(siteIcon({ id: 'tower' }), 'cicon')}<span><b>Your tower</b><small>${nl} lair${nl === 1 ? '' : 's'} · ${S.minions.length} ${esc(MT().name.toLowerCase())}${nb ? ` · ${nb} idle` : ''}${(S.summons || []).length ? ` · ${S.summons.length} summoning` : ''}${G.talentFree(S) ? ` · <b class="gold">${G.talentFree(S)} talent point${G.talentFree(S) > 1 ? 's' : ''}</b>` : ''}${S.base.libBuild ? ' · library going up' : ''}</small></span>${G.talentFree(S) ? `<i class="badge pts" title="Talent points to spend">${G.talentFree(S)}</i>` : nb ? `<i class="badge">${nb}</i>` : ''}</button>
       ${S.town ? townBtn() : ''}`;
     el.scrollTop = keep;
@@ -1745,7 +1819,7 @@
     const btn = $('endday');
     if (btn) { btn.disabled = ui.moving || S.phase !== 'map'; btn.querySelector('span').textContent = ui.night ? 'Night falls…' : ui.moving ? 'Travelling…' : 'End day'; }
     if (ui.screen) renderScreen();
-    renderBar(); renderActions();
+    renderBar(); renderActions(); phoneSync();
   }
   // 0.37: when the week's assault comes
   const daysToAssault = () => S.day >= 7 ? 'tonight' : `in ${8 - S.day} days`;
@@ -1771,7 +1845,8 @@
       $('b-vlv').textContent = 'Lv ' + L; $('b-inf').textContent = hi ? `${Math.floor(xp)}/${hi}` : Math.floor(xp);
       $('b-infbar').style.width = (hi ? Math.max(0, Math.min(1, (xp - lo) / (hi - lo))) * 100 : 100).toFixed(0) + '%';
       $('g-inf').title = `${VN()} is level ${L}. ${hi ? `${Math.ceil(hi - xp)} more Infamy to level ${L + 1}.` : 'The highest level there is.'} Hurting and killing heroes, breaking into Millbrook, plunder and every lair you keep standing earn Infamy. Each level makes your villain stronger on the throne and gives a talent point.`; }
-    $('b-date').textContent = `Week ${S.week} · Day ${S.day}`;
+    $('b-date').innerHTML = `<span class="dw">Week ${S.week} · </span>Day ${S.day}`;
+    { const dd = $('drawdot'); if (dd) { const n = G.talentFree(S); dd.hidden = !n; dd.textContent = n || ''; dd.title = n ? `${n} talent point${n > 1 ? 's' : ''} to spend` : ''; } }
     { const c = $('b-camp'); if (c) { const n = G.campCount(S); c.hidden = !n; if (n) { c.innerHTML = `${img('unit-mb-gate', 'ci')}War camp <b>${n}</b><span class="cx"> · assault ${daysToAssault()}</span>`; c.title = `Your war camp outside Millbrook: ${n} monsters. The assault: ${daysToAssault()}. Waves and recruits gather there; when the week ends, the whole camp storms the town.`; c.classList.toggle('soon', S.day >= 6); } } }
     const fx = G.WEEKS_FX[S.weekFx]; $('b-week').textContent = fx.name; $('b-week').title = fx.text;
     $('b-lvl').textContent = 'Lv ' + G.avgLevel(S);
@@ -2132,7 +2207,7 @@
     const el = ui.tview; if (!el) return;
     const card = el.querySelector('.tvcard'); const html = ui.tvSel ? viewCard(ui.tvSel) : '';
     card.hidden = !html; card.innerHTML = html ? `<button class="xbtn" data-act="tvclose" title="Close">×</button>${html}` : '';
-    el.querySelector('.tvhint').textContent = ui.tvSel ? '' : 'Click a building or a plot. Build around the tower to raise your limits, and the tower grows with them.';
+    el.querySelector('.tvhint').textContent = ui.tvSel ? '' : `${TOUCHY() ? 'Tap' : 'Click'} a building or a plot. Build around the tower to raise your limits, and the tower grows with them.`;
     const L = el.querySelector('.tvlist'); if (L && ui.viewKind === 'tower') { const sc = (L.querySelector('.glist') || {}).scrollTop || 0; L.innerHTML = groundsList(); const g = L.querySelector('.glist'); if (g) g.scrollTop = sc; } else if (L) L.innerHTML = '';
     // the 3D picture moves over to make room for the list (on a narrow screen the list sits along the bottom instead)
     if (ui.r3d && W3 && W3.setTownInset) W3.setTownInset(L && L.innerHTML && L.offsetHeight && el.clientWidth > 760 ? L.offsetWidth + 12 : 0);
@@ -2456,13 +2531,13 @@
       <p>You are ${esc(VF())}, a ${esc(VT().label.toLowerCase())} newly risen in the Dark Tower, and still weak: level 1. Your minions dig, build lairs and breed monsters, and your lairs send them down the roads to burn Millbrook, the heroes' town. The game runs Millbrook and its four heroes. They will grow stronger, and one day they will march on your tower.</p>
       <ol class="rules">
         <li><b>Your eyes are your minions.</b> You start with two ${esc(mt.name.toLowerCase())} at the tower. The map stays dark where none of them have been; you see what your tower, your lairs, your bands, your minions and your villain see. <b>The heroes walk in the fog:</b> you only see them where one of yours can. You know roughly where Millbrook lies (the gold ring) until one of yours sees it.</li>
-        <li><b>Gather.</b> Your units sit in the <b>action bar</b> along the bottom of the map: click one (Shift-click for more, <b>I</b> for the next idle minion) and give it an order there, or with its key: <b>M</b> move, <b>G</b> gather, <b>B</b> build, <b>H</b> home, <b>X</b> stop. Send a minion to a gold deposit, timber stand or ore deposit (or right-click it): it spends a day sinking a mine or clearing a camp, then the minion is free and the site works on its own. <b>A site fills over a few nights</b> (a gold mine in three) and then waits, sparkling, until you <b>click it to collect</b>; only then does it start again. Press <b>C</b> to jump to the next full one. You start with two minions; the talent A Third Servant (in Dominion) lets you keep a third. The heroes wreck mines they reach, and carry off whatever was piled up there.</li>
+        <li><b>Gather.</b> Your units sit in the <b>action bar</b> along the bottom of the map: click one (Shift-click for more, <b>I</b> for the next idle minion) and give it an order there, or with its key: <b>M</b> move, <b>G</b> gather, <b>B</b> build, <b>H</b> home, <b>X</b> stop. Send a minion to a gold deposit, timber stand or ore deposit (or ${RCLK()} it): it spends a day sinking a mine or clearing a camp, then the minion is free and the site works on its own. <b>A site fills over a few nights</b> (a gold mine in three) and then waits, sparkling, until you <b>click it to collect</b>; only then does it start again. Press <b>C</b> to jump to the next full one. You start with two minions; the talent A Third Servant (in Dominion) lets you keep a third. The heroes wreck mines they reach, and carry off whatever was piled up there.</li>
         <li><b>Build lairs.</b> Pick <b>Build</b>, choose a lair and click explored ground the heroes can't see. Each lair breeds one kind of monster every night. <b>When it's full, a wave marches to your war camp outside Millbrook on its own.</b> A lair near the town reinforces the camp quickly; one far away is harder for the heroes to find.</li>
         <li><b>Build up the Grounds.</b> The Dark Tower's <b>Grounds</b> tab (or the food counter in the bottom bar) lists the buildings you can raise around the tower with gold, lumber and ore; a minion walks home and works a few nights on each. They raise your limits: the <b>Farm</b> grows the food your lairs eat (1 to 3 each, so you can't keep more lairs than it feeds), the <b>Servants' Quarters</b> house more minions, the <b>Blacksmith</b> forges weapons and armour for every monster, and the Storehouse, Black Obelisk, Library, Summoning Circle, Muster Field, Stockade and Reliquary do the rest. Every level counts toward the tower's growth, and each stage of the tower opens more.</li>
         <li><b>The war camp and the weekly assault.</b> Your waves and the bands that join you gather in a war camp just outside Millbrook; the heroes leave it alone. <b>When the week ends, you hold a war council</b>: attack, lead the assault yourself, or hold back a week. The assault is a battle against Millbrook's gate, towers, militia and town hall (and the heroes, if they're home). Break the gate or a tower to get in; every tower that falls loses Millbrook a level of it; whatever gets inside damages the hall, plunders gold and burns buildings. <b>Bring the hall down and Millbrook is yours.</b> Your villain hits hardest of all, but if ${esc(VP().he)} falls below half health ${esc(VP().he)} flees to the tower for 3 days.</li>
         <li><b>Infamy.</b> Hurting and killing heroes, breaking into Millbrook, plunder and every lair you keep standing earn Infamy. Infamy levels up your villain: stronger on the throne, a new power at levels 6, 11 and 16, and a talent point every level. Spend talents at the Dark Tower on the talent web: six regions around your sigil (The Brood, Dominion, Siegecraft, Dread, ${esc(VN())}'s own path with a monster only ${esc(VP().he)} can raise, and the Wilds for recruiting). Each talent you take has to join one you already have, so every campaign walks its own path.</li>
-        <li><b>Your villain walks the map.</b> Click ${esc(VN())} in the sidebar, then right-click a band of the wilds to go and win it over: <b>pay</b> it, <b>talk</b> (Intimidate, Persuade or Deceive, a d20 each), or <b>fight</b> it alone. Every wild band shows its level next to ${esc(VP().his)}: a band four levels above ${esc(VP().him)} only fights. Bands that join you march on Millbrook; your banner holds 1 band plus 1 for every ${G.CMD_PER} levels at a time. Beaten, a band may kneel (or buy its life, if your banner is full) and march once it has healed; one that fights to the last leaves its hoard. Lose, and ${esc(VN())} limps home to recover.</li>
-        <li><b>Relics.</b> Dark treasures lie hidden around the map, and only ${esc(VN())} can sense them: they glow where your servants have seen one, rarer the farther they lie from the tower. Select ${esc(VN())} and right-click one to go and claim it (${esc(VP().he)} can seize the heroes' artifacts before they do, too). ${esc(capWord(VP().he))} wears three at a time and carries the rest; each adds to ${esc(VP().his)} might, menace, stride or command, or gives a power. Some are cursed. <b>R</b> opens them.</li>
+        <li><b>Your villain walks the map.</b> Click ${esc(VN())} in the sidebar, then ${RCLK()} a band of the wilds to go and win it over: <b>pay</b> it, <b>talk</b> (Intimidate, Persuade or Deceive, a d20 each), or <b>fight</b> it alone. Every wild band shows its level next to ${esc(VP().his)}: a band four levels above ${esc(VP().him)} only fights. Bands that join you march on Millbrook; your banner holds 1 band plus 1 for every ${G.CMD_PER} levels at a time. Beaten, a band may kneel (or buy its life, if your banner is full) and march once it has healed; one that fights to the last leaves its hoard. Lose, and ${esc(VN())} limps home to recover.</li>
+        <li><b>Relics.</b> Dark treasures lie hidden around the map, and only ${esc(VN())} can sense them: they glow where your servants have seen one, rarer the farther they lie from the tower. Select ${esc(VN())} and ${RCLK()} one to go and claim it (${esc(VP().he)} can seize the heroes' artifacts before they do, too). ${esc(capWord(VP().he))} wears three at a time and carries the rest; each adds to ${esc(VP().his)} might, menace, stride or command, or gives a power. Some are cursed. <b>R</b> opens them.</li>
         <li><b>The heroes.</b> You never control them. They hunt the monsters they think they can beat, intercept your waves, storm your lairs and raid your mines. Millbrook puts bounties on the lairs that hurt it most. Click any band you can see to <b>Patrol</b>, <b>Level up</b> or send it <b>Away</b>; the card tells you how it would fare against the heroes, and a wave's card how it would fare against the town.</li>
         <li><b>The lie of the land.</b> Battlefields have rivers and ponds (only flyers cross deep water; shallows are slow and leave you easier to hit), bridges, ruins that block sight, low walls that give cover against shots across them, brush to hide in and hills that give archers +1 and let them shoot over cover. Hover a hex to see what it does.</li>
         <li><b>Watch, or take command.</b> Battles play out on their own. Press <b>Take command</b> to play your monsters: every unit gets a <b>Move</b>, an <b>Attack</b> and a <b>Bonus</b> action each turn. <b>Skip</b> jumps to the end of a fight.</li>
@@ -2948,7 +3023,7 @@
     else if (b.over) st = 'The battle is over.';
     else if (dm) {
       const bn = bonusName(u); const bo = G.bonusOptions(b, u);
-      const hint = ui.bmode === 'move' ? 'Click a lit hex to move.' : ui.bmode === 'attack' ? 'Click a hero to attack.' : ui.bmode === 'bonus' ? `Pick a ${bo && bo.hexes.length ? 'hex' : 'target'} for ${bn}.` : 'Click a hero to attack, or a lit hex to move.';
+      const CK = TOUCHY() ? 'Tap' : 'Click'; const hint = ui.bmode === 'move' ? `${CK} a lit hex to move.` : ui.bmode === 'attack' ? `${CK} a hero to attack.` : ui.bmode === 'bonus' ? `Pick a ${bo && bo.hexes.length ? 'hex' : 'target'} for ${bn}.` : `${CK} a hero to attack, or a lit hex to move.`;
       st = `Your turn: ${u.count > 1 ? u.count + ' ' : ''}${u.name}${u.ranged ? ' (' + u.shots + ' shots)' : ''}. ${hint}`;
     }
     else if (u) st = `${u.count > 1 ? u.count + ' ' + u.name : (u.side === 'dm' && u.one && !u.boss ? 'The ' + u.one : u.name)} ${u.side === 'party' ? (u.count > 1 ? 'act' : 'acts') + ' on their own…' : (u.count > 1 ? 'act…' : 'acts…')}${ui.autoBattle && u.side === 'dm' ? ' Press Take command to play your monsters yourself.' : ''}`;
@@ -3281,6 +3356,7 @@
         case 'mbuild': ui.mbuild = !ui.mbuild; ui.mode = null; if (!ui.mbuild) ui.place = null; renderSide(); drawMap(); return;
         case 'placelair': { if (ui.place && ui.place.k === d.k) { ui.place = null; renderSide(); drawMap(); return; } const err = G.lairCheck(S, d.k); if (err) { toast(err, 'bad'); return; } ui.place = { k: d.k }; renderSide(); drawMap(); return; }
         case 'minimap': toggleMini(); return;
+        case 'drawer': setDrawer(!drawerOpen()); return;
         case 'buildlair': { if (!ui.sel || ui.sel.type !== 'spot') return; const { x, y } = ui.sel; const err = G.orderBuild(S, d.k, x, y); if (err) { toast(err, 'bad'); return; } sfx('minion-go'); sfx('coins', { vol: 0.6 }); const o = S.objects[S.objects.length - 1]; ui.sel = { type: 'lair', id: o.id, x, y }; toast(`Your ${MT().one.toLowerCase()} sets off to build the ${G.DUNGEONS[d.k].name}: ${G.lairDays(S, d.k)} days of work.`, 'good'); ui.finaleEst = null; commit(); return; }
         case 'work': { const err = G.orderWork(S, d.id); if (err) { toast(err, 'bad'); return; } sfx('minion-go'); toast(`A ${MT().one.toLowerCase()} sets off for the ${G.nodeName(S.nodes.find(n => n.id === d.id))}.`, 'good'); commit(); return; }
         case 'recall': { const err = G.recallFrom(S, d.id); if (err) toast(err, 'bad'); commit(); return; }
@@ -3333,6 +3409,7 @@
         if (ui.screen && ui.tvSel) { ui.tvSel = null; updateViewCard(); return; }
         if (ui.screen) { closeScreen(); return; }
         if (ui.place || ui.mode) { ui.place = null; ui.mode = null; renderSide(); drawMap(); return; }
+        if (drawerOpen()) { setDrawer(false); return; }
         if (ui.abSub) { ui.abSub = null; ui.mbuild = false; renderSide(); drawMap(); return; }
         if (ui.sel) { ui.sel = null; ui.mbuild = false; renderSide(); drawMap(); }
         return;
@@ -3359,7 +3436,9 @@
     const ro = new ResizeObserver(() => { if (S && S.phase === 'battle') { if (S.battle) { sizeBattle(); kick(); } } else sizeMap(); });
     ro.observe($('mapwrap')); ro.observe($('bfield'));
     bindMap(); bindBattle();
-    try { if (localStorage.getItem('bts-mini') === '0') toggleMini(false); } catch (e) { /* storage unavailable */ }
+    // 0.40: a phone starts with the minimap folded away (its own setting, apart from the computer's)
+    try { const k = isPhone() ? 'bts-mini-p' : 'bts-mini'; const v = localStorage.getItem(k); if (v === '0' || (isPhone() && v !== '1')) toggleMini(false); } catch (e) { if (isPhone()) toggleMini(false); }
+
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { drawMap(); kick(); });
   }
   /* ============ entering and leaving a campaign (the title screen lives in front.js) ============ */
@@ -3467,5 +3546,11 @@
     if (ui.r3d) { const M = W3._map(); const T3 = M.camera.position.constructor; const v = new T3(x + 0.5, M.hAt(x + 0.5, y + 0.5), y + 0.5); v.project(M.camera); const r = W3.canvas.getBoundingClientRect(); return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height }; }
     const r = mapCv().getBoundingClientRect(); return { x: r.left + (x + 0.5) * TILE - Math.round(ui.cam.x), y: r.top + (y + 0.5) * TILE - Math.round(ui.cam.y) };
   }
+  // 0.40: the "turn your phone sideways" screen offers full screen, locked sideways, where the phone allows it (Android)
+  { const fsb = $('rotfs'); const de = document.documentElement;
+    if (fsb && de.requestFullscreen && typeof screen !== 'undefined' && screen.orientation && screen.orientation.lock) {
+      fsb.hidden = false;
+      fsb.addEventListener('click', () => { de.requestFullscreen({ navigationUI: 'hide' }).then(() => screen.orientation.lock('landscape')).catch(() => { /* the phone said no */ }); });
+    } }
   window.__bts = { state: () => S, ui, vo: () => VO, bark: (c, w, o) => bark(c, w, o), vsay: (c, o) => vsay(c, o), msay: (t, c, o) => msay(t, c, o), minionSay: (m, c) => minionSay(m, c), minionBubble: m => minionBubble(m), TILE, minionScreen, tileScreen, centerOn: (x, y) => { centerOn(x, y, true); drawMap(); }, enterBattle: () => enterBattle(), commit: () => commit(), openScreen: k => openScreen(k), renderSide: () => renderSide(), showOver: () => showOver(), spellbook: () => spellbook(), select: sel => { ui.sel = sel; renderSide(); drawMap(); }, showWeek: () => showWeek(), showVillainUps: () => showVillainUps(), dawn: () => dawn(), parley: r => showParley(r), parleyAct: (a, k) => parleyAct(a, k), endDay: () => endDay() };
 })();

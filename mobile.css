@@ -1,0 +1,176 @@
+/* ---------- 0.40: phones ----------
+   On a phone the game is played in landscape. A phone held upright gets a "turn it sideways" screen; a short
+   landscape screen (a phone on its side) gets the map edge to edge, the side panel as a drawer that slides in
+   from the right, a floating End day button and compact bars. Tablets and computers are untouched.
+   One query marks the phone layout everywhere below: (orientation: landscape) and (max-height: 540px). */
+.rotate, .drawbtn { display: none; }
+/* a touch screen has no keyboard shortcuts to show */
+@media (hover: none) and (pointer: coarse) { .abtn kbd, .partybtn kbd, .vilbtn kbd { display: none; } }
+#map, #bcv, .tview { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+
+@media (orientation: portrait) and (max-width: 600px) {
+  .rotate { position: fixed; inset: 0; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px; text-align: center;
+    background: radial-gradient(ellipse at 50% 40%, #2a1f14 0%, #0b0806 70%); color: var(--gold); }
+  .rotate svg { width: 96px; height: 96px; animation: rotphone 2.6s ease-in-out infinite; }
+  .rotate b { font-family: var(--font-display); font-size: 22px; letter-spacing: .06em; }
+  .rotate span { color: var(--muted); font-size: 15px; }
+  .rotate .btn { margin-top: 10px; }
+  .rotate .btn[hidden] { display: none; }
+  @keyframes rotphone { 0%, 25% { transform: rotate(0); } 55%, 100% { transform: rotate(-90deg); } }
+}
+
+@media (orientation: landscape) and (max-height: 540px) {
+  /* ----- title and new campaign ----- */
+  .title { grid-template-rows: auto auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .fbg::after { background: linear-gradient(90deg, rgba(10,7,5,.97) 0%, rgba(10,7,5,.9) 40%, rgba(10,7,5,.3) 75%, rgba(10,7,5,.5) 100%); }
+  .tcol { align-self: start; width: min(420px, 60vw); gap: 8px; padding-block: max(10px, env(safe-area-inset-top, 0px)) 4px; }
+  .tlogo { grid-template-columns: 44px minmax(0, 1fr); gap: 10px; }
+  .tlogo .emblem { width: 44px; }
+  .wordmark { font-size: 30px; }
+  .tlogo .eyebrow { margin-top: 4px; font-size: 9.5px; }
+  .tag { display: none; }
+  .tmenu { gap: 5px; margin-top: 0; }
+  .tbtn { border-width: 6px; padding: 4px 12px; }
+  .tbtn span { font-size: 14px; }
+  .tbtn.primary span { font-size: 16px; }
+  .tbtn small { font-size: 12px; }
+  .tbtn:not(.primary) small { display: none; }
+  .acct { padding-top: 6px; }
+  .tfoot { padding-block: 6px max(8px, env(safe-area-inset-bottom, 0px)); font-size: 12px; gap: 6px 14px; }
+  .setup { padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
+  .sin { gap: 10px; padding-block: 6px 0; }
+  .shead { gap: 8px 20px; padding-bottom: 6px; }
+  .stitle h2 { font-size: 22px; margin-bottom: 2px; }
+  .stitle p { font-size: 13.5px; line-height: 1.35; }
+  .sfoot { padding-block: 8px max(8px, env(safe-area-inset-bottom, 0px)); }
+  .vgrid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .vform { position: sticky; order: 0; }
+  .vbig { width: 72px; height: 72px; }
+  .pslots { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+  /* ----- the map: edge to edge, the panel slides in from the right ----- */
+  .app { height: 100%; min-height: 0; grid-template-rows: minmax(0, 1fr) auto; gap: 4px; padding: 4px max(6px, env(safe-area-inset-right, 0px)) max(4px, env(safe-area-inset-bottom, 0px)) max(6px, env(safe-area-inset-left, 0px)); }
+  .adv { grid-template-columns: minmax(0, 1fr); }
+  .mapwrap { height: auto; }
+  .side { display: contents; }
+  .sidebody { position: fixed; z-index: 26; top: 0; right: 0; bottom: 0; width: min(330px, 48vw); overflow-y: auto; overscroll-behavior: contain;
+    padding: max(8px, env(safe-area-inset-top, 0px)) max(8px, env(safe-area-inset-right, 0px)) 72px 8px; background: linear-gradient(180deg, #1d160f, #120d08);
+    box-shadow: -2px 0 0 #000, -4px 0 0 var(--frame), -12px 0 30px rgba(0,0,0,.6); transform: translateX(105%); transition: transform .22s ease; }
+  .app.drawer .sidebody { transform: none; }
+  .drawbtn { display: grid; place-items: center; position: fixed; z-index: 27; top: max(8px, env(safe-area-inset-top, 0px)); right: max(10px, env(safe-area-inset-right, 0px)); width: 40px; height: 40px; padding: 0;
+    border: 1px solid #000; border-radius: 4px; background: linear-gradient(180deg, #4a3620, #1e150c); box-shadow: 0 0 0 1px var(--frame), 0 4px 12px rgba(0,0,0,.5); color: var(--gold); cursor: pointer; }
+  .drawbtn svg { width: 22px; height: 22px; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+  .drawbtn .i-shut, .app.drawer .drawbtn .i-open { display: none; }
+  .app.drawer .drawbtn .i-shut { display: block; }
+  .drawbtn { transition: transform .22s ease; }
+  .app.drawer .drawbtn { transform: translateX(calc(4px - min(330px, 48vw))); }
+  .drawbtn .dot[hidden] { display: none; }
+  .app.drawer .abar, .app.drawer .mapwrap:has(.minimap.off) .abar { right: calc(min(330px, 48vw) + 4px); }
+  .drawbtn .dot { position: absolute; top: -4px; right: -4px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: #c8402a; color: #fff; font: 700 10px/16px system-ui, sans-serif; }
+  /* End day sits at the right end of the bottom bar */
+  .endday { position: fixed; z-index: 25; right: max(8px, env(safe-area-inset-right, 0px)); bottom: max(5px, env(safe-area-inset-bottom, 0px)); height: 46px; border-width: 7px; grid-template-columns: 24px auto; gap: 6px; padding: 0 10px; font-size: 14px; letter-spacing: .08em; }
+  .endday img { width: 24px; height: 24px; }
+  .app.drawer .endday { z-index: 27; }
+
+  /* the tower's screens cover the whole phone (as they do under 900px wide) */
+  .screen { position: fixed; inset: 0; z-index: 30; border: 0; box-shadow: none; padding: 0; padding-top: env(safe-area-inset-top, 0px); }
+  .scr { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+  .screen::after { display: none; }
+
+  .scbody { padding: 8px max(12px, env(safe-area-inset-right, 0px)) 16px max(12px, env(safe-area-inset-left, 0px)); gap: 10px; }
+  .schd { align-items: center; gap: 6px 12px; padding-bottom: 14px; background-size: 72px 16px, 100% 1px; background-position: center bottom, center bottom 7px; }
+  .schd .dtitle { font-size: 20px; margin: 0; }
+  .schd p { display: none; }
+  .schd-t { min-width: 0; }
+  .schd .btn { padding: 4px 10px; font-size: 12px; }
+  .scpurse { padding: 3px 8px; gap: 6px; }
+  .scpurse .pn { display: none; }
+  .ttabs { margin-top: 0; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .ttab { padding: 6px 12px 5px; font-size: 12px; }
+  /* the Grounds: the view fills what's left, the list on its left */
+  .scbody.vmode { height: 100%; overflow: hidden; grid-template-rows: auto auto minmax(0, 1fr); gap: 6px; padding-bottom: 8px; }
+  .scbody.vmode .schd { padding-bottom: 12px; }
+  .tview { height: 100%; min-height: 0; }
+  .tview .tvlist { left: 6px; top: 6px; bottom: 6px; right: auto; width: min(270px, 40%); max-height: none; }
+  .tview .tvlist:not(:empty) ~ .tvhint { left: calc(min(270px, 40%) + 14px); }
+  .tvhint { font-size: 11px; }
+  .tvlist header { padding: 6px 10px 6px; }
+  .tvlist header h3 { font-size: 15px; }
+  .tvcard { top: 6px; right: 6px; bottom: 6px; left: auto; width: min(300px, 44%); max-height: none; padding: 10px 12px; }
+
+  /* battles: one slim row above the field and one below; the resource bar steps aside */
+  .app:has(.battle:not([hidden])) .bar { display: none; }
+  .battle { min-height: 0; gap: 4px; }
+  .bfield { min-height: 0; }
+  .bhead { grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; padding: 2px 6px; }
+  .bparty { flex-wrap: nowrap; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+  .bh { min-width: 0; padding: 2px 6px 2px 2px; flex: none; }
+  .bh .port.sm { width: 26px; height: 26px; }
+  .bh span { font-size: 11px; }
+  .bh small { font-size: 10px; }
+  .hpb { width: 56px; }
+  .bmid b { font-size: 14px; }
+  .bmid span { font-size: 10.5px; }
+  .bdmwrap .port.sm { display: none; }
+  #bdm { font-size: 10.5px; }
+  #bdm b { font-size: 12px; }
+  .bfoot { padding: 3px 6px; gap: 3px; }
+  .bqueue { gap: 3px; }
+  .q { width: 28px; height: 28px; }
+  .qimg { width: 26px; height: 26px; }
+  .bctrl { gap: 4px 8px; }
+  .bstatus { flex-basis: 200px; font-size: 12.5px; }
+  .bbtns { gap: 4px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .bbtns .btn { padding: 4px 9px; font-size: 12px; flex: none; }
+  .blogwrap { max-height: 90px; }
+
+  /* the map's own furniture */
+  .minimap { left: max(8px, env(safe-area-inset-left, 0px)); top: 8px; bottom: auto; width: 132px; border-width: 4px; }
+  .mapwrap.hasbar .minimap { bottom: auto; }
+  .minimap.off .minitog { width: 34px; height: 34px; }
+  .abar, .mapwrap:has(.minimap.off) .abar { left: 6px; right: 6px; bottom: 6px; }
+  .acard { display: none; }
+  .aunits { max-width: 132px; max-height: 76px; }
+  .toasts { top: 6px; width: min(440px, calc(100% - 300px)); }
+  .toast { font-size: 12.5px; padding: 6px 10px; }
+  .bark { grid-template-columns: 52px minmax(0, 1fr); gap: 8px; width: min(380px, 52vw); padding: 6px 10px 6px 6px; }
+  .bkport, .bkport canvas { width: 52px; height: 52px; }
+  .bktext { font-size: 13px; }
+
+  /* dialogs: thinner frames, the full height of the phone */
+  .veil { padding: max(6px, env(safe-area-inset-top, 0px)) max(10px, env(safe-area-inset-right, 0px)) max(6px, env(safe-area-inset-bottom, 0px)) max(10px, env(safe-area-inset-left, 0px)); }
+  .dialog { max-height: calc(100vh - 12px); max-height: calc(100dvh - 12px); border-width: 12px; border-image-width: 26px; padding: 8px 14px 10px; }
+  .dialog.partysheet { max-height: calc(100dvh - 12px); }
+  .dtitle { font-size: 20px; margin-bottom: 6px; }
+  .dtitle.xl { font-size: 26px; }
+
+  /* the bottom bar: one row */
+  .bar { flex-wrap: nowrap; gap: 4px 8px; padding: 3px 150px 3px 8px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+  .bar::-webkit-scrollbar { display: none; }
+  .bar .p-town, .bar .week, .bar .vgauge .k, .bar .lvl .k, .bar .purse .pn, .bar .purse .pic { display: none; }
+  .bar .date { font-size: 12px; white-space: nowrap; }
+  .bar .date .dw { display: none; }
+  .bar .ready { font-size: 11px; }
+  .bar b { font-size: 14px; }
+  .bar .res img { width: 18px; height: 18px; }
+  .bar .gauge .track { width: 46px; }
+  .campchip .cx { display: none; }
+  .bar .navs .navbtn, .bar .sndbtn { width: 30px; height: 30px; }
+  .bar .menu .btn { padding: 4px 8px; font-size: 12px; }
+}
+@media (orientation: landscape) and (max-height: 540px) and (max-width: 720px) {
+  .bar .ready { display: none; }
+  .bstatus { display: none; }
+  .bh small { display: none; }
+  .bar .gauge .track { width: 34px; }
+  .bar { gap: 4px 6px; padding-left: 6px; padding-right: 146px; }
+}
+@media (orientation: landscape) and (max-height: 400px) {
+  .tcol { gap: 6px; padding-top: 6px; }
+  .tmenu { gap: 3px; }
+  .tbtn { padding-block: 2px; }
+  .tlogo { grid-template-columns: 38px minmax(0, 1fr); }
+  .tlogo .emblem { width: 38px; }
+  .wordmark { font-size: 26px; }
+  .tlogo .eyebrow { margin-top: 2px; }
+}

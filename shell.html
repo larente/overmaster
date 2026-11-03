@@ -1,3 +1,4 @@
+<div class="rotate" id="rotate" aria-live="polite"><svg viewBox="0 0 64 64" aria-hidden="true"><rect x="20" y="8" width="24" height="44" rx="4" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="32" cy="46" r="2" fill="currentColor"/><path d="M50 30a18 18 0 0 1-8 15" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="M38 44l4 1.5 1-4.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><b>Turn your phone sideways</b><span>Overmaster is played in landscape.</span><button class="btn" id="rotfs" type="button" hidden>Play full screen</button></div>
 <div class="intro" id="intro" hidden></div>
 <div class="front" id="front">
   <div class="fbg" id="fbg" aria-hidden="true"></div>
@@ -7,7 +8,7 @@
 </div>
 <div class="app" id="app" hidden>
   <div class="adv" id="adv">
-    <div class="mapwrap" id="mapwrap"><canvas id="map" aria-label="Adventure map. Drag to look around, scroll to zoom."></canvas><div class="toasts" id="toasts" aria-live="polite"></div><div class="tray" id="maptray" hidden aria-live="polite"></div><div class="abar" id="abar" hidden aria-label="Action bar"></div><div class="minimap" id="minimap"><canvas id="mini" aria-label="Minimap. Click or drag to look there; right-click to send selected minions."></canvas><button class="minitog" id="minitog" data-act="minimap" title="Hide the minimap" aria-pressed="true">–</button></div></div>
+    <div class="mapwrap" id="mapwrap"><canvas id="map" aria-label="Adventure map. Drag to look around, scroll to zoom."></canvas><div class="toasts" id="toasts" aria-live="polite"></div><div class="tray" id="maptray" hidden aria-live="polite"></div><div class="abar" id="abar" hidden aria-label="Action bar"></div><button class="drawbtn" id="drawbtn" data-act="drawer" aria-label="Show the panel" aria-expanded="false"><svg class="i-open" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><svg class="i-shut" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg><i class="dot" id="drawdot" hidden></i></button><div class="minimap" id="minimap"><canvas id="mini" aria-label="Minimap. Click or drag to look there; right-click to send selected minions."></canvas><button class="minitog" id="minitog" data-act="minimap" title="Hide the minimap" aria-pressed="true">–</button></div></div>
     <aside class="side" aria-label="Dungeon master's tools">
       <div class="sidebody" id="sidebody"></div>
       <button class="endday" id="endday" data-act="endday" title="End the day (E)"><img data-icon="obj-hourglass" alt=""><span>End day</span></button>
