@@ -357,7 +357,7 @@
       tstate: { talents: { r: Object.assign({}, (s.talents && s.talents.r) || {}) } },   // the DM's talents, for monsters that join mid-fight
       layout: tiles.layout || null, assault, campIds: opts.campIds || null, bell: assault && units.some(u => u.bell), heroesIn: party.length > 0, heroKillHp: 0,
       sfx: assault ? (() => { const F = talentFx(s); return { wallDmg: F.wallDmg || 0, hallDmg: F.hallDmg || 0, towers: F.towers || 0 }; })() : null,
-      duel: !!opts.duel, kneel: opts.duel ? talentFx(s).kneel : 0, vtype: s.villain.type, siege: !!opts.siege, wallLv: opts.siege ? townLv(s, 'walls') : 0, towers: opts.siege && !assault && s.town ? { arrows: ARROWS[townLv(s, 'watch')] || 0, bolts: BOLTS[townLv(s, 'ballista')] || 0, splash: SPLASH[townLv(s, 'arcane')] || 0, bell: townLv(s, 'bell') > 0 } : null,
+      duel: !!opts.duel, kneel: opts.duel ? talentFx(s).kneel : 0, vtype: s.villain.type, siege: !!opts.siege, wallLv: opts.siege ? townLv(s, 'walls') : 0, wallIntact: opts.siege ? intact : 1, towers: opts.siege && !assault && s.town ? { arrows: ARROWS[townLv(s, 'watch')] || 0, bolts: BOLTS[townLv(s, 'ballista')] || 0, splash: SPLASH[townLv(s, 'arcane')] || 0, bell: townLv(s, 'bell') > 0 } : null,
       objId: stackObj ? stackObj.id : null, dungeonId: opts.dungeonId || null, guardLair: opts.guardLair || null, raidNode: opts.raidNode || null, attack: !!opts.attack, sent: opts.attack ? stacks.map(x => [x[0], x[1]]) : null, villain: !!opts.boss, finale: !!opts.finale, stage: opts.stage || 0, terrain, boss: !!opts.boss,
       round: 1, units, tiles, traps: [], freeTraps: opts.dungeonId ? 2 : opts.stage === 1 ? 1 + (hasTech(s, 'forge') ? 2 : 0) : opts.finale ? 1 + (s.villain.up.traps || 0) : 0, boughtTraps: 0,
       hallowed: party.some(u => conscious(u) && u.ab.indexOf('hallowed') >= 0), intervention: party.some(u => u.ab.indexOf('intervention') >= 0), intervened: false,
@@ -450,7 +450,7 @@
     for (let i = 0; i < T.bolts; i++) { const f = foes().sort((a, z) => z.maxHp - a.maxHp); if (!f.length) break; applyDamage(b, f[0], Math.round(BOLT_DMG * holyMul(f[0])), null, 'ranged'); hits.push(f[0].id); }
     if (T.splash) for (const u of foes().slice(0, 4)) { applyDamage(b, u, Math.round(T.splash * Math.min(u.count, 3) * holyMul(u)), null, 'aoe'); hits.push(u.id); }
     if (T.bell) for (const u of foes().filter(x => x.undead)) { applyDamage(b, u, HOLY * Math.min(u.count, 3), null, 'aoe'); hits.push(u.id); }
-    if (hits.length) { b.events.push({ t: 'spell', name: 'Millbrook\'s towers', fx: 'arrow', targets: hits.filter((id, i, a) => a.indexOf(id) === i) }); blog(b, 'Millbrook\'s towers loose a volley at your monsters.', 'note'); }
+    if (hits.length) { b.events.push({ t: 'spell', name: 'Millbrook\'s towers', fx: 'arrow', arrows: true, targets: hits.filter((id, i, a) => a.indexOf(id) === i) }); blog(b, 'Millbrook\'s towers loose a volley at your monsters.', 'note'); }
     if (!b.units.some(u => u.side === 'dm' && u.alive)) b.over = 'win';
   }
   // 0.37: while Millbrook's bell stands, its ringing burns every undead group on the field at the start of a round
@@ -700,7 +700,7 @@
       if ((ev.down || ev.died) && b.intervention && !b.intervened && b.units.some(u => isHero(u) && conscious(u) && u.ab.indexOf('intervention') >= 0)) {
         b.intervened = true; const ids = [];
         for (const u of b.units) if (u.side === 'party' && !u.structure && conscious(u)) { u.hp = Math.min(u.maxHp, u.hp + Math.ceil(u.maxHp / 2)); ids.push(u.id); }
-        b.events.push(ev); b.events.push({ t: 'spell', name: 'Divine Intervention', fx: 'holyword', targets: ids, heal: true });
+        b.events.push(ev); b.events.push({ t: 'spell', name: 'Divine Intervention', fx: 'holyword', power: 'divine', targets: ids, heal: true });
         blog(b, 'The cleric cries out to the heavens. Divine Intervention heals every standing hero!', 'heal');
         return ev;
       }
@@ -712,7 +712,7 @@
       }
       if (d.boss && d.phyl && d.hp - dmg <= 0) {
         d.phyl = false; d.hp = Math.round(d.maxHp * 0.25); ev.dmg = dmg; ev.phylactery = true;
-        b.events.push(ev); b.events.push({ t: 'spell', name: 'Phylactery', src: d.id, fx: 'rend', targets: [d.id], heal: true });
+        b.events.push(ev); b.events.push({ t: 'spell', name: 'Phylactery', src: d.id, fx: 'rend', power: 'phylactery', targets: [d.id], heal: true });
         blog(b, `${d.name} crumbles to dust... and the dust rises again. Somewhere, a phylactery pulses. (${d.hp} HP)`, 'boss'); return ev;
       }
       // 0.37: brutes smash gates; your siege talents bite harder on the walls and the hall
@@ -851,7 +851,7 @@
     u.bonused = true;
     if (B.kind === 'heal') {
       u.sw = true; const h = Math.min(u.maxHp - u.hp, rint(1, 10) + (u.level || 1)); u.hp += h;
-      b.events.push({ t: 'spell', name: B.name, src: u.id, fx: 'heal', targets: [u.id], heal: true }); blog(b, `${u.name} catches a second wind (+${h} HP).`, 'heal');
+      b.events.push({ t: 'spell', name: B.name, src: u.id, fx: 'heal', power: 'wind', targets: [u.id], heal: true }); blog(b, `${u.name} catches a second wind (+${h} HP).`, 'heal');
     } else if (B.kind === 'guard') {
       u.guard = 2; blog(b, `${who(u)} lock${u.count > 1 ? '' : 's'} shields: +2 AC until ${u.count > 1 ? 'their' : 'its'} next turn.`, 'note');
     } else if (B.kind === 'aim') {
@@ -872,7 +872,7 @@
       else { const g = Math.min(t.maxHp - t.hp, h); t.hp += g; blog(b, `${u.name} calls out a Healing Word to ${t.name} (+${g} HP).`, 'heal'); }
       b.events.push({ t: 'spell', name: B.name, src: u.id, fx: 'heal', targets: [t.id], heal: true });
     } else if (B.kind === 'teleport') {
-      b.events.push({ t: 'move', id: u.id, path: [u.pos, a.to], fly: true, blink: true }); u.pos = a.to;
+      b.events.push({ t: 'move', id: u.id, path: [u.pos, a.to], fly: true, blink: true, style: B.key }); u.pos = a.to;
       blog(b, `${who(u)} ${B.key === 'misty' ? 'misty-steps' : 'drift'} across the field.`, 'note');
     } else if (B.kind === 'step') {
       const reach = reachable(b, u, B.range); const path = pathTo(reach, a.to);
@@ -941,7 +941,7 @@
       } else if (a.type === 'potion') {
         if (!u.potions) return 'No potions left.';
         u.potions--; const h = Math.min(u.maxHp - u.hp, Math.round(u.maxHp * 0.35)); u.hp += h;
-        b.events.push({ t: 'spell', name: 'Healing Potion', src: u.id, fx: 'heal', targets: [u.id], heal: true });
+        b.events.push({ t: 'spell', name: 'Healing Potion', src: u.id, fx: 'heal', power: 'potion', targets: [u.id], heal: true });
         blog(b, `${u.name} drinks a healing potion (+${h} HP, ${u.potions} left).`, 'heal');
       } else if (a.type === 'power' || a.type === 'rend' || a.type === 'raise') {
         const key = a.type === 'power' ? a.key : a.type === 'raise' ? 'servants' : u.P && u.P.meteor ? 'meteor' : 'rend';
@@ -972,7 +972,7 @@
     const nm = BOSS_POWERS[key].name;
     blog(b, key === 'rend' ? `${u.name} raises a skeletal hand. Soul Rend tears at the whole party!` : `${u.name} tears open the sky. A Meteor Swarm crashes down on the party!`, 'boss');
     const victims = b.units.filter(x => x.side === 'party' && conscious(x));
-    b.events.push({ t: 'spell', name: nm, src: u.id, fx: key === 'rend' ? 'rend' : 'meteor', targets: victims.map(v => v.id) });
+    b.events.push({ t: 'spell', name: nm, src: u.id, fx: key === 'rend' ? 'rend' : 'meteor', power: key, targets: victims.map(v => v.id) });
     const D = key === 'meteor' ? [u.aoe[0] + 2, u.aoe[1], u.aoe[2]] : u.aoe;
     const rec = dmgRecord(nm, D[0], D[1], D[2], b.pull ? 0.5 : 1); b.events.push(rec);
     for (const h of victims) {
@@ -987,7 +987,7 @@
     const victims = b.units.filter(v => v.side === 'party' && conscious(v) && hexDist(v.pos, center) <= radius);
     const D = key === 'breath' ? [u.aoe[0] + 4, u.aoe[1], u.aoe[2]] : [u.aoe[0] + 1, u.aoe[1], u.aoe[2]];
     blog(b, key === 'breath' ? `${u.name} breathes a torrent of fire!` : key === 'orb' ? `${u.name} hurls an orb of hellfire!` : `${u.name} calls down hellfire!`, 'boss');
-    b.events.push({ t: 'spell', name: nm, src: u.id, fx: key === 'breath' ? 'breath' : 'fireball', targets: victims.map(v => v.id), center });
+    b.events.push({ t: 'spell', name: nm, src: u.id, fx: key === 'breath' ? 'breath' : 'fireball', power: key, targets: victims.map(v => v.id), center });
     const rec = dmgRecord(nm, D[0], D[1], D[2], b.pull ? 0.5 : 1); b.events.push(rec);
     for (const v of victims) {
       const sv = heroSave(v, u.aoeDC, `${v.name} dives clear`); b.events.push(sv);
@@ -1018,7 +1018,7 @@
     if (key === 'charm') {
       const t = heroes.filter(x => !x.structure).sort((x, y) => threat(y) - threat(x))[0]; if (!t) return 'No target.';
       u.cd.charm = 3;
-      b.events.push({ t: 'spell', name: 'Charm', src: u.id, fx: 'rend', targets: [t.id] });
+      b.events.push({ t: 'spell', name: 'Charm', src: u.id, fx: 'rend', power: 'charm', targets: [t.id] });
       const sv = heroSave(t, u.aoeDC - 1, `${t.name} fights the charm`); b.events.push(sv);
       if (sv.result === 'success') blog(b, `${u.name} locks eyes with ${t.name}, who shakes it off.`, 'boss');
       else { t.charmed = true; blog(b, `${u.name} locks eyes with ${t.name}. ${t.name} lowers their weapon, charmed, and will lose their next turn.`, 'boss'); }
@@ -1027,7 +1027,7 @@
     if (key === 'servants') { raiseDead(s, b, u); return null; }
     if (key === 'timestop') {
       u.stopped = true; b.queue.unshift(u.id, u.id);
-      b.events.push({ t: 'spell', name: 'Time Stop', src: u.id, fx: 'rend', targets: [] });
+      b.events.push({ t: 'spell', name: 'Time Stop', src: u.id, fx: 'rend', power: 'timestop', targets: [] });
       blog(b, `${u.name} stops time. The heroes freeze mid-step while ${u.name} acts twice more!`, 'boss');
       return null;
     }
@@ -1042,7 +1042,7 @@
       }
       if (best === null) return 'Nowhere to go.';
       u.cd.blink = 2; u.blinked = true;
-      b.events.push({ t: 'move', id: u.id, path: [u.pos, best], fly: true, blink: true });
+      b.events.push({ t: 'move', id: u.id, path: [u.pos, best], fly: true, blink: true, style: 'blink' });
       u.pos = best; blog(b, `${u.name} blinks across the battlefield.`, 'boss');
       return 'free';
     }
@@ -1058,7 +1058,7 @@
       const near = b.units.filter(v => v.side === 'party' && conscious(v) && hexDist(v.pos, u.pos) === 1);
       if (near.length) {
         const rec = dmgRecord('Fire Aura', Math.max(1, Math.round(u.aoe[0] / 3)), 10, Math.round(u.aoe[2] / 4), b.pull ? 0.5 : 1); b.events.push(rec);
-        b.events.push({ t: 'spell', name: 'Fire Aura', src: u.id, fx: 'breath', targets: near.map(v => v.id) });
+        b.events.push({ t: 'spell', name: 'Fire Aura', src: u.id, fx: 'breath', power: 'aura', targets: near.map(v => v.id) });
         for (const v of near) { const ev = applyDamage(b, v, rec.dmg.total, u, 'aoe'); blog(b, `${u.name}'s fire aura burns ${v.name} for ${ev.dmg}.`, 'hurt'); }
       }
     }
@@ -1138,7 +1138,7 @@
       if (ev.targets.length >= 2) b.aoeBig = true;
     } else if (sp === 'arrow') {
       const t = b.units.find(x => x.id === target);
-      const darts = 3 + Math.floor((L - 1) / 2);
+      const darts = 3 + Math.floor((L - 1) / 2); ev.n = darts;
       const r = dmgRecord(`${u.name}: ${darts} Magic Missiles`, darts, 4, darts + emp); b.events.push(r);
       blog(b, `${u.name} fires ${darts} Magic Missiles at ${whom(t)}.`, 'spell'); hitStack(t, r.dmg.total, false);
     } else if (sp === 'lightning') {
@@ -1157,14 +1157,14 @@
       blog(b, `${u.name} fires a green ray of Disintegration at ${whom(t)}!`, 'spell'); hitStack(t, r.dmg.total, true);
     }
     // Time Stop: once per battle the wizard acts again straight away
-    if (hasA('timestop') && !u.timestop && conscious(u) && foesOf(b, u).length) { u.timestop = true; b.queue.unshift(u.id); blog(b, `${u.name} stops time and acts again!`, 'spell'); }
+    if (hasA('timestop') && !u.timestop && conscious(u) && foesOf(b, u).length) { u.timestop = true; b.queue.unshift(u.id); b.events.push({ t: 'spell', name: 'Time Stop', src: u.id, fx: 'rend', power: 'timestop', targets: [] }); blog(b, `${u.name} stops time and acts again!`, 'spell'); }
   }
   // Spirit Guardians: radiant spirits sear enemies next to the cleric after each of her turns
   function spiritGuardians(b, u) {
     if (!conscious(u) || u.ab.indexOf('spirits') < 0) return;
     const near = foesOf(b, u).filter(f => hexDist(f.pos, u.pos) === 1); if (!near.length) return;
     const r = dmgRecord(`${u.name}: Spirit Guardians`, 3, 8, 0); b.events.push(r);
-    b.events.push({ t: 'spell', name: 'Spirit Guardians', src: u.id, fx: 'holyword', targets: near.map(f => f.id) });
+    b.events.push({ t: 'spell', name: 'Spirit Guardians', src: u.id, fx: 'holyword', power: 'spirits', targets: near.map(f => f.id) });
     for (const f of near) {
       const sv = saveRoll(f.name, f.sv || 0, spellDC(u), `The ${f.name} resist the spirits`); b.events.push(sv);
       const e = applyDamage(b, f, sv.result === 'success' ? Math.floor(r.dmg.total / 2) : r.dmg.total, u, 'spell');
@@ -1337,7 +1337,7 @@
     const mult = f => Math.max(0.1, (1 - (fx.towers || 0)) * holy(f));
     if (u.kind === 'arcane') {
       const hit = b.units.filter(f => f.side === 'dm' && conscious(f) && hexDist(f.pos, t.pos) <= 1).slice(0, 4);
-      b.events.push({ t: 'spell', name: 'Arcane fire', src: u.id, fx: 'fireball', targets: hit.map(f => f.id), center: t.pos });
+      b.events.push({ t: 'spell', name: 'Arcane fire', src: u.id, fx: 'fireball', power: 'arcane', targets: hit.map(f => f.id), center: t.pos });
       blog(b, `The Arcane Tower rains fire on your monsters.`, 'spell');
       for (const f of hit) applyDamage(b, f, Math.round(u.splash * Math.min(f.count, 3) * mult(f)), u, 'aoe');
       return;
@@ -1436,7 +1436,7 @@
     if (key === 'lucky') {
       const f = b.units.find(x => x.side === 'party' && x.alive && x.down);
       f.down = false; f.stable = false; f.hp = Math.max(1, Math.round(f.maxHp / 4)); f.saves = 0; f.fails = 0;
-      b.events.push({ t: 'spell', name: 'Lucky Break', fx: 'heal', targets: [f.id], heal: true });
+      b.events.push({ t: 'spell', name: 'Lucky Break', fx: 'heal', power: 'divine', targets: [f.id], heal: true });
       blog(b, `You fudge a death save. ${f.name} gasps and gets back up.`, 'dm');
     }
     if (key === 'reinforce') {
@@ -1452,7 +1452,7 @@
     if (key === 'deus') {
       b.pendingTPK = false;
       for (const x of b.units) if (x.side === 'party' && x.alive && x.down) { x.down = false; x.stable = false; x.hp = Math.max(1, Math.round(x.maxHp / 4)); }
-      b.events.push({ t: 'spell', name: 'Deus ex Machina', fx: 'heal', targets: b.units.filter(x => x.side === 'party' && x.alive).map(x => x.id), heal: true });
+      b.events.push({ t: 'spell', name: 'Deus ex Machina', fx: 'heal', power: 'divine', targets: b.units.filter(x => x.side === 'party' && x.alive).map(x => x.id), heal: true });
       if (b.finale) { blog(b, 'A spectral knight steps out of the shadows and drags the heroes to their feet. "Finish this," it says, and fades.', 'dm'); nextTurn(b); }
       else { b.over = 'saved'; blog(b, 'A mysterious ranger bursts in, drives the monsters off, and vanishes. The players exchange looks.', 'dm'); }
     }

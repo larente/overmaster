@@ -251,7 +251,7 @@ const World3D = (() => {
       sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWPos;\nvarying vec3 vWNorm;')
         .replace('#include <project_vertex>', '#include <project_vertex>\nvWPos = (modelMatrix * vec4(transformed, 1.0)).xyz;\nvWNorm = normalize(mat3(modelMatrix) * objectNormal);');
       let head = '#include <common>\nvarying vec3 vWPos;\nvarying vec3 vWNorm;\nuniform sampler2D uDetail;\nuniform sampler2D uPat;\nuniform sampler2D uSplat;\nuniform vec4 uSplatBox;\nuniform float uSnowLine;\n';
-      if (opts.map) head += 'uniform sampler2D uFog;\nuniform sampler2D uOverlay;\nuniform vec2 uMapSize;\nuniform vec4 uSight;\nuniform float uTime;\n';
+      if (opts.map) head += 'uniform sampler2D uFog;\nuniform sampler2D uOverlay;\nuniform vec2 uMapSize;\nuniform vec4 uSight;\nuniform float uTime;\nuniform float uBlock;\n';
       sh.fragmentShader = sh.fragmentShader.replace('#include <common>', head)
         .replace('#include <map_fragment>', `#include <map_fragment>
           float dt = texture2D(uDetail, vWPos.xz * 0.37).r * 0.55 + texture2D(uDetail, vWPos.xz * 1.6).r * 0.45;
@@ -277,14 +277,24 @@ const World3D = (() => {
           diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.8, 0.85, 0.92) * (0.9 + 0.16 * pp.g), snowK);`)
         .replace('#include <dithering_fragment>', (opts.map ? `
           vec2 tuv = vWPos.xz / uMapSize;
-          vec2 fv = texture2D(uFog, tuv).rg; float ex = fv.r;
+          vec4 fv4 = texture2D(uFog, tuv); vec2 fv = fv4.rg; float ex = fv.r; float fr = max(fv4.a, ex);
           float outside = max(max(-vWPos.x, vWPos.x - uMapSize.x), max(-vWPos.z, vWPos.z - uMapSize.y));
           vec3 cc = gl_FragColor.rgb;
           float lum = dot(cc, vec3(0.3, 0.59, 0.11));
           float cloud = texture2D(uDetail, vWPos.xz * 0.12 + vec2(uTime * 0.004, 0.0)).r;
           vec3 fogc = mix(vec3(lum), cc, 0.3) * (0.36 + 0.12 * cloud) + vec3(0.015, 0.02, 0.045);
           fogc = mix(vec3(0.012, 0.012, 0.022) + vec3(0.02, 0.02, 0.03) * cloud, fogc, fv.g);
-          cc = mix(fogc, cc, ex);
+          // 0.41: far sight: the land a ring beyond what you see clearly, a little dimmer and greyer
+          vec3 farc = mix(vec3(lum), cc, 0.72) * 0.8 + vec3(0.0, 0.006, 0.02);
+          cc = mix(fogc, mix(farc, cc, ex), fr);
+          // 0.41: ground nobody can walk on (mountains): a dark rim where it rises, and red hatching while something that walks is picked
+          float bl = fv4.b;
+          float rim = (1.0 - smoothstep(0.0, 0.1, abs(bl - 0.5))) * fv.g;
+          float inB = smoothstep(0.5, 0.62, bl) * fv.g;
+          float hatch = step(0.55, fract((vWPos.x + vWPos.z) * 2.2));
+          cc = mix(cc, cc * 0.4, rim * 0.55 * (1.0 - uBlock));
+          cc = mix(cc, vec3(0.7, 0.14, 0.08), uBlock * inB * (0.14 + 0.24 * hatch));
+          cc = mix(cc, vec3(1.0, 0.32, 0.18), uBlock * rim * 0.85);
           if (outside <= 0.0) {
             vec4 ov = texture2D(uOverlay, tuv);
             float oa = ov.a * 255.0; float border = step(127.5, oa); float fill = mod(oa, 128.0) / 127.0;
@@ -366,8 +376,9 @@ const World3D = (() => {
       const tx = x - EX, ty = y - EX; const t = tclamp(tx, ty); const i = y * W + x;
       const outside = tx < 0 || ty < 0 || tx >= MW || ty >= MH;
       const md = t === 'mount' ? Math.min(mDepth[i], 4) : 0;
-      tileH[i] = t === 'mount' ? 0.25 + 0.55 * (md - 1) + hash2(tx, ty, seed) * 0.35 * Math.min(1, md - 1) + (outside ? 0.2 : 0) : TH[t] + (t === 'water' && outside ? -0.15 : 0);
-      mountI[i] = t === 'mount' ? Math.min(1, 0.35 + 0.3 * (md - 1)) : 0; roadI[i] = roadAt(tx, ty);
+      // 0.41: every mountain tile stands well clear of the ground (its foot used to be a foothill you couldn't tell from open land)
+      tileH[i] = t === 'mount' ? 1.0 + 0.5 * (md - 1) + hash2(tx, ty, seed) * 0.35 * Math.min(1, md - 1) + (outside ? 0.2 : 0) : TH[t] + (t === 'water' && outside ? -0.15 : 0);
+      mountI[i] = t === 'mount' ? Math.min(1, 0.75 + 0.25 * (md - 1)) : 0; roadI[i] = roadAt(tx, ty);
     }
     const sampleGrid = (A, wx, wz) => {
       const fx = wx + EX - 0.5, fz = wz + EX - 0.5; const x0 = Math.floor(fx), z0 = Math.floor(fz);
@@ -419,8 +430,9 @@ const World3D = (() => {
     // uniforms shared by the ground and water
     const fogData = new Uint8Array(MW * MH * 4); const fogTex = new T.DataTexture(fogData, MW, MH, T.RGBAFormat); fogTex.magFilter = T.LinearFilter; fogTex.minFilter = T.LinearFilter; fogTex.needsUpdate = true;
     const ovData = new Uint8Array(MW * MH * 4); const ovTex = new T.DataTexture(ovData, MW, MH, T.RGBAFormat); ovTex.magFilter = T.NearestFilter; ovTex.minFilter = T.NearestFilter; ovTex.needsUpdate = true;
-    const U = { uDetail: { value: DETAIL }, uFog: { value: fogTex }, uOverlay: { value: ovTex }, uMapSize: { value: new T.Vector2(MW, MH) }, uSight: { value: new T.Vector4(0, 0, 0, 0) }, uTime: { value: 0 }, uSnowLine: { value: 2.55 } };
+    const U = { uDetail: { value: DETAIL }, uFog: { value: fogTex }, uOverlay: { value: ovTex }, uMapSize: { value: new T.Vector2(MW, MH) }, uSight: { value: new T.Vector4(0, 0, 0, 0) }, uTime: { value: 0 }, uSnowLine: { value: 2.55 }, uBlock: { value: 0 } };
     MAP.U = U; MAP.fogData = fogData; MAP.fogTex = fogTex; MAP.ovData = ovData; MAP.ovTex = ovTex; MAP.fogKey = -1;
+    for (let i = 0; i < MW * MH; i++) fogData[i * 4 + 2] = Mp.T[i] === 'mount' ? 255 : 0;   // 0.41: where nobody can walk
 
     // ---- ground texture ----
     const groundTex = paintGround(S, Mp, W, H, tclamp, roadAt, hAt, seed);
@@ -627,11 +639,12 @@ const World3D = (() => {
           #include <encodings_fragment>
           #include <fog_fragment>
           vec2 tuv = vWPos.xz / uMapSize;
-          vec2 fv = texture2D(uFog, tuv).rg; float ex = fv.r;
+          vec4 fv4 = texture2D(uFog, tuv); vec2 fv = fv4.rg; float ex = fv.r; float fr = max(fv4.a, ex);
           float outside = max(max(-vWPos.x, vWPos.x - uMapSize.x), max(-vWPos.z, vWPos.z - uMapSize.y));
           vec3 cc = gl_FragColor.rgb;
           float lum = dot(cc, vec3(0.3, 0.59, 0.11));
-          cc = mix(mix(mix(vec3(0.012, 0.012, 0.022), vec3(lum), fv.g), cc, 0.3 * fv.g) * 0.4 + vec3(0.015, 0.02, 0.045) * fv.g, cc, ex);
+          vec3 farc = mix(vec3(lum), cc, 0.72) * 0.8 + vec3(0.0, 0.006, 0.02);
+          cc = mix(mix(mix(vec3(0.012, 0.012, 0.022), vec3(lum), fv.g), cc, 0.3 * fv.g) * 0.4 + vec3(0.015, 0.02, 0.045) * fv.g, mix(farc, cc, ex), fr);
           cc *= 1.0 - smoothstep(0.0, 7.0, outside) * 0.8;
           gl_FragColor.rgb = cc * uDim;
         }`,
@@ -947,7 +960,9 @@ const World3D = (() => {
         if (i !== ud.dir && angDiff(a, ud.dir * step) < step / 2 + 0.12) i = ud.dir; // a little stickiness, so it doesn't flicker
         // 0.35: walking or building: this frame of that animation, if there is one
         let rec = ud.rec, k = ud.key, f; const ar = ud.anim ? animRec(ud.key, ud.anim) : null;
-        if (ar) { rec = ar; k = ud.key + '~' + ud.anim; f = ar.once ? Math.min(ar.frames - 1, Math.max(0, ud.frame | 0)) : (((ud.frame | 0) % ar.frames) + ar.frames) % ar.frames; }
+        if (ar) { rec = ar; k = ud.key + '~' + ud.anim; const n = ar.frames, fr = ud.frame | 0;
+          // 0.41: an idle plays forward, then back (the generated idles don't end where they start, so a plain loop jumps)
+          if (ar.once) f = Math.min(n - 1, Math.max(0, fr)); else if (ud.anim === 'idle' && n > 2) { const c = 2 * n - 2, m = ((fr % c) + c) % c; f = m < n ? m : c - m; } else f = ((fr % n) + n) % n; }
         // 0.38: an animation drawn facing east only: east-ish plays it as drawn, west-ish mirrored, straight on by the side it leans to
         const side = ar && ar.dirs === 1; const flip = side ? (i >= 5 ? -1 : i >= 1 && i <= 3 ? 1 : d < 0 ? -1 : 1) : 1;
         const gk = k + '#' + (side ? 0 : i) + '#' + (f === undefined ? '' : f);
@@ -1297,13 +1312,14 @@ const World3D = (() => {
     MAP.scene.fog.near = C.d * 1.25; MAP.scene.fog.far = C.d * 3.6;
     // fog of war texture
     const FG = hooks.fog ? hooks.fog() : null;
-    if (FG) { if (FG !== MAP.fogKey) { MAP.fogKey = FG; const d = MAP.fogData; for (let i = 0; i < FG.vis.length; i++) { d[i * 4] = FG.vis[i] ? 255 : 0; d[i * 4 + 1] = FG.seen[i] ? 255 : 0; d[i * 4 + 3] = 255; } MAP.fogTex.needsUpdate = true; } }
-    else { let ec = 0; for (let i = 0; i < S.explored.length; i++) ec += S.explored[i]; if (ec !== MAP.fogKey) { MAP.fogKey = ec; const d = MAP.fogData; for (let i = 0; i < S.explored.length; i++) { const v = S.explored[i] ? 255 : 0; d[i * 4] = v; d[i * 4 + 1] = 255; d[i * 4 + 3] = 255; } MAP.fogTex.needsUpdate = true; } }
+    if (FG) { if (FG !== MAP.fogKey) { MAP.fogKey = FG; const d = MAP.fogData; const sc = FG.scout || FG.seen, fr = FG.far || FG.vis; for (let i = 0; i < FG.vis.length; i++) { d[i * 4] = FG.vis[i] ? 255 : 0; d[i * 4 + 1] = sc[i] ? 255 : 0; d[i * 4 + 3] = fr[i] ? 255 : 0; } MAP.fogTex.needsUpdate = true; } }
+    else { let ec = 0; for (let i = 0; i < S.explored.length; i++) ec += S.explored[i]; if (ec !== MAP.fogKey) { MAP.fogKey = ec; const d = MAP.fogData; for (let i = 0; i < S.explored.length; i++) { const v = S.explored[i] ? 255 : 0; d[i * 4] = v; d[i * 4 + 1] = 255; d[i * 4 + 3] = v; } MAP.fogTex.needsUpdate = true; } }
     // overlay texture
     const od = MAP.ovData; od.fill(0);
     if (spec.tiles) for (const [i, c] of spec.tiles) { const o = i * 4; od[o] = c[0]; od[o + 1] = c[1]; od[o + 2] = c[2]; od[o + 3] = Math.round(clamp(c[3], 0, 1) * 127) + (c[4] ? 128 : 0); }
     MAP.ovTex.needsUpdate = true;
     if (spec.sight) U.uSight.value.set(spec.sight.x, spec.sight.z, spec.sight.r, 1); else U.uSight.value.w = 0;
+    U.uBlock.value += ((spec.block ? 1 : 0) - U.uBlock.value) * Math.min(1, dt * 8);
     // sites
     const town = MAP.sites.town; if (town && town.userData.mill) town.userData.mill.rotation.z = t * 0.8;
     const tw = MAP.sites.tower; if (tw && tw.userData.circle) { tw.userData.circle.rotation.z = t * 0.15; tw.userData.circle.material.opacity = 0.35 + 0.15 * Math.sin(t * 1.3); }
@@ -1355,7 +1371,7 @@ const World3D = (() => {
     if (!MAP.nodes) MAP.nodes = new Map(); if (!MAP.mins) MAP.mins = new Map();
     for (const n of S.nodes || []) {
     // 0.30: mines and camps stand smaller than the Dark Tower (they were 1.2)
-      const look = hooks.nodeLook ? hooks.nodeLook(n) : 'node-' + n.kind; const nseen = hooks.seeTile ? hooks.seeTile(n.x, n.y) : true;
+      const look = hooks.nodeLook ? hooks.nodeLook(n) : 'node-' + n.kind; const nseen = hooks.seeNode ? hooks.seeNode(n.x, n.y) : hooks.seeTile ? hooks.seeTile(n.x, n.y) : true;
       let E = MAP.nodes.get(n.id); if (!E || E.look !== look) { if (E) MAP.scene.remove(E.grp); const grp = prop(look); grp.scale.setScalar(0.72); MAP.scene.add(grp); E = { grp, look, fx: look.indexOf('node-') === 0 ? nodeFx(n.kind, grp) : null }; MAP.nodes.set(n.id, E); }
       const wx = n.x + 0.5, wz = n.y + 0.5; E.grp.position.set(wx, hAt(wx, wz), wz); E.grp.visible = nseen; if (!nseen) continue;
       if (E.fx) { const u = E.grp.userData; if (u.quad) fxOnQuad(E.fx.fx, u.quad); runNodeFx(E.fx, t, hooks.nodeState ? hooks.nodeState(n) : 'work', n.x * 1.7 + n.y * 0.9); }
@@ -1667,13 +1683,14 @@ const World3D = (() => {
   function enterBattle(S, BF) {
     const b = S.battle; BAT.bf = BF;
     disposeScene(BAT.scene);
-    for (const L of BAT.labels.values()) L.el.remove(); BAT.labels = new Map(); BAT.units = new Map(); BAT.fx = new Map(); BAT.overlayKey = '';
+    for (const L of BAT.labels.values()) L.el.remove(); for (const E of BAT.fx.values()) if (E.obj) fxFree(E.obj); BAT.labels = new Map(); BAT.units = new Map(); BAT.fx = new Map(); BAT.overlayKey = '';
     const scene = new T.Scene(); BAT.scene = scene; scene.background = new T.Color(0x10141a);
     const terr = BTC[b.terrain] ? b.terrain : 'grass';
     scene.fog = new T.Fog(0x2c3440, 34, 70);
     const sunDir = new T.Vector3(-0.45, 1.0, 0.5).normalize(); BAT.lights = addLights(scene, sunDir); BAT.lights.dir = sunDir;
     followShadow(BAT.lights, FW / 2, FH / 2, 20);
     BAT.camera = new T.PerspectiveCamera(34, 1.6, 0.1, 200);
+    BAT.fxLight = new T.PointLight(0xffffff, 0, 14, 2); BAT.fxLight.position.set(FW / 2, 2, FH / 2); scene.add(BAT.fxLight);   // 0.41: the spells' light, always there so adding it never recompiles a shader
     const seed = (S.seed + S.week * 31 + S.day * 7) % 100000;
     const R = M.rng(seed);
     // ground: flat field in a shallow bowl of hills
@@ -1740,7 +1757,7 @@ const World3D = (() => {
     }
     // obstacles on the field
     BAT.waterMat = [new T.MeshStandardMaterial({ color: lin('#2f6a86'), roughness: 0.08, metalness: 0.25, transparent: true, opacity: 0.86, emissive: new T.Color(lin('#0e3446')) }), new T.MeshStandardMaterial({ color: lin('#6fa2b2'), roughness: 0.1, metalness: 0.15, transparent: true, opacity: 0.55 })];
-    BAT.stoneMat = new T.MeshStandardMaterial({ color: lin(terr === 'snow' ? '#9a988f' : terr === 'waste' ? '#544a46' : '#767062'), roughness: 0.95 });
+    BAT.stoneMat = new T.MeshStandardMaterial({ map: stoneTex(), color: new T.Color(terr === 'snow' ? '#e8e6e0' : terr === 'waste' ? '#8a7e78' : '#c4bcae'), roughness: 0.95 });   // 0.41: masonry, not plain boxes
     BAT.mossMat = new T.MeshStandardMaterial({ color: lin(terr === 'snow' ? '#dfe6ea' : terr === 'waste' ? '#3e322e' : '#4e5e32'), roughness: 1 });
     BAT.darkMat = new T.MeshStandardMaterial({ color: lin('#1a1612'), roughness: 1 }); BAT.sackMat = new T.MeshStandardMaterial({ color: lin('#b49a6a'), roughness: 1 });
     BAT.hillMat = new T.MeshStandardMaterial({ color: lin((BTC[terr] || BTC.grass)[1]), roughness: 0.95, flatShading: true });
@@ -1751,8 +1768,8 @@ const World3D = (() => {
       else if (t === 'tree') { const kinds = terr === 'snow' ? ['snowpine'] : terr === 'swamp' || terr === 'waste' ? ['dead'] : ['broad', 'pine']; for (let i = 0; i < 2; i++) { const m = new T.Mesh(M.treeVariants(kinds[Math.floor(r() * kinds.length)])[Math.floor(r() * 3)], tmat); m.scale.setScalar(2.2 + r() * 0.8); m.position.set((r() - 0.5) * 0.9, 0, (r() - 0.5) * 0.9); m.rotation.y = r() * 6; m.castShadow = m.receiveShadow = true; grp.add(m); } }
       else if (t === 'brush') { for (let i = 0; i < 6; i++) { const m = new T.Mesh(M.treeVariants('bush')[Math.floor(r() * 3)], tmat); m.scale.setScalar(2.1 + r() * 0.9); const a = r() * 6.3, rr = r() * 0.6; m.position.set(Math.cos(a) * rr, 0, Math.sin(a) * rr); m.castShadow = m.receiveShadow = true; grp.add(m); } }
       else if (t === 'wall') {
-        // 0.30: Millbrook's wall: sharpened logs for a palisade, grey blocks with merlons for stone
-        if ((b.wallLv || 1) <= 1) {
+        // 0.30: Millbrook's wall: sharpened logs for a palisade, grey blocks with merlons for stone (0.41: drawn as one wall, buildSiegeWall)
+        if (false) {
           const wood = new T.MeshStandardMaterial({ color: lin('#7a5636'), roughness: 0.92 }), tip = new T.MeshStandardMaterial({ color: lin('#a07a50'), roughness: 0.9 });
           for (let i = 0; i < 6; i++) {
             const h = 1.35 + r() * 0.3; const zz = -0.95 + i * 0.38 + (r() - 0.5) * 0.06;
@@ -1763,8 +1780,8 @@ const World3D = (() => {
         } else {
           const stone = new T.MeshStandardMaterial({ color: lin(b.wallLv >= 3 ? '#9a9488' : '#8a8478'), roughness: 0.95 });
           const h = b.wallLv >= 3 ? 1.9 : 1.55;
-          const wall = new T.Mesh(new T.BoxGeometry(0.75, h, 2.05), stone); wall.position.y = h / 2; wall.castShadow = wall.receiveShadow = true; grp.add(wall);
-          for (let i = 0; i < 4; i++) { const m = new T.Mesh(new T.BoxGeometry(0.8, 0.3, 0.3), stone); m.position.set(0, h + 0.15, -0.8 + i * 0.53); m.castShadow = true; grp.add(m); }
+          void h; void stone;
+
         }
       }
       else if (t === 'water' || t === 'ford' || t === 'bridge') {
@@ -1789,7 +1806,10 @@ const World3D = (() => {
           if (r() < 0.6) { const win = new T.Mesh(new T.BoxGeometry(0.22, 0.32, 0.36), BAT.darkMat); win.position.set((r() - 0.5) * w * 0.4, h * 0.55, 0); wall.add(win); }
         }
         for (let i = 0; i < 5; i++) { const s = 0.16 + r() * 0.2; const bl = new T.Mesh(new T.BoxGeometry(s, s * 0.7, s * 1.2), r() < 0.3 ? moss : stone); bl.position.set((r() - 0.5) * 1.4, s * 0.3, (r() - 0.5) * 1.4); bl.rotation.set(r() * 0.4, r() * 3, r() * 0.4); bl.castShadow = true; grp.add(bl); }
-      }
+              // 0.41: a burned-out cottage: charred roof beams fallen across it, and soot on the ground
+        for (let i = 0; i < 3; i++) { const bm = new T.Mesh(new T.BoxGeometry(1.3 + r() * 0.5, 0.12, 0.14), BAT.darkMat); bm.position.set((r() - 0.5) * 0.6, 0.35 + r() * 0.55, (r() - 0.5) * 0.6); bm.rotation.set((r() - 0.5) * 0.3, r() * 3.1, (r() - 0.5) * 0.9); bm.castShadow = true; grp.add(bm); }
+        { const soot = new T.Mesh(HEXG(0.95), new T.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28, depthWrite: false })); soot.rotation.x = -Math.PI / 2; soot.position.y = 0.02; grp.add(soot); }
+}
       else if (t === 'barricade') {
         // a low wall: dry stone on hard ground, a split-rail fence and a few sacks on soft
         if (terr === 'snow' || terr === 'waste' || terr === 'dirt' || terr === 'mount' || r() < 0.4) {
@@ -1817,6 +1837,7 @@ const World3D = (() => {
     }
     // trap spikes (visible to the DM)
     BAT.traps = new Map(); BAT.rubble = new Map();
+    BAT.burns = []; BAT.dust = []; BAT.wall = null; buildSiegeWall(b);   // 0.41
     // units
     BAT.cur = M.circleMesh('#ffd36a', 1.9, 0.95); BAT.cur.position.y = 0.05; scene.add(BAT.cur);
     fitBattleCamera();
@@ -1828,7 +1849,7 @@ const World3D = (() => {
     const dH = (FH / 2 + 1.6) / Math.tan(vf) * Math.sin(pitch) * 0.92;
     const d = Math.max(dW, dH) * 0.98;
     cam.position.set(FW / 2, d * Math.sin(pitch), FH / 2 + 1.2 + d * Math.cos(pitch));
-    cam.lookAt(FW / 2, 0, FH / 2 + 0.6); cam.updateMatrixWorld();
+    cam.lookAt(FW / 2, 0, FH / 2 + 0.6); cam.updateMatrixWorld(); BAT.camBase = cam.position.clone(); BAT.shaking = false;
     // keep the fog behind the field however far a tall, narrow screen pushes the camera back
     if (BAT.scene && BAT.scene.fog) { BAT.scene.fog.near = Math.max(34, d * 1.15); BAT.scene.fog.far = Math.max(70, d * 2.6); }
     BAT.scale = clamp(18 / d, 0.75, 1.2);
@@ -1882,7 +1903,8 @@ const World3D = (() => {
         const fl = v.flash && now - v.flash < 260 ? 1 - (now - v.flash) / 260 : 0; if (ud.mat.emissive) ud.mat.emissive.setRGB(fl * 0.7, fl * 0.15, fl * 0.05); else if (ud.mat.color) ud.mat.color.setRGB(1, 1 - fl * 0.5, 1 - fl * 0.6);
         ud.fig.position.y = v.alive ? 0 : -(1 - fade) * 1.2; ud.fig.rotation.z = v.alive ? 0 : (1 - fade) * 0.25;
         if (!v.alive && !BAT.rubble.has(u.id)) { const r = rubble(); r.position.set(w.x, 0, w.z); BAT.scene.add(r); BAT.rubble.set(u.id, r); }
-        ud.ring.material.opacity = 0.25 * fade;
+        ud.ring.material.opacity = 0.25 * fade; structBurn(u, v, E);
+        if (ud.sprite && ud.mat.color && v.alive) { const f = Math.max(0, v.hp / u.maxHp); const k = 0.62 + 0.38 * Math.min(1, f / 0.6); ud.mat.color.setRGB(k, k * 0.97 * (1 - fl * 0.5), k * 0.94 * (1 - fl * 0.6)); }   // 0.41: it greys as it burns (and still flashes when hit)
         if (v.alive) { const f = Math.max(0, v.hp / u.maxHp); const L = label(BAT.labels, 'u' + u.id, 'b-hp b-struct', `<span class="sn">${esc(u.name)}</span>` + hpBar(f, f < 0.3 ? 'l' : f < 0.6 ? 'w' : 'g')); L.pos.set(w.x, ud.h + 0.2, w.z); }
         continue;
       }
@@ -1901,8 +1923,9 @@ const World3D = (() => {
       if (v.face) { const tw = hexW(v.face); want = Math.atan2(tw.x - w.x, tw.z - w.z); }
       ud.rot = lerpAng(ud.rot, want, 1 - Math.exp(-dt * 8)); ud.fig.rotation.y = ud.rot;
       ud.fig.rotation.z = v.down ? Math.PI / 2 * 0.95 : 0; if (v.down) ud.fig.position.y = 0.12;
-      const fade = v.alive ? (v.down ? 0.6 : 1) : Math.max(0, v.fade);
-      ud.mat.opacity = fade; ud.mat.depthWrite = fade > 0.95;
+      let fade = v.alive ? (v.down ? 0.6 : 1) : Math.max(0, v.fade);
+      if (v.ghost) fade = 0; else if (v.born) fade *= clamp((now - v.born) / 450, 0, 1);   // 0.41: gone mid-teleport; climbing out of a portal
+      ud.mat.opacity = fade; ud.mat.depthWrite = fade > 0.95; ud.fig.visible = fade > 0.01;
       const fl = v.flash && now - v.flash < 260 ? 1 - (now - v.flash) / 260 : 0;
       if (ud.mat.emissive) ud.mat.emissive.setRGB(fl * 0.9, fl * 0.12, fl * 0.05);
       else { const b0 = ud.fig.userData.base; ud.mat.color.setRGB(b0.r * (1 + fl * 0.6), b0.g * (1 - fl * 0.6), b0.b * (1 - fl * 0.65)); }
@@ -1911,7 +1934,7 @@ const World3D = (() => {
       ud.ring.material.color.set(u.defending && v.alive && !v.down ? '#7ab0ff' : u.side === 'party' ? '#ffcf5a' : u.boss ? '#b25aff' : '#ff5a3a');
       ud.ring.rotation.z = t * 0.2;
       // labels: counts and health
-      if (v.alive) {
+      if (v.alive && !v.ghost) {
         let html, cls;
         if ((u.side === 'dm' && !u.boss) || u.militia) { html = `<b>${v.count}</b>`; cls = 'b-count'; if (u.count === 1 && u.maxHp >= 60) html += hpBar(v.hp / u.maxHp, 'm'); }
         else { const f = Math.max(0, v.hp / u.maxHp); html = hpBar(f, u.boss ? 'b' : f < 0.3 ? 'l' : f < 0.6 ? 'w' : 'g') + (v.down ? '<span class="dn">DOWN</span>' : ''); cls = 'b-hp'; }
@@ -1929,6 +1952,7 @@ const World3D = (() => {
       if (!E || E.key !== key) { if (E) BAT.scene.remove(E.g); const g = spikes(tr.sprung); const w = hexW(tr.k); g.position.set(w.x, 0, w.z); BAT.scene.add(g); E = { g, key }; BAT.traps.set(tr.k, E); }
     }
     for (const [k, E] of BAT.traps) if (!b.traps.some(tr => tr.k === k)) { BAT.scene.remove(E.g); BAT.traps.delete(k); }
+    siegeWallTick(b, t);   // 0.41
     // overlay canvas
     drawOverlay(hooks.bspec());
     // effects and floating numbers
@@ -1981,17 +2005,28 @@ const World3D = (() => {
   }
   // map 2D fx records (in virtual pixel space) onto 3D effects
   function updateFx(list, now) {
-    const live = new Set();
+    const live = new Set(); let L = null, shake = 0;
     for (const f of list) {
       if (now < f.t0) continue; const tt = (now - f.t0) / f.dur; if (tt > 1) continue;
       live.add(f);
       let E = BAT.fx.get(f);
       if (!E) { E = makeFx(f); BAT.fx.set(f, E); if (E.obj) BAT.scene.add(E.obj); }
       E.update(tt);
+      if (E.light) { const l = E.light(tt); if (l && l[2] > 0.01 && (!L || l[2] > L[2])) L = l; }
+      if (E.shake) shake += E.shake(tt);
     }
-    for (const [f, E] of BAT.fx) if (!live.has(f)) { if (E.obj) BAT.scene.remove(E.obj); BAT.fx.delete(f); }
+    for (const [f, E] of BAT.fx) if (!live.has(f)) { if (E.obj) { BAT.scene.remove(E.obj); fxFree(E.obj); } BAT.fx.delete(f); }
+    // 0.41: the brightest spell lights the field around it, and the big ones shake the camera a little
+    if (BAT.fxLight) { if (L) { BAT.fxLight.position.copy(L[0]); BAT.fxLight.color.set(L[1]); BAT.fxLight.intensity = Math.min(9, L[2]); } else BAT.fxLight.intensity = 0; }
+    const cam = BAT.camera;
+    if (cam && BAT.camBase) {
+      if (shake > 0.002 && !fxReduced) { const k = Math.min(shake, 0.35); cam.position.set(BAT.camBase.x + (Math.random() - 0.5) * k, BAT.camBase.y + (Math.random() - 0.5) * k, BAT.camBase.z + (Math.random() - 0.5) * k * 0.5); BAT.shaking = true; }
+      else if (BAT.shaking) { cam.position.copy(BAT.camBase); BAT.shaking = false; }
+    }
   }
   function makeFx(f) {
+    if (SFX[f.kind]) return SFX[f.kind](f);
+    if (f.x == null) return { obj: null, update: () => {} };
     const a = pxToW(f.x, f.y); const R = BAT.bf.R;
     const col = f.color || '#ffe9a8';
     if (f.kind === 'shot') {
@@ -2031,12 +2066,518 @@ const World3D = (() => {
     }
     return { obj: null, update: () => {} };
   }
+  /* ================= 0.41: Millbrook's wall in a siege =================
+     One wall down the town's line, from tower to gate to tower, instead of a box per hex (the hex rows zig-zag, so the
+     boxes read as a staircase). It wears its damage in four stages, from the gate's hit points: intact; cracked, with
+     merlons knocked off and stones at its foot; battered, with lowered, sooty stretches and smoke; and crumbling, most
+     of it broken down, burning. Towers, the gate, the hall and the bell smoke and burn as they're hurt too. */
+  let STONE_TEX = null;
+  function stoneTex() {
+    if (STONE_TEX) return STONE_TEX;
+    const S = 128, cv = document.createElement('canvas'); cv.width = cv.height = S; const c = cv.getContext('2d'); const r = M.rng(11);
+    c.fillStyle = '#6a645a'; c.fillRect(0, 0, S, S);
+    const rows = 6, rh = S / rows;
+    for (let y = 0; y < rows; y++) { let x = -((y % 2) * 11); while (x < S) { const w = 17 + r() * 15, v = 150 + Math.floor(r() * 50); c.fillStyle = `rgb(${v},${v - 5},${v - 14})`; c.fillRect(x + 1.5, y * rh + 1.5, w - 3, rh - 3); c.fillStyle = 'rgba(255,255,255,0.08)'; c.fillRect(x + 1.5, y * rh + 1.5, w - 3, 2); x += w; } }
+    STONE_TEX = new T.CanvasTexture(cv); STONE_TEX.wrapS = STONE_TEX.wrapT = T.RepeatWrapping; STONE_TEX.encoding = T.sRGBEncoding; STONE_TEX.anisotropy = 2;
+    return STONE_TEX;
+  }
+  const wallStage = f => f > 0.75 ? 0 : f > 0.45 ? 1 : f > 0.2 ? 2 : 3;
+  function siegeWallFrac(b) {
+    const g = b.units.find(u => u.gate); if (!g) return b.wallIntact == null ? 1 : b.wallIntact;
+    const v = (hooks.view() || {})[g.id]; const hp = v ? (v.alive ? v.hp : 0) : g.hp;
+    return clamp(hp / Math.max(1, g.wallMax || g.maxHp), 0, 1);
+  }
+  // a plume of smoke (and flames, when it's burning): sprites that loop up from one point
+  function burnAt(parent, at, fire, size) {
+    const g = new T.Group(); g.position.copy(at);
+    const sm = []; for (let i = 0; i < 7; i++) sm.push(fxSprite(g, 'smoke', i % 2 ? '#2e2924' : '#45403a', 1, 0, true));
+    const fl = fire ? [0, 1, 2, 3].map(i => fxSprite(g, 'glow', i % 2 ? '#ff9a3a' : '#ff5a1a', 0.8, 0)) : [];
+    parent.add(g); const E = { g, sm, fl, size: size || 1, ph: Math.random() }; BAT.burns.push(E); return E;
+  }
+  function tickBurns(t) {
+    BAT.burns = BAT.burns.filter(E => E.g.parent);
+    for (const E of BAT.burns) {
+      E.sm.forEach((s, i) => { const q = (t * 0.3 + E.ph + i / E.sm.length) % 1; s.position.set(Math.sin(q * 5 + i) * 0.2 * E.size, (0.2 + q * 2.6) * E.size, Math.cos(q * 4 + i) * 0.12 * E.size); const z = (0.45 + q * 1.5) * E.size; s.scale.set(z, z, 1); s.material.opacity = 0.6 * bell(q); });
+      E.fl.forEach((s, i) => { const k = 0.65 + 0.35 * Math.sin(t * (12 + i * 3.3) + i * 2); s.position.set((i - 1.5) * 0.16 * E.size, (0.15 + (i % 2) * 0.12) * E.size, 0); s.scale.set(0.6 * E.size * k, 0.85 * E.size * k, 1); s.material.opacity = 0.8 * k; });
+    }
+  }
+  function buildSiegeWall(b) {
+    if (BAT.wall) { BAT.scene.remove(BAT.wall.g); fxFree(BAT.wall.g); BAT.wall.g.traverse(o => { if (o.userData.wallGeo) o.geometry.dispose(); }); BAT.wall = null; }
+    const wallK = Object.keys(b.tiles).filter(k => b.tiles[k] === 'wall').map(Number);
+    const anchors = b.units.filter(u => u.structure && (u.gate || u.tower));
+    if (!wallK.length && !anchors.length) return;
+    const col = G.hc(wallK.length ? wallK[0] : anchors[0].pos).c;
+    const lv = Math.max(1, b.wallLv || 1); const frac = siegeWallFrac(b); const st = wallStage(frac);
+    const g = new T.Group(); g.userData.own = true; BAT.wall = { g, stage: st, col };
+    const at = r => G.hc ? r * G.BW + col : 0;
+    const solid = r => { if (r < 0 || r >= G.BH) return false; const k = r * G.BW + col; if (b.tiles[k] === 'wall') return 'wall'; const u = anchors.find(x => x.pos === k); if (!u) return false; if (u.gate && st === 3 && frac <= 0) return false; return 'anchor'; };
+    const stone = new T.MeshStandardMaterial({ map: stoneTex(), color: new T.Color(st >= 2 ? '#b8b0a4' : '#ffffff'), roughness: 0.96 }); stone.userData = {};
+    const dark = new T.MeshStandardMaterial({ color: lin('#2a2420'), roughness: 1 });
+    const wood = new T.MeshStandardMaterial({ color: lin('#7a5636'), roughness: 0.92 }), burnt = new T.MeshStandardMaterial({ color: lin('#2e231b'), roughness: 1 }), tip = new T.MeshStandardMaterial({ color: lin('#a07a50'), roughness: 0.9 });
+    for (const m of [stone, dark, wood, burnt, tip]) { m.userData.own = true; }
+    const H = lv >= 3 ? 2.1 : 1.7, TH = lv >= 3 ? 0.72 : 0.62;
+    const hsh = (i, k) => { const x = Math.sin(i * 12.9898 + k * 78.233 + (b.round || 0) * 0) * 43758.5453; return x - Math.floor(x); };
+    const box = (w, h, d, mat, x, y, z, ry, parent) => { const m = new T.Mesh(new T.BoxGeometry(w, h, d), mat); m.userData.wallGeo = true; m.position.set(x, y, z); if (ry) m.rotation.y = ry; m.castShadow = m.receiveShadow = true; (parent || g).add(m); return m; };
+    // the segments: row to row, trimmed where a tower or the gate stands, and off the edges of the field at both ends
+    const segs = [];
+    for (let r = -1; r < G.BH; r++) {
+      const a = solid(r), z = solid(r + 1);
+      if (r === -1 && z) { const p = hexW(at(0)); segs.push([new T.Vector2(p.x, p.z - 1.4), new T.Vector2(p.x, p.z), false, z === 'anchor']); continue; }
+      if (r === G.BH - 1) { if (a) { const p = hexW(at(r)); segs.push([new T.Vector2(p.x, p.z), new T.Vector2(p.x, p.z + 1.4), a === 'anchor', false]); } continue; }
+      if (a && z) { const p = hexW(at(r)), q = hexW(at(r + 1)); segs.push([new T.Vector2(p.x, p.z), new T.Vector2(q.x, q.z), a === 'anchor', z === 'anchor']); }
+    }
+    segs.forEach(([A, B, ta, tb], i) => {
+      const d = B.clone().sub(A); let len = d.length(); const dir = d.clone().normalize();
+      if (ta) { A.addScaledVector(dir, 0.62); len -= 0.62; } if (tb) { B.addScaledVector(dir, -0.62); len -= 0.62; }
+      if (len < 0.15) return;
+      const mid = A.clone().lerp(B, 0.5); const ry = Math.atan2(dir.x, dir.y);
+      const seg = new T.Group(); seg.position.set(mid.x, 0, mid.y); seg.rotation.y = ry; g.add(seg);
+      const h0 = hsh(i, 1), h1 = hsh(i, 2), h2 = hsh(i, 3);
+      if (lv <= 1) {
+        // a palisade: sharpened logs, knocked out, leaning and burnt as it suffers
+        const n = Math.max(2, Math.round(len / 0.34));
+        for (let j = 0; j < n; j++) {
+          const q = (j + 0.5) / n - 0.5; const hj = hsh(i * 31 + j, 4), hk = hsh(i * 31 + j, 5);
+          if (st >= 1 && hj < 0.1 * st) continue;
+          const broken = st >= 3 && hk < 0.45; const h = (1.3 + hsh(i * 31 + j, 6) * 0.35) * (broken ? 0.45 : 1);
+          const mat = st >= 2 && hk < 0.3 * st ? burnt : wood;
+          const log = new T.Mesh(new T.CylinderGeometry(0.16, 0.18, h, 7), mat); log.userData.wallGeo = true; log.position.set((hk - 0.5) * 0.08, h / 2, q * len); log.castShadow = log.receiveShadow = true;
+          if (st >= 2) { log.rotation.x = (hj - 0.5) * 0.18 * st; log.rotation.z = (hk - 0.5) * 0.12 * st; }
+          seg.add(log);
+          if (!broken) { const c = new T.Mesh(new T.ConeGeometry(0.16, 0.3, 7), mat === burnt ? burnt : tip); c.userData.wallGeo = true; c.position.set(0, h / 2 + 0.15, 0); log.add(c); }
+        }
+        box(0.1, 0.14, len, wood, -0.2, 0.75, 0, 0, seg);
+      } else {
+        // stone: a wall with a walk along the top and merlons; lowered, jagged stretches once it's battered
+        const low = (st >= 2 && h0 < 0.45) || (st >= 3 && h0 < 0.85); const hm = low ? H * (st >= 3 ? 0.42 : 0.62) : H;
+        const w = box(TH, hm, len, stone, 0, hm / 2, 0, 0, seg); w.material = stone.clone(); w.material.userData.own = true; w.material.map = stoneTex().clone(); w.material.map.needsUpdate = true; w.material.map.repeat.set(len / 1.1, hm / 0.75); w.userData.own = true;
+        if (low) { for (let j = 0; j < 3; j++) { const ch = H * (0.12 + hsh(i * 7 + j, 7) * 0.3); box(TH * 0.9, ch, len / 3.4, stone, (hsh(i, j + 9) - 0.5) * 0.08, hm + ch / 2 - 0.02, (j - 1) * len / 3, (hsh(i, j + 12) - 0.5) * 0.3, seg); } }
+        else { const n = Math.max(2, Math.floor(len / 0.42)); for (let j = 0; j < n; j++) { if (st >= 1 && hsh(i * 13 + j, 8) < 0.16 * st) continue; box(TH + 0.04, 0.3, 0.24, stone, 0, hm + 0.15, ((j + 0.5) / n - 0.5) * len, 0, seg); } }
+        // cracks on the outward face (the side your army comes from)
+        if (st >= 1) for (let j = 0; j < st + 1; j++) { const cz = (hsh(i * 5 + j, 10) - 0.5) * len * 0.8, cy = hm * (0.25 + hsh(i * 5 + j, 11) * 0.55); box(0.03, hm * (0.25 + 0.1 * st), 0.05, dark, TH / 2 + 0.005, cy, cz, 0, seg).rotation.x = (hsh(i * 5 + j, 12) - 0.5) * 0.9; }
+      }
+      // stones and rubble at its foot, outside
+      if (st >= 1) for (let j = 0; j < 2 + st * 2; j++) { const s = 0.14 + hsh(i * 17 + j, 13) * 0.22; box(s, s * 0.7, s * 1.1, lv <= 1 ? (j % 2 ? burnt : wood) : stone, TH / 2 + 0.2 + hsh(i * 17 + j, 14) * 0.5, s * 0.3, (hsh(i * 17 + j, 15) - 0.5) * len, hsh(i, j) * 3, seg); }
+      // smoke where it's battered, fire where it's crumbling
+      if ((st >= 2 && h1 < 0.5) || (st >= 3 && h1 < 0.8)) burnAt(seg, new T.Vector3(0, lv <= 1 ? 0.9 : H * 0.6, (h2 - 0.5) * len * 0.6), st >= 3 && h2 < 0.6, 0.9);
+    });
+    // breaches: a heap of rubble where the wall has a hole
+    for (let r = 0; r < G.BH; r++) { const k = r * G.BW + col; if (!b.tiles[k] && !anchors.some(u => u.pos === k)) { const p = hexW(k); const rb = rubble(); rb.position.set(p.x, 0, p.z); rb.scale.setScalar(0.9); g.add(rb); } }
+    BAT.scene.add(g);
+  }
+  function siegeWallTick(b, t) {
+    if (BAT.wall) {
+      const st = wallStage(siegeWallFrac(b));
+      if (st !== BAT.wall.stage) {
+        // the wall gives a little: rebuild it a stage worse, with a cloud of dust along it
+        const col = BAT.wall.col; buildSiegeWall(b);
+        for (let r = 0; r < G.BH; r += 2) { const p = hexW(r * G.BW + col); const grp = new T.Group(); const pose = fxBurst(grp, { at: new T.Vector3(p.x + 0.4, 0.6, p.z), n: 8, tex: 'smoke', cols: ['#8a8072', '#6a6258'], size: [0.8, 1.5], speed: [0.6, 1.8], drag: 1.5, grav: -0.6, life: [0.8, 1.4], grow: 1.2, normal: true, op: 0.7, seed: r * 31 + st }); BAT.scene.add(grp); BAT.dust.push({ grp, pose, t0: t }); }
+      }
+    }
+    BAT.dust = BAT.dust.filter(D => { const a = t - D.t0; if (a > 1.6) { BAT.scene.remove(D.grp); fxFree(D.grp); return false; } D.pose(a); return true; });
+    tickBurns(t);
+  }
+  // a building of Millbrook's: smoke from 60% down, flames from 30%, and its picture greys as it burns
+  function structBurn(u, v, E) {
+    const ud = E.userData; const f = v.alive ? clamp(v.hp / Math.max(1, u.maxHp), 0, 1) : 1;
+    const stg = !v.alive ? 0 : f < 0.3 ? 2 : f < 0.6 ? 1 : 0;
+    if (ud.burnStage === stg) return; ud.burnStage = stg;
+    if (ud.burnG) { E.remove(ud.burnG); fxFree(ud.burnG); ud.burnG = null; }
+    if (!stg) return;
+    const g = new T.Group(); E.add(g); ud.burnG = g; const h = ud.h || 2;
+    burnAt(g, new T.Vector3(0.25, h * 0.7, 0), stg >= 2, 1.1);
+    if (stg >= 2) burnAt(g, new T.Vector3(-0.35, h * 0.45, 0.2), true, 0.8);
+  }
+  /* ================= 0.41: spells =================
+     ui.js plays every spell as a few fx records: where (the battle's virtual pixels), when, how long, and the ids of who
+     casts and who is hit, so an effect can find a figure's hands and chest. Each kind here builds its pieces once and then
+     poses them from t (0..1 of its life) alone, so nothing is kept between frames. Additive glows for light, plain
+     blending for smoke and scorch marks; the brightest effect alive also drives one point light, and big blasts shake
+     the camera a little. */
+  const FX_PLANE = new T.PlaneGeometry(1, 1);
+  const FX_CYL = new T.CylinderGeometry(1, 1, 1, 14, 1, true);
+  const SPT = {};
+  function fxTex(k) {
+    if (SPT[k]) return SPT[k];
+    const S = k === 'sigil' ? 512 : k === 'wall' ? 128 : 64, h = S / 2;
+    const cv = document.createElement('canvas'); cv.width = cv.height = S; const c = cv.getContext('2d');
+    const rad = (stops, x, y, r) => { const g = c.createRadialGradient(x == null ? h : x, y == null ? h : y, 0, x == null ? h : x, y == null ? h : y, r || h); for (const [o, col] of stops) g.addColorStop(o, col); return g; };
+    if (k === 'glow') { c.fillStyle = rad([[0, 'rgba(255,255,255,1)'], [0.22, 'rgba(255,255,255,0.6)'], [0.55, 'rgba(255,255,255,0.14)'], [1, 'rgba(255,255,255,0)']]); c.fillRect(0, 0, S, S); }
+    else if (k === 'spark') {
+      c.fillStyle = rad([[0, 'rgba(255,255,255,1)'], [0.16, 'rgba(255,255,255,0.55)'], [0.45, 'rgba(255,255,255,0.08)'], [1, 'rgba(255,255,255,0)']]); c.fillRect(0, 0, S, S);
+      c.fillStyle = '#fff'; c.globalAlpha = 0.9; c.beginPath(); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, r = i % 2 ? S * 0.045 : h * 0.96; c.lineTo(h + Math.cos(a) * r, h + Math.sin(a) * r); } c.closePath(); c.fill();
+    } else if (k === 'plus') {
+      c.fillStyle = rad([[0, 'rgba(255,255,255,0.75)'], [0.5, 'rgba(255,255,255,0.12)'], [1, 'rgba(255,255,255,0)']]); c.fillRect(0, 0, S, S);
+      c.fillStyle = '#fff'; c.fillRect(h - 5, h - 19, 10, 38); c.fillRect(h - 19, h - 5, 38, 10);
+    } else if (k === 'smoke') {
+      const r = M.rng(7);
+      for (let i = 0; i < 10; i++) { const x = h + (r() - 0.5) * S * 0.36, y = h + (r() - 0.5) * S * 0.36; c.fillStyle = rad([[0, 'rgba(255,255,255,0.45)'], [1, 'rgba(255,255,255,0)']], x, y, S * (0.16 + r() * 0.16)); c.fillRect(0, 0, S, S); }
+    } else if (k === 'ring') { c.fillStyle = rad([[0, 'rgba(255,255,255,0)'], [0.6, 'rgba(255,255,255,0)'], [0.83, 'rgba(255,255,255,1)'], [0.9, 'rgba(255,255,255,0.45)'], [1, 'rgba(255,255,255,0)']]); c.fillRect(0, 0, S, S); }
+    else if (k === 'disc') { c.fillStyle = rad([[0, 'rgba(255,255,255,1)'], [0.5, 'rgba(255,255,255,0.65)'], [1, 'rgba(255,255,255,0)']]); c.fillRect(0, 0, S, S); }
+    else if (k === 'streak') { const g = c.createLinearGradient(0, 0, 0, S); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.5, 'rgba(255,255,255,1)'); g.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g; c.fillRect(0, 0, S, S); }
+    else if (k === 'wall') { const g = c.createLinearGradient(0, S, 0, 0); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.3, 'rgba(255,255,255,0.5)'); g.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g; c.fillRect(0, 0, S, S); }
+    else if (k === 'sigil') {
+      // a magic circle: rings, a ring of made-up runes, two triangles and a few small circles where they meet
+      c.translate(h, h); c.strokeStyle = '#fff'; c.fillStyle = '#fff'; c.shadowColor = '#fff'; c.shadowBlur = 10; c.lineCap = 'round';
+      const ring = (r, w) => { c.lineWidth = w; c.beginPath(); c.arc(0, 0, r, 0, 7); c.stroke(); };
+      ring(h * 0.95, 7); ring(h * 0.82, 3); ring(h * 0.56, 4); ring(h * 0.47, 2); ring(h * 0.12, 3);
+      const r = M.rng(31);
+      for (let i = 0; i < 28; i++) {   // runes: two to four strokes in a small box between the outer rings
+        c.save(); c.rotate(i / 28 * Math.PI * 2); c.translate(0, -h * 0.885); c.lineWidth = 3;
+        const n = 2 + Math.floor(r() * 3); c.beginPath();
+        for (let j = 0; j < n; j++) { const x0 = (r() - 0.5) * 18, y0 = (r() - 0.5) * 20, x1 = (r() - 0.5) * 18, y1 = (r() - 0.5) * 20; c.moveTo(x0, y0); c.lineTo(x1, y1); }
+        c.stroke(); c.restore();
+      }
+      for (let i = 0; i < 72; i++) { c.save(); c.rotate(i / 72 * Math.PI * 2); c.fillRect(-1.5, -h * 0.56 - (i % 6 ? 6 : 14), 3, i % 6 ? 6 : 14); c.restore(); }
+      c.lineWidth = 3.5; c.lineJoin = 'round';
+      for (const off of [0, Math.PI / 3]) { c.beginPath(); for (let i = 0; i <= 3; i++) { const a = off + i / 3 * Math.PI * 2 - Math.PI / 2; const x = Math.cos(a) * h * 0.82, y = Math.sin(a) * h * 0.82; if (i) c.lineTo(x, y); else c.moveTo(x, y); } c.stroke(); }
+      for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2 - Math.PI / 2; c.lineWidth = 2.5; c.beginPath(); c.arc(Math.cos(a) * h * 0.82, Math.sin(a) * h * 0.82, h * 0.06, 0, 7); c.stroke(); }
+    }
+    const t = new T.CanvasTexture(cv); SPT[k] = t; return t;
+  }
+  const seg = (t, a, b) => clamp((t - a) / (b - a), 0, 1);
+  const eOut = q => 1 - (1 - q) * (1 - q), eIn = q => q * q, bell = q => Math.sin(clamp(q, 0, 1) * Math.PI);
+  const fxRng = f => M.rng(Math.floor((f.seed || 1) * 1000) + 7);
+  const fxReduced = (() => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } })();
+  // pieces: a camera-facing glow, a flat decal on the ground, a glowing tube
+  function fxSprite(g, tex, col, size, op, normal) {
+    const s = new T.Sprite(new T.SpriteMaterial({ map: fxTex(tex), color: new T.Color(col), blending: normal ? T.NormalBlending : T.AdditiveBlending, transparent: true, depthWrite: false, opacity: op == null ? 1 : op, toneMapped: false }));
+    s.scale.set(size, size, 1); s.renderOrder = 4; s.userData.own = true; g.add(s); return s;
+  }
+  function fxFlat(g, tex, col, size, op, normal) {
+    const m = new T.Mesh(FX_PLANE, new T.MeshBasicMaterial({ map: fxTex(tex), color: new T.Color(col), transparent: true, opacity: op == null ? 1 : op, blending: normal ? T.NormalBlending : T.AdditiveBlending, depthWrite: false, toneMapped: false, side: T.DoubleSide, polygonOffset: true, polygonOffsetFactor: -4 }));
+    m.rotation.x = -Math.PI / 2; m.scale.set(size, size, 1); m.renderOrder = 3; m.userData.own = true; g.add(m); return m;
+  }
+  function fxTube(g, col, op, tex) {
+    const m = new T.Mesh(FX_CYL, new T.MeshBasicMaterial({ map: tex ? fxTex(tex) : null, color: new T.Color(col), transparent: true, opacity: op == null ? 1 : op, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false, side: T.DoubleSide }));
+    m.renderOrder = 4; m.userData.own = true; g.add(m); return m;
+  }
+  // a flat ribbon through a list of points, turned to face the camera: lightning, so it has a width
+  function fxRibbon(g, n, width, col, op) {
+    const pos = new Float32Array((n + 1) * 2 * 3), uv = new Float32Array((n + 1) * 2 * 2), idx = [];
+    for (let i = 0; i <= n; i++) { uv[i * 4] = i / n; uv[i * 4 + 1] = 0; uv[i * 4 + 2] = i / n; uv[i * 4 + 3] = 1; if (i < n) { const a = i * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); } }
+    const geo = new T.BufferGeometry(); geo.setAttribute('position', new T.BufferAttribute(pos, 3)); geo.setAttribute('uv', new T.BufferAttribute(uv, 2)); geo.setIndex(idx);
+    const m = new T.Mesh(geo, new T.MeshBasicMaterial({ map: fxTex('streak'), color: new T.Color(col), transparent: true, opacity: op == null ? 1 : op, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false, side: T.DoubleSide }));
+    m.renderOrder = 5; m.frustumCulled = false; m.userData.own = true; m.userData.ownGeo = true; g.add(m);
+    const d = new T.Vector3(), v = new T.Vector3(), o = new T.Vector3();
+    m.userData.set = P => {
+      const cam = BAT.camera ? BAT.camera.position : new T.Vector3(0, 20, 20);
+      for (let i = 0; i <= n; i++) {
+        const p = P[i], q = P[Math.min(n, i + 1)], r = P[Math.max(0, i - 1)]; d.subVectors(q, r).normalize(); v.subVectors(cam, p).normalize(); o.crossVectors(d, v).normalize().multiplyScalar(width / 2);
+        pos[i * 6] = p.x + o.x; pos[i * 6 + 1] = p.y + o.y; pos[i * 6 + 2] = p.z + o.z; pos[i * 6 + 3] = p.x - o.x; pos[i * 6 + 4] = p.y - o.y; pos[i * 6 + 5] = p.z - o.z;
+      }
+      geo.attributes.position.needsUpdate = true;
+    };
+    return m;
+  }
+  function fxFree(obj) { obj.traverse(o => { if (o.userData && o.userData.own && o.material) o.material.dispose(); if (o.userData && o.userData.ownGeo && o.geometry) o.geometry.dispose(); }); }
+  // a burst of particles thrown from one point; returns pose(seconds since the burst)
+  function fxBurst(g, o) {
+    const r = M.rng(Math.floor(o.seed || 1) + 3); const P = [];
+    for (let i = 0; i < o.n; i++) {
+      const th = r() * Math.PI * 2; let ph = Math.acos(1 - 2 * r()); if (o.hemi) ph *= 0.5; if (o.flat) ph = Math.PI / 2 + (r() - 0.5) * 0.3;
+      const dir = new T.Vector3(Math.sin(ph) * Math.cos(th), Math.cos(ph), Math.sin(ph) * Math.sin(th));
+      const s = fxSprite(g, o.tex, o.cols[i % o.cols.length], 1, 0, o.normal);
+      const L = (a, b) => a + (b - a) * r();
+      P.push({ s, v: dir.multiplyScalar(L(o.speed[0], o.speed[1])), life: L(o.life[0], o.life[1]), d: o.delay ? L(o.delay[0], o.delay[1]) : 0, sz: L(o.size[0], o.size[1]) });
+    }
+    const drag = o.drag || 0, grav = o.grav || 0, op = o.op == null ? 1 : o.op, at = o.at;
+    return sec => {
+      for (const p of P) {
+        const a = sec - p.d; if (a < 0 || a > p.life) { p.s.visible = false; continue; }
+        p.s.visible = true; const k = a / p.life; const m = drag ? (1 - Math.exp(-drag * a)) / drag : a;
+        p.s.position.set(at.x + p.v.x * m, at.y + p.v.y * m - 0.5 * grav * a * a, at.z + p.v.z * m);
+        p.s.material.opacity = op * Math.min(1, k * 7) * (1 - k); const z = p.sz * (o.grow ? 1 + k * o.grow : 1 - k * 0.45); p.s.scale.set(z, z, 1);
+      }
+    };
+  }
+  // where things are: on a figure (a fraction of its height), at its hands (toward a point), or on the ground
+  function fxGround(px, py, y) { const w = pxToW(px, py); return new T.Vector3(w.x, y || 0, w.z); }
+  function fxH(id) { const E = id != null && BAT.units.get(id); return E ? (E.userData.h || 1.6) : 1.6; }
+  function fxPt(id, px, py, frac) {
+    const E = id != null && BAT.units.get(id);
+    if (E) { const fy = E.userData.fig ? E.userData.fig.position.y : 0; return new T.Vector3(E.position.x, E.position.y + fy + (E.userData.h || 1.6) * frac, E.position.z); }
+    return fxGround(px, py, 1.6 * frac);
+  }
+  function fxHand(id, px, py, tx, ty, frac) {
+    const p = fxPt(id, px, py, frac == null ? 0.62 : frac);
+    if (tx != null) { const q = fxGround(tx, ty); const d = new T.Vector3(q.x - p.x, 0, q.z - p.z); if (d.lengthSq() > 0.01) p.addScaledVector(d.normalize(), Math.min(0.55, fxH(id) * 0.22)); }
+    return p;
+  }
+  const FX_PAL = { fire: ['#fff3b8', '#ffc24a', '#ff7a1e', '#d8381a'], hell: ['#ffd8b0', '#ff5a2a', '#c4161a', '#5a0a24'], arcane: ['#fbe8ff', '#d48cff', '#9a4aff', '#4a1aa0'] };
+  const HEAL_PAL = { green: ['#6dff8e', '#eaffb8'], gold: ['#ffd66a', '#fff6d2'], potion: ['#ff5a74', '#ffc8d0'], wind: ['#dff0ff', '#ffffff'], phyl: ['#6affb8', '#c8ffe8'] };
+
+  const SFX = {};
+  // the wind-up: a circle of runes under the caster, motes rising around it, light gathering in its hands
+  SFX.cast = f => {
+    const g = new T.Group(); const col = f.color || '#c9a0ff'; const r = fxRng(f); const H = fxH(f.src);
+    const at = fxPt(f.src, f.x, f.y, 0); at.y += 0.05;
+    const size = Math.max(1.7, Math.min(3.6, H * 0.9));
+    const glow = fxFlat(g, 'disc', col, 1, 0); glow.position.copy(at); const sig = fxFlat(g, 'sigil', col, 1, 0); sig.position.copy(at); sig.position.y += 0.01;
+    const motes = []; for (let i = 0; i < 16; i++) motes.push({ s: fxSprite(g, 'spark', i % 3 ? col : '#ffffff', 0.16 + r() * 0.14, 0), a: r() * 6.28, d: r() * 0.4, sp: 1.5 + r() * 2, rr: size * (0.25 + r() * 0.2) });
+    const hp = fxHand(f.src, f.x, f.y, f.x2, f.y2, f.frac); const hand = fxSprite(g, 'glow', col, 0.5, 0); hand.position.copy(hp); const core = fxSprite(g, 'glow', '#ffffff', 0.3, 0); core.position.copy(hp);
+    return { obj: g, update: t => {
+      const inn = eOut(seg(t, 0, 0.3)), out = 1 - seg(t, 0.72, 1);
+      sig.scale.set(size * inn, size * inn, 1); sig.rotation.z = t * 2.4; sig.material.opacity = 0.95 * out;
+      glow.scale.set(size * 1.25 * inn, size * 1.25 * inn, 1); glow.material.opacity = 0.32 * out;
+      for (const m of motes) { const q = seg(t, m.d, m.d + 0.6); m.s.visible = q > 0 && q < 1; if (!m.s.visible) continue; const a = m.a + q * m.sp * 3, rr = m.rr * (1 - q * 0.6); m.s.position.set(at.x + Math.cos(a) * rr, at.y + q * H * 0.95, at.z + Math.sin(a) * rr); m.s.material.opacity = bell(q); }
+      const hg = seg(t, 0.15, 1); const hs = 0.35 + hg * 0.75 + Math.sin(t * 50) * 0.06; hand.scale.set(hs, hs, 1); hand.material.opacity = Math.min(1, hg * 2) * (1 - seg(t, 0.9, 1)); core.scale.set(hs * 0.45, hs * 0.45, 1); core.material.opacity = hand.material.opacity;
+    }, light: t => [hp, col, 2.4 * bell(seg(t, 0.05, 1))] };
+  };
+  // a ball of fire (or hellfire, or arcane fire) with a smoking tail; from the caster's hands, or from the sky
+  SFX.orb = f => {
+    const g = new T.Group(); const pal = FX_PAL[f.pal] || FX_PAL.fire; const r = fxRng(f); const sz = f.size || 0.9;
+    const B = f.dst != null ? fxPt(f.dst, f.x2, f.y2, f.sky ? 0.2 : 0.45) : fxGround(f.x2, f.y2, f.sky ? 0.35 : 0.6);
+    const A = f.sky ? new T.Vector3(B.x - 4 - r() * 2, B.y + 13, B.z - 3 - r() * 2) : fxHand(f.src, f.x, f.y, f.x2, f.y2, f.frac);
+    const arc = f.sky ? 0 : (f.arc == null ? 1.2 : f.arc); const ease = f.sky ? eIn : (q => q);
+    const P = q => new T.Vector3(A.x + (B.x - A.x) * q, A.y + (B.y - A.y) * q + Math.sin(q * Math.PI) * arc, A.z + (B.z - A.z) * q);
+    const trail = []; for (let i = 0; i < 14; i++) trail.push(fxSprite(g, i % 3 === 2 ? 'smoke' : 'glow', pal[Math.min(3, 1 + (i >> 2))], sz * (1.5 - i * 0.07), 0));
+    const head = fxSprite(g, 'glow', pal[1], sz * 1.9), core = fxSprite(g, 'glow', pal[0], sz * 0.9);
+    const embers = []; for (let i = 0; i < 20; i++) embers.push({ s: fxSprite(g, 'spark', pal[i % 3], 0.12 + r() * 0.14, 0), q: r() * 0.95, dx: (r() - 0.5) * 0.7, dz: (r() - 0.5) * 0.7 });
+    const hp = A.clone();
+    return { obj: g, update: t => {
+      const q = ease(clamp(t, 0, 1)); hp.copy(P(q)); const live = t < 1;
+      head.position.copy(hp); core.position.copy(hp); const fl = 1 + Math.sin(t * 95) * 0.09; head.scale.set(sz * 1.9 * fl, sz * 1.9 * fl, 1); head.visible = core.visible = live;
+      trail.forEach((s, i) => { const q2 = ease(clamp(t - (i + 1) * 0.022, 0, 1)); s.position.copy(P(q2)); s.material.opacity = q2 > 0 && live ? 0.75 * (1 - i / 14) : 0; });
+      for (const e of embers) { const age = t - e.q; e.s.visible = age > 0 && age < 0.25; if (!e.s.visible) continue; const pp = P(ease(e.q)); const k = age / 0.25; e.s.position.set(pp.x + e.dx * k, pp.y - k * 0.7, pp.z + e.dz * k); e.s.material.opacity = 1 - k; }
+    }, light: () => [hp, pal[1], 3] };
+  };
+  // the explosion where it lands: a flash, a ball of fire, embers, a shock ring, smoke and a scorch mark
+  SFX.blast = f => {
+    const g = new T.Group(); const pal = FX_PAL[f.pal] || FX_PAL.fire; const sz = f.size || 1; const r = fxRng(f); const dur = f.dur / 1000;
+    const at = fxGround(f.x, f.y, 0.55 * sz); const gr = fxGround(f.x, f.y, 0.05);
+    const flash = fxSprite(g, 'glow', '#ffffff', 1, 0); flash.position.copy(at);
+    const body = fxBurst(g, { at, n: 16, tex: 'smoke', cols: [pal[1], pal[2], pal[2], pal[3]], size: [1.3 * sz, 2.2 * sz], speed: [2.2 * sz, 5 * sz], drag: 5, life: [0.32, 0.7], grow: 1.0, hemi: true, normal: true, op: 0.95, seed: r() * 1e5 });
+    const hot = fxBurst(g, { at, n: 10, tex: 'glow', cols: [pal[0], pal[1]], size: [0.9 * sz, 1.5 * sz], speed: [1.5 * sz, 3.5 * sz], drag: 6, life: [0.22, 0.45], grow: 0.6, hemi: true, op: 0.75, seed: r() * 1e5 });
+    const embers = fxBurst(g, { at, n: 30, tex: 'spark', cols: [pal[0], pal[1]], size: [0.12, 0.3], speed: [4 * sz, 9 * sz], drag: 1.2, grav: 9, life: [0.45, 0.95], hemi: true, seed: r() * 1e5 });
+    const smoke = fxBurst(g, { at: at.clone().setY(at.y + 0.3), n: 10, tex: 'smoke', cols: [f.pal === 'arcane' ? '#2e2440' : f.pal === 'hell' ? '#241418' : '#38322c'], size: [1.4 * sz, 2.3 * sz], speed: [0.5, 1.6], drag: 1, grav: -1.3, life: [0.8, 1.35], delay: [0.08, 0.26], grow: 1.4, hemi: true, normal: true, op: 0.55, seed: r() * 1e5 });
+    const wave = fxFlat(g, 'ring', pal[1], 1, 0); wave.position.copy(gr); wave.position.y += 0.02;
+    const glow = fxFlat(g, 'disc', pal[2], 4.2 * sz, 0); glow.position.copy(gr);
+    const scorch = fxFlat(g, 'disc', '#000000', 2.8 * sz, 0, true); scorch.position.copy(gr); scorch.position.y = 0.035;
+    return { obj: g, update: t => {
+      const s = t * dur; const fq = seg(t, 0, 0.14); const fs = 2.6 * sz * (0.5 + fq); flash.scale.set(fs, fs, 1); flash.material.opacity = 0.85 * (1 - fq);
+      body(s); hot(s); embers(s); smoke(s);
+      const wq = seg(t, 0, 0.45); const wr = (1 + eOut(wq) * 5.5) * sz; wave.scale.set(wr, wr, 1); wave.material.opacity = (1 - wq) * 0.95;
+      glow.material.opacity = 0.6 * (1 - seg(t, 0, 0.5)); scorch.material.opacity = 0.5 * seg(t, 0.05, 0.2) * (1 - seg(t, 0.72, 1));
+    }, light: t => [at, pal[1], 8 * sz * Math.pow(1 - t, 2)], shake: t => (f.shake == null ? 0.2 : f.shake) * sz * Math.pow(1 - seg(t, 0, 0.45), 2) };
+  };
+  // lightning: a jagged bolt that re-forks sixteen times a second, with two branches, a flash and sparks where it strikes
+  SFX.bolt = f => {
+    const g = new T.Group(); const col = f.color || '#bfe6ff';
+    const A = f.from != null ? fxPt(f.from, f.x, f.y, 0.5) : f.src != null ? fxHand(f.src, f.x, f.y, f.x2, f.y2) : fxGround(f.x, f.y, 1);
+    const B = f.dst != null ? fxPt(f.dst, f.x2, f.y2, 0.5) : fxGround(f.x2, f.y2, 1);
+    const N = 14;
+    const halo = fxRibbon(g, N, 0.75, '#5a9cff', 0), mid = fxRibbon(g, N, 0.28, col, 0), core = fxRibbon(g, N, 0.09, '#ffffff', 0);
+    const br = [0, 1].map(() => ({ glow: fxRibbon(g, 4, 0.3, col, 0), core: fxRibbon(g, 4, 0.06, '#ffffff', 0) }));
+    const hit = fxSprite(g, 'glow', '#ffffff', 1.6, 0); hit.position.copy(B); const hitc = fxSprite(g, 'glow', col, 2.6, 0); hitc.position.copy(B); const src = fxSprite(g, 'glow', col, 1.2, 0); src.position.copy(A);
+    const sparks = fxBurst(g, { at: B, n: 18, tex: 'spark', cols: ['#ffffff', col], size: [0.1, 0.24], speed: [3, 7.5], drag: 2, grav: 6, life: [0.25, 0.5], seed: (f.seed || 1) * 1e4 });
+    const dir = B.clone().sub(A); const len = dir.length(); const side = new T.Vector3(-dir.z, 0, dir.x); if (side.lengthSq() < 1e-4) side.set(1, 0, 0); side.normalize();
+    let frame = -1, flick = 1, op = 0;
+    const shape = k => {
+      const r = M.rng(Math.floor((f.seed || 1) * 1000) + k * 97); const P = [];
+      for (let i = 0; i <= N; i++) { const amp = i && i < N ? 0.16 + len * 0.03 : 0; const p = A.clone().addScaledVector(dir, i / N).addScaledVector(side, (r() - 0.5) * 2 * amp); p.y += (r() - 0.5) * amp; P.push(p); }
+      halo.userData.set(P); mid.userData.set(P); core.userData.set(P);
+      for (const b of br) { const from = P[2 + Math.floor(r() * (N - 5))]; const d = side.clone().multiplyScalar(r() < 0.5 ? -1 : 1).addScaledVector(dir.clone().normalize(), 0.7).add(new T.Vector3(0, -0.45, 0)).normalize(); const Q = [from.clone()]; for (let i = 1; i <= 4; i++) Q.push(Q[i - 1].clone().addScaledVector(d, 0.28 + r() * 0.25).add(new T.Vector3((r() - 0.5) * 0.25, (r() - 0.5) * 0.25, (r() - 0.5) * 0.25))); b.glow.userData.set(Q); b.core.userData.set(Q); }
+      flick = 0.6 + r() * 0.4;
+    };
+    return { obj: g, update: t => {
+      const k = Math.floor(t * 16); if (k !== frame) { frame = k; shape(k); }
+      op = (t < 0.65 ? 1 : 1 - seg(t, 0.65, 1)) * flick;
+      halo.material.opacity = op * 0.45; mid.material.opacity = op * 0.9; core.material.opacity = op;
+      for (const b of br) { b.glow.material.opacity = op * 0.6; b.core.material.opacity = op * 0.9; }
+      const hs = 1.3 + Math.sin(t * 70) * 0.25; hit.scale.set(hs, hs, 1); hit.material.opacity = op; hitc.material.opacity = op * 0.5; src.material.opacity = op * 0.8;
+      sparks(t * f.dur / 1000);
+    }, light: () => [B, col, 7 * op], shake: t => 0.07 * (1 - t) };
+  };
+  // a magic missile: a dart of light on its own curve, popping where it lands
+  SFX.dart = f => {
+    const g = new T.Group(); const col = f.color || '#c08aff'; const r = fxRng(f);
+    const A = fxHand(f.src, f.x, f.y, f.x2, f.y2), B = f.dst != null ? fxPt(f.dst, f.x2, f.y2, 0.55) : fxGround(f.x2, f.y2, 1);
+    const d = B.clone().sub(A); const side = new T.Vector3(-d.z, 0, d.x); if (side.lengthSq() < 1e-4) side.set(1, 0, 0); side.normalize();
+    const C = A.clone().lerp(B, 0.5).addScaledVector(side, (r() - 0.5) * (f.low ? 1.6 : 3.4)); C.y += f.low ? 0.3 + r() * 0.6 : 0.8 + r() * 1.7;
+    const Bz = q => { const u = 1 - q; return new T.Vector3(u * u * A.x + 2 * u * q * C.x + q * q * B.x, u * u * A.y + 2 * u * q * C.y + q * q * B.y, u * u * A.z + 2 * u * q * C.z + q * q * B.z); };
+    const trail = []; for (let i = 0; i < 9; i++) trail.push(fxSprite(g, 'glow', col, 0.75 - i * 0.06, 0));
+    const halo = fxSprite(g, 'glow', col, 1.25), head = fxSprite(g, 'spark', '#ffffff', 0.7);
+    const pop = fxSprite(g, 'glow', col, 1, 0); pop.position.copy(B);
+    const FL = 0.72, dur = f.dur / 1000;
+    const sparks = fxBurst(g, { at: B, n: 8, tex: 'spark', cols: ['#ffffff', col], size: [0.08, 0.16], speed: [2, 4.5], drag: 3, life: [0.18, 0.34], seed: r() * 1e4 });
+    const go = q => eIn(q) * 0.35 + q * 0.65; const hp = A.clone();
+    return { obj: g, update: t => {
+      const q = clamp(t / FL, 0, 1); const fly = q < 1; hp.copy(Bz(go(q)));
+      head.visible = halo.visible = fly; head.position.copy(hp); halo.position.copy(hp);
+      trail.forEach((s, i) => { const q2 = clamp(q - (i + 1) * 0.035, 0, 1); s.position.copy(Bz(go(q2))); s.material.opacity = fly && q2 > 0 ? 0.85 * (1 - i / 9) : 0; });
+      const pq = seg(t, FL, 1); pop.material.opacity = pq > 0 ? 1 - pq : 0; const ps = 0.4 + pq * 1.3; pop.scale.set(ps, ps, 1);
+      sparks(t < FL ? -1 : (t - FL) * dur);
+    }, light: t => [hp, col, t < FL ? 1.4 : 2.5 * (1 - seg(t, FL, 1))] };
+  };
+  // Disintegrate: a green ray that holds for a moment, and the target's dust drifting off
+  SFX.beam = f => {
+    const g = new T.Group(); const col = f.color || '#7dff6a'; const r = fxRng(f); const dur = f.dur / 1000;
+    const A = fxHand(f.src, f.x, f.y, f.x2, f.y2), B = fxPt(f.dst, f.x2, f.y2, 0.5);
+    const d = B.clone().sub(A); const len = d.length(); const mid = A.clone().lerp(B, 0.5); const q = new T.Quaternion().setFromUnitVectors(new T.Vector3(0, 1, 0), d.clone().normalize());
+    const outer = fxTube(g, col, 0.6), inner = fxTube(g, '#d8ffd0', 0.75); for (const m of [outer, inner]) { m.position.copy(mid); m.quaternion.copy(q); }
+    const glowR = fxRibbon(g, 1, 1.1, col, 0); glowR.userData.set([A, B]);
+    const e0 = fxSprite(g, 'glow', col, 1.2, 0), e1 = fxSprite(g, 'glow', col, 1.7, 0); e0.position.copy(A); e1.position.copy(B);
+    const flow = []; for (let i = 0; i < 12; i++) flow.push(fxSprite(g, 'spark', i % 2 ? '#ffffff' : col, 0.24, 0));
+    const dust = fxBurst(g, { at: B, n: 28, tex: 'spark', cols: [col, '#d8ffc8'], size: [0.1, 0.26], speed: [0.6, 1.9], drag: 1, grav: -2.5, life: [0.5, 0.9], delay: [0.08, 0.55], seed: r() * 1e4 });
+    let w = 0;
+    return { obj: g, update: t => {
+      w = 0.17 * eOut(seg(t, 0, 0.12)) * (1 - seg(t, 0.74, 0.95)) * (1 + Math.sin(t * 60) * 0.18);
+      const on = w > 0.002; outer.visible = inner.visible = on;
+      outer.scale.set(w, len, w); inner.scale.set(w * 0.3, len, w * 0.3); glowR.visible = on; glowR.material.opacity = 0.55 * clamp(w / 0.17, 0, 1);
+      const eo = on ? 1 : 0; e0.material.opacity = eo * 0.9; e1.material.opacity = eo; const es = 1.4 + Math.sin(t * 45) * 0.3; e1.scale.set(es, es, 1);
+      flow.forEach((s, i) => { const k = (t * 3.2 + i / 12) % 1; s.position.copy(A.clone().lerp(B, k)); s.material.opacity = on ? 0.9 : 0; });
+      dust(t * dur);
+    }, light: () => [B, col, 6 * clamp(w / 0.17, 0, 1)] };
+  };
+  // a wave out from the caster along the ground, with a wall of light (Holy Word, the Temple Bell, Soul Rend, a fire aura)
+  SFX.nova = f => {
+    const g = new T.Group(); const col = f.color || '#ffe08a', col2 = f.color2 || col; const R = f.radius || 8; const r = fxRng(f); const dur = f.dur / 1000;
+    const at = fxPt(f.src, f.x, f.y, 0); at.y += 0.05;
+    const ring = fxFlat(g, 'ring', col, 1, 0), ring2 = fxFlat(g, 'ring', col2, 1, 0), sig = fxFlat(g, 'sigil', col, 1, 0);
+    for (const m of [ring, ring2, sig]) m.position.copy(at); ring2.position.y += 0.01; sig.position.y += 0.02;
+    const wall = fxTube(g, col, 0, 'wall'); wall.position.copy(at);
+    const parts = fxBurst(g, { at: at.clone().setY(at.y + 0.5), n: 30, tex: f.dark ? 'smoke' : 'spark', cols: [col, col2], size: f.dark ? [0.8, 1.5] : [0.14, 0.3], speed: [R * 0.7, R * 1.1], drag: 1.6, grav: f.dark ? -0.6 : 0, life: [0.5, 0.95], flat: true, normal: !!f.dark, op: f.dark ? 0.65 : 1, seed: r() * 1e4 });
+    return { obj: g, update: t => {
+      const q = eOut(seg(t, 0.04, 0.8)); const rr = 0.6 + q * R;
+      const thin = 1 / (1 + rr * 0.18); ring.scale.set(rr * 2, rr * 2, 1); ring.material.opacity = 0.95 * thin * (1 - seg(t, 0.5, 0.92));
+      ring2.scale.set(rr * 1.55, rr * 1.55, 1); ring2.material.opacity = 0.55 * thin * (1 - seg(t, 0.4, 0.85));
+      const wh = 1.1 * (1 - q * 0.6); wall.scale.set(rr * 0.92, wh, rr * 0.92); wall.position.y = at.y + wh / 2; wall.material.opacity = (f.dark ? 0.3 : 0.2) * (1 - seg(t, 0.2, 0.75)) / (1 + rr * 0.12);
+      const ss = 3.2 * eOut(seg(t, 0, 0.25)); sig.scale.set(ss, ss, 1); sig.rotation.z = -t * 3; sig.material.opacity = 0.9 * (1 - seg(t, 0.6, 1));
+      parts(t * dur);
+    }, light: t => [at.clone().setY(at.y + 1.2), col, 5 * (1 - t)] };
+  };
+  // a column of light from the sky onto one figure, with motes falling through it
+  SFX.pillar = f => {
+    const g = new T.Group(); const col = f.color || '#fff2b0'; const r = fxRng(f); const H = f.h || 9;
+    const base = fxPt(f.dst, f.x, f.y, 0); base.y += 0.04;
+    const beam = fxTube(g, col, 0, 'wall'), core = fxTube(g, '#fffbe8', 0, 'wall'); for (const m of [beam, core]) m.position.set(base.x, base.y + H / 2, base.z);
+    const sig = fxFlat(g, 'sigil', col, 1, 0), glow = fxFlat(g, 'disc', col, 2.6, 0); sig.position.copy(base); glow.position.copy(base); sig.position.y += 0.01;
+    const motes = []; for (let i = 0; i < 14; i++) motes.push({ s: fxSprite(g, 'spark', i % 2 ? col : '#ffffff', 0.14 + r() * 0.12, 0), a: r() * 6.28, rr: r() * 0.45, d: r() * 0.4, h: 3 + r() * 4 });
+    let lv = 0;
+    return { obj: g, update: t => {
+      const inn = eOut(seg(t, 0, 0.18)), out = 1 - seg(t, 0.55, 1); lv = inn * out;
+      const w = 0.6 * inn * (0.65 + 0.35 * out); beam.scale.set(w, H, w); beam.material.opacity = 0.7 * out; core.scale.set(w * 0.3, H, w * 0.3); core.material.opacity = 0.6 * out;
+      const ss = 1.3 + inn * 0.9; sig.scale.set(ss, ss, 1); sig.rotation.z = t * 2; sig.material.opacity = 0.9 * out; glow.material.opacity = 0.5 * lv;
+      for (const m of motes) { const q = seg(t, m.d, m.d + 0.5); m.s.visible = q > 0 && q < 1; if (!m.s.visible) continue; m.s.position.set(base.x + Math.cos(m.a) * m.rr, base.y + m.h * (1 - q), base.z + Math.sin(m.a) * m.rr); m.s.material.opacity = bell(q); }
+    }, light: () => [base.clone().setY(base.y + 1.5), col, 4 * lv] };
+  };
+  // healing: a small circle at the feet and light rising around the figure (green, gold, a potion's red, a breath of white)
+  SFX.heal2 = f => {
+    const g = new T.Group(); const pal = HEAL_PAL[f.pal] || HEAL_PAL.green; const r = fxRng(f); const H = fxH(f.dst); const wind = f.pal === 'wind';
+    const base = fxPt(f.dst, f.x, f.y, 0); base.y += 0.04;
+    const sig = fxFlat(g, 'sigil', pal[0], 1, 0), glow = fxFlat(g, 'disc', pal[0], 2.3, 0); sig.position.copy(base); glow.position.copy(base); sig.position.y += 0.01;
+    const col = fxSprite(g, 'glow', pal[0], 1, 0);
+    const ups = []; for (let i = 0; i < 22; i++) ups.push({ s: fxSprite(g, wind ? 'smoke' : i % 3 ? 'plus' : 'spark', i % 2 ? pal[0] : pal[1], (wind ? 0.8 : 0.42) + r() * 0.2, 0), a: r() * 6.28, rr: 0.3 + r() * 0.5, d: r() * 0.42, sw: r() * 6 });
+    let lv = 0;
+    return { obj: g, update: t => {
+      const inn = eOut(seg(t, 0, 0.25)), out = 1 - seg(t, 0.7, 1); lv = inn * out;
+      const ss = 2.3 * inn; sig.scale.set(ss, ss, 1); sig.rotation.z = t * 1.6; sig.material.opacity = 0.95 * out; glow.material.opacity = 0.55 * lv;
+      col.position.set(base.x, base.y + H * 0.55, base.z); col.scale.set(1.8, H * 1.4, 1); col.material.opacity = 0.42 * lv;
+      for (const u of ups) { const q = seg(t, u.d, u.d + 0.55); u.s.visible = q > 0 && q < 1; if (!u.s.visible) continue; const a = u.a + (wind ? q * 9 : Math.sin(q * 3 + u.sw) * 0.6); const rr = wind ? u.rr * (1.3 - q * 0.6) : u.rr; u.s.position.set(base.x + Math.cos(a) * rr, base.y + 0.1 + q * H * 1.1, base.z + Math.sin(a) * rr); u.s.material.opacity = bell(q) * (wind ? 0.55 : 1); }
+    }, light: () => [base.clone().setY(base.y + 1), pal[0], 2.6 * lv] };
+  };
+  // Soul Rend: wisps torn out of a hero, spiralling up and pulled back to the caster
+  SFX.souls = f => {
+    const g = new T.Group(); const col = f.color || '#c9a8ff'; const r = fxRng(f); const dur = f.dur / 1000;
+    const A = fxPt(f.dst, f.x, f.y, 0.6); const B = f.src != null ? fxHand(f.src, f.x2, f.y2, f.x, f.y) : A.clone().setY(A.y + 5);
+    const ws = []; for (let i = 0; i < 3; i++) { const tail = []; for (let j = 0; j < 8; j++) tail.push(fxSprite(g, j % 2 ? 'smoke' : 'glow', j < 3 ? col : '#7a3ac0', 0.75 - j * 0.06, 0)); ws.push({ head: fxSprite(g, 'glow', col, 0.9, 0), core: fxSprite(g, 'glow', '#ffffff', 0.3, 0), tail, ph: r() * 6.28, d: i * 0.08, up: 1.2 + r() * 1.3, sw: 0.5 + r() * 0.5 }); }
+    const hitPuff = fxBurst(g, { at: A, n: 12, tex: 'smoke', cols: ['#2a1038'], size: [0.6, 1.1], speed: [1, 2.6], drag: 2, life: [0.4, 0.75], normal: true, op: 0.6, seed: r() * 1e4 });
+    const P = (w, q) => { const s = 1 - q; const p = new T.Vector3(A.x + Math.cos(w.ph + q * 8) * w.sw * s, A.y + w.up * Math.sin(Math.min(1, q * 1.6) * Math.PI / 2), A.z + Math.sin(w.ph + q * 8) * w.sw * s); return p.lerp(B, eIn(seg(q, 0.35, 1))); };
+    return { obj: g, update: t => {
+      for (const w of ws) { const q = seg(t, w.d, w.d + 0.86); const vis = q > 0 && q < 1; w.head.visible = w.core.visible = vis; if (vis) { const p = P(w, q); w.head.position.copy(p); w.core.position.copy(p); } w.head.material.opacity = w.core.material.opacity = bell(q);
+        w.tail.forEach((s, j) => { const q2 = q - (j + 1) * 0.03; s.visible = vis && q2 > 0; if (s.visible) s.position.copy(P(w, q2)); s.material.opacity = bell(q) * 0.75 * (1 - j / 8); }); }
+      hitPuff(t * dur);
+    } };
+  };
+  // Charm: a ribbon of crimson mist from the caster's eyes to the hero, then hearts' worth of motes circling the hero's head
+  SFX.mist = f => {
+    const g = new T.Group(); const col = '#ff3a5c', col2 = '#ff9ab0'; const r = fxRng(f);
+    const A = fxHand(f.src, f.x, f.y, f.x2, f.y2, 0.85), B = fxPt(f.dst, f.x2, f.y2, 0.85);
+    const d = B.clone().sub(A); const side = new T.Vector3(-d.z, 0, d.x); if (side.lengthSq() < 1e-4) side.set(1, 0, 0); side.normalize();
+    const P = (k, ph) => A.clone().lerp(B, k).addScaledVector(side, Math.sin(k * Math.PI * 2 + ph) * 0.55 * Math.sin(k * Math.PI)).add(new T.Vector3(0, Math.sin(k * Math.PI) * 0.7, 0));
+    const ps = []; for (let i = 0; i < 44; i++) ps.push({ s: fxSprite(g, i % 3 ? 'smoke' : 'glow', i % 3 ? (i % 2 ? '#c8143a' : '#8a0a2a') : col2, 0.8 + r() * 0.5, 0, !!(i % 3)), o: r() * 0.42, ph: r() * 6.28 });   // the mist itself plain-blended, so it stays crimson over bright grass
+    const aura = fxSprite(g, 'glow', col, 2.2, 0); aura.position.copy(B);
+    const orbit = []; for (let i = 0; i < 8; i++) orbit.push(fxSprite(g, 'spark', i % 2 ? col : col2, 0.24, 0));
+    const ring = fxFlat(g, 'ring', col, 1.6, 0); ring.position.copy(fxPt(f.dst, f.x2, f.y2, 0)); ring.position.y += 0.05;
+    let lv = 0;
+    return { obj: g, update: t => {
+      for (const p of ps) { const k = (t - p.o) * 2.2; p.s.visible = k > 0 && k < 1; if (!p.s.visible) continue; p.s.position.copy(P(k, p.ph)); p.s.material.opacity = bell(k) * 0.8; }
+      const oq = seg(t, 0.42, 1); lv = bell(oq);
+      orbit.forEach((s, i) => { const a = t * 8 + i / 8 * Math.PI * 2; s.position.set(B.x + Math.cos(a) * 0.6, B.y + Math.sin(a * 2) * 0.12, B.z + Math.sin(a) * 0.6); s.scale.set(0.36, 0.36, 1); s.material.opacity = lv; }); aura.material.opacity = 0.45 * lv;
+      const rs = 1.4 + Math.sin(t * 14) * 0.2; ring.scale.set(rs, rs, 1); ring.material.opacity = 0.8 * lv;
+    }, light: t => [t < 0.45 ? A.clone().lerp(B, t * 2) : B, col, 2.5 * Math.max(lv, t < 0.45 ? 0.6 : 0)] };
+  };
+  // Time Stop: a great clock of runes spreads over the whole field, its hands spin and freeze, and the dust stops in the air
+  SFX.clock = f => {
+    const g = new T.Group(); const col = '#bfe0ff'; const r = fxRng(f);
+    const at = new T.Vector3(FW / 2, 0.06, FH / 2 + 0.3);
+    const big = fxFlat(g, 'sigil', col, 1, 0), small = fxFlat(g, 'sigil', '#eef7ff', 1, 0), ring = fxFlat(g, 'ring', col, 1, 0);
+    for (const m of [big, small, ring]) m.position.copy(at); small.position.y += 0.01; ring.position.y += 0.02;
+    const hands = [6.5, 4.2].map(L => { const h = new T.Group(); h.position.copy(at); h.position.y += 0.03; const m = fxFlat(h, 'disc', '#eef7ff', 1, 0); m.scale.set(0.35, L, 1); m.position.z = -L / 2; g.add(h); return { h, m }; });
+    const dust = []; for (let i = 0; i < 26; i++) dust.push({ s: fxSprite(g, 'spark', i % 2 ? col : '#ffffff', 0.12 + r() * 0.12, 0), p: new T.Vector3(r() * FW, 0.4 + r() * 2.6, r() * FH), d: r() * 0.3 });
+    let lv = 0;
+    return { obj: g, update: t => {
+      const inn = eOut(seg(t, 0, 0.3)), out = 1 - seg(t, 0.72, 1); lv = inn * out;
+      const bs = 18 * inn; big.scale.set(bs, bs, 1); big.rotation.z = t * 0.5; big.material.opacity = 0.55 * out;
+      const sm = 9 * inn; small.scale.set(sm, sm, 1); small.rotation.z = -t * 0.9; small.material.opacity = 0.45 * out;
+      const rq = seg(t, 0.1, 0.6); const rr = 4 + rq * 22; ring.scale.set(rr, rr, 1); ring.material.opacity = 0.8 * (1 - rq);
+      const spin = eOut(seg(t, 0, 0.55)); hands[0].h.rotation.y = -spin * 14; hands[1].h.rotation.y = -spin * 3.5; for (const hd of hands) hd.m.material.opacity = 0.6 * out * inn;
+      for (const dd of dust) { const q = seg(t, dd.d, dd.d + 0.2); dd.s.visible = q > 0; dd.s.position.copy(dd.p); dd.s.material.opacity = q * out * 0.9; }
+    }, light: () => [at.clone().setY(3), col, 3 * lv] };
+  };
+  // dragon fire: a roaring stream from the jaws to one hero, white-hot at the mouth and red at the end
+  SFX.breath2 = f => {
+    const g = new T.Group(); const r = fxRng(f); const H = fxH(f.src);
+    const A = fxHand(f.src, f.x, f.y, f.x2, f.y2, 0.72); { const q = fxGround(f.x2, f.y2); const d = new T.Vector3(q.x - A.x, 0, q.z - A.z); if (d.lengthSq() > 0.01) A.addScaledVector(d.normalize(), H * 0.2); }
+    const B = fxPt(f.dst, f.x2, f.y2, 0.35);
+    const d = B.clone().sub(A); const side = new T.Vector3(-d.z, 0, d.x); if (side.lengthSq() < 1e-4) side.set(1, 0, 0); side.normalize();
+    const cA = new T.Color('#fff4c8'), cB = new T.Color('#ff8a24'), cC = new T.Color('#c42a12'); const tmp = new T.Color();
+    const ps = []; for (let i = 0; i < 72; i++) ps.push({ s: fxSprite(g, i % 5 === 4 ? 'smoke' : 'glow', '#ffffff', 1, 0), e: i / 72 * 0.55 + r() * 0.02, sx: (r() - 0.5) * 2, sy: (r() - 0.5) * 2, sz: 0.6 + r() * 0.4 });
+    const T0 = 0.26; const mouth = fxSprite(g, 'glow', '#ffe8a8', 1.1, 0); mouth.position.copy(A);
+    let lv = 0;
+    return { obj: g, update: t => {
+      lv = bell(seg(t, 0, 0.8)); mouth.material.opacity = t < 0.62 ? 0.9 : 0; const ms = 0.9 + Math.sin(t * 60) * 0.2; mouth.scale.set(ms, ms, 1);
+      for (const p of ps) {
+        const k = (t - p.e) / T0; p.s.visible = k > 0 && k < 1.25; if (!p.s.visible) continue;
+        const kk = Math.min(1, k); const sp = 0.25 + kk * 0.9;
+        p.s.position.copy(A).addScaledVector(d, kk).addScaledVector(side, p.sx * sp * 0.55); p.s.position.y += p.sy * sp * 0.35 + (k > 1 ? (k - 1) * 1.2 : 0);
+        if (kk < 0.4) tmp.copy(cA).lerp(cB, kk / 0.4); else tmp.copy(cB).lerp(cC, (kk - 0.4) / 0.6); p.s.material.color.copy(tmp);
+        const z = (0.45 + kk * 1.6) * p.sz * 2; p.s.scale.set(z, z, 1); p.s.material.opacity = (k > 1 ? 1 - (k - 1) / 0.25 : 1) * 0.7;
+      }
+    }, light: () => [A.clone().lerp(B, 0.6), '#ff8a2a', 6 * lv], shake: t => 0.05 * bell(seg(t, 0, 0.7)) };
+  };
+  // a portal: a dark swirl on the ground that something climbs out of (Call Servants, raised dead, the phylactery)
+  SFX.portal = f => {
+    const g = new T.Group(); const col = f.color || '#9a5aff'; const r = fxRng(f); const dur = f.dur / 1000;
+    const at = fxGround(f.x, f.y, 0.05);
+    const hole = fxFlat(g, 'disc', '#000000', 1, 0, true), sig = fxFlat(g, 'sigil', col, 1, 0), ring = fxFlat(g, 'ring', col, 1, 0);
+    for (const m of [hole, sig, ring]) m.position.copy(at); sig.position.y += 0.01; ring.position.y += 0.02;
+    const smoke = fxBurst(g, { at: at.clone().setY(0.3), n: 12, tex: 'smoke', cols: ['#1a1024', '#2a1a3a'], size: [0.8, 1.4], speed: [0.2, 0.7], drag: 0.6, grav: -2.2, life: [0.6, 1.0], delay: [0, 0.45], grow: 1.4, hemi: true, normal: true, op: 0.6, seed: r() * 1e4 });
+    const sparks = []; for (let i = 0; i < 14; i++) sparks.push({ s: fxSprite(g, 'spark', i % 2 ? col : '#ffffff', 0.16 + r() * 0.1, 0), a: r() * 6.28, d: r() * 0.4 });
+    let lv = 0;
+    return { obj: g, update: t => {
+      const inn = eOut(seg(t, 0, 0.3)), out = 1 - seg(t, 0.7, 1); lv = inn * out;
+      const s = 2.2 * inn; hole.scale.set(s * 0.8, s * 0.8, 1); hole.material.opacity = 0.7 * lv; sig.scale.set(s, s, 1); sig.rotation.z = t * 7; sig.material.opacity = 0.95 * out; ring.scale.set(s * 1.4, s * 1.4, 1); ring.material.opacity = 0.7 * lv;
+      smoke(t * dur);
+      for (const p of sparks) { const q = seg(t, p.d, p.d + 0.5); p.s.visible = q > 0 && q < 1; if (!p.s.visible) continue; const a = p.a + q * 6; p.s.position.set(at.x + Math.cos(a) * 0.8 * (1 - q), at.y + q * 2.2, at.z + Math.sin(a) * 0.8 * (1 - q)); p.s.material.opacity = bell(q); }
+    }, light: () => [at.clone().setY(1), col, 3 * lv] };
+  };
+  // a puff where someone vanishes or reappears (Misty Step, a wraith's phase, the vampire's mist, the Archmage's blink)
+  SFX.poof = f => {
+    const g = new T.Group(); const col = f.color || '#c9b0ff'; const r = fxRng(f); const dur = f.dur / 1000;
+    const at = fxGround(f.x, f.y, 0.9);
+    const puff = fxBurst(g, { at, n: 16, tex: 'smoke', cols: [col, '#ffffff'], size: [0.7, 1.2], speed: [1.5, 3], drag: 4, life: [0.35, 0.6], grow: 1.2, op: 0.7, seed: r() * 1e4 });
+    const sp = fxBurst(g, { at, n: 12, tex: 'spark', cols: ['#ffffff', col], size: [0.1, 0.2], speed: [2, 5], drag: 3, life: [0.25, 0.5], seed: r() * 1e4 });
+    const ring = fxFlat(g, 'ring', col, 1, 0); ring.position.copy(fxGround(f.x, f.y, 0.06));
+    return { obj: g, update: t => { puff(t * dur); sp(t * dur); const q = eOut(seg(t, 0, 0.6)); const s = 0.6 + q * 2.6; ring.scale.set(s, s, 1); ring.material.opacity = 0.8 * (1 - q); }, light: t => [at, col, 2.5 * (1 - t)] };
+  };
   function pickHexPx(cx, cy) {
     if (!BAT.camera) return null;
     const p = planeHit(rayFrom(cx, cy, BAT.camera), 0); if (!p) return null;
     return { x: BAT.bf.x0 + p.x * BAT.bf.R, y: BAT.bf.y0 + p.z * BAT.bf.R };
   }
-  function exitBattle() { disposeScene(BAT.scene); BAT.scene = null; for (const L of BAT.labels.values()) L.el.remove(); BAT.labels = new Map(); BAT.units = new Map(); BAT.fx = new Map(); }
+  function exitBattle() { for (const E of BAT.fx.values()) if (E.obj) fxFree(E.obj); BAT.fxLight = null; disposeScene(BAT.scene); BAT.scene = null; for (const L of BAT.labels.values()) L.el.remove(); BAT.labels = new Map(); BAT.units = new Map(); BAT.fx = new Map(); }
 
   function disposeScene(sc) {
     if (!sc) return;

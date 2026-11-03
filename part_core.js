@@ -1376,10 +1376,11 @@
   /* --- your fog of war: you see what your tower, minions, lairs, bands and villain see. Since 0.31 the heroes walk in
      the fog too: you only see them where one of yours can. --- */
   const DM_SIGHT = { tower: 5, minion: 3, lair: 2, band: 2, villain: 4 };
+  const DM_FAR = 2;   // 0.41: far sight: this much farther, you make out the land and its deposits, but not who's on it
   // pos: where a minion stands right now, for a page animating them mid-walk
-  function dmVisible(s, pos) {
-    const v = new Uint8Array(MW * MH);
-    const mark = (cx, cy, r) => {
+  function dmVisible(s, pos, extra) {
+    const v = new Uint8Array(MW * MH); const X = extra || 0;
+    const mark = (cx, cy, r0) => { const r = r0 + X;
       for (let y = Math.max(0, Math.floor(cy - r)); y <= Math.min(MH - 1, Math.ceil(cy + r)); y++) for (let x = Math.max(0, Math.floor(cx - r)); x <= Math.min(MW - 1, Math.ceil(cx + r)); x++)
         if (Math.hypot(x - cx, y - cy) <= r + 0.25) v[y * MW + x] = 1;
     };
@@ -1393,7 +1394,9 @@
   }
   function dmReveal(s) {
     if (!s.dmSeen) s.dmSeen = new Array(MW * MH).fill(0);
+    if (!s.dmFar) s.dmFar = s.dmSeen.slice();   // 0.41: the land you've made out from afar (older saves start from what they'd seen)
     const v = dmVisible(s); for (let i = 0; i < v.length; i++) if (v[i]) s.dmSeen[i] = 1;
+    const f = dmVisible(s, null, DM_FAR); for (let i = 0; i < f.length; i++) if (f[i]) s.dmFar[i] = 1;
     if (s.heroes && living(s).length && v[tIdx(s.party.x, s.party.y)]) s.partySeen = { x: s.party.x, y: s.party.y, w: s.week, d: s.day };
   }
   // 0.31: whether you can see the heroes right now, and Millbrook's whereabouts until you've seen the town itself
@@ -1405,6 +1408,7 @@
   }
   const dmSees = (s, x, y) => dmVisible(s)[tIdx(x, y)] === 1;
   const dmSeen = (s, x, y) => !s.dmSeen || !!s.dmSeen[tIdx(x, y)];
+  const dmScouted = (s, x, y) => dmSeen(s, x, y) || !!(s.dmFar && s.dmFar[tIdx(x, y)]);   // 0.41: seen up close, or made out from afar
 
   /* --- minions --- */
   function freeNear(s, cx, cy, maxR) {
@@ -1459,6 +1463,7 @@
     const n = (s.nodes || []).find(z => z.id === nodeId); if (!n) return 'No such site.';
     if (nodeRaided(s, n)) return `The heroes drove your minions off. It's safe to go back in ${n.raidedUntil - dayIndex(s)} day${n.raidedUntil - dayIndex(s) > 1 ? 's' : ''}.`;
     if (n.dev) return `The ${nodeName(n)} is already yours: it works on its own.`;
+    if (!dmScouted(s, n.x, n.y)) return 'None of yours has found that deposit yet. Send someone that way first.';   // 0.41
     if (assignedTo(s, n).filter(z => z.id !== minionId).length >= NODE_KINDS[n.kind].cap) return `Another ${minionType(s).one.toLowerCase()} is already on its way to that ${nodeName(n)}.`;
     const m = minionId ? s.minions.find(z => z.id === minionId) : nearestIdle(s, n.x, n.y);
     if (!m) return `No idle ${minionType(s).name.toLowerCase()}. Summon more at the tower, or call one off another job.`;
@@ -2857,12 +2862,15 @@
   const villainAt = s => villainOnMap(s) ? { x: s.villain.x, y: s.villain.y } : siteOf(s, 'tower');
   const adjacent = (a, b) => Math.abs(a.x - b.x) <= 1 && Math.abs(a.y - b.y) <= 1;
   // where your villain will walk: to a spot, home to the tower, or up to a band of the wilds
+  // 0.41: what stands in the villain's way: bands of the wilds and lairs not his own. His own lairs and bands make way
+  // for their master (before, a lair built in a pass or a wave on the road could shut him in)
+  const vBlocks = z => (z.kind === 'stack' && !(z.yours || z.lair || z.wave)) || (z.kind === 'dungeon' && !z.mine);
   function villainPathTo(s, x, y, tgt) {
     const V = s.villain; const from = villainAt(s); const tw = siteOf(s, 'tower');
     const enter = (ex, ey) => {
       if (ex === tw.x && ey === tw.y) return tileCost(s, ex, ey);
       const site = siteAt(s, ex, ey); if (site) return Infinity;
-      if (s.objects.some(z => z.x === ex && z.y === ey && (z.kind === 'stack' || z.kind === 'dungeon'))) return Infinity;
+      if (s.objects.some(z => z.x === ex && z.y === ey && vBlocks(z))) return Infinity;
       return tileCost(s, ex, ey);
     };
     const D = dijkstra(from.x, from.y, enter);
@@ -2974,12 +2982,22 @@
     if (!V.path || !V.path.length) return;
     const P = s.party; const near = (x, y) => living(s).length && Math.abs(x - P.x) <= 1 && Math.abs(y - P.y) <= 1;
     let left = VILLAIN_DAY_MP * (1 + talentFx(s).stride), px = V.x, py = V.y; const trail = [[px, py]]; let n = 0;
+    let bumped = false;
     for (const [nx, ny] of V.path) {
       const c = stepCost(s, px, py, nx, ny); if (c > left || near(nx, ny)) break;
-      if (s.objects.some(z => z.x === nx && z.y === ny && (z.kind === 'stack' || z.kind === 'dungeon'))) break;
+      if (s.objects.some(z => z.x === nx && z.y === ny && vBlocks(z))) { bumped = true; break; }
       left -= c; px = nx; py = ny; trail.push([px, py]); n++;
     }
+    // passing through his own lair or band is fine; stopping on one for the night isn't: he stays a step short
+    while (n > 0 && s.objects.some(z => z.x === px && z.y === py && (z.kind === 'stack' || z.kind === 'dungeon'))) { trail.pop(); n--; [px, py] = trail[trail.length - 1]; }
     V.path = V.path.slice(n); V.x = px; V.y = py; if (trail.length > 1) V.trail = trail;
+    // 0.41: something stepped into the road: find a way round it for tomorrow, or stop and say so (he used to stand there for good)
+    if (bumped && V.path.length) {
+      const end = V.path[V.path.length - 1]; const tgt = V.target ? s.objects.find(z => z.id === V.target && z.wild) : null;
+      const p2 = tgt ? villainPathTo(s, tgt.x, tgt.y, tgt) : villainPathTo(s, end[0], end[1], null);
+      if (p2 && (p2.length || tgt)) V.path = p2;
+      else { V.path = []; V.goHome = false; say(s, `A band of the wilds blocks the way, and ${vName(s)} can't find a way round. Give a new order.`, 'dm'); }
+    }
     // 0.36: any relic or artifact on the way is picked up as the villain passes
     for (const [tx, ty] of trail.slice(1)) { const o = s.objects.find(z => z.x === tx && z.y === ty && (z.kind === 'relic' || z.kind === 'artifact')); if (o) claimRelic(s, o); }
     const tw = siteOf(s, 'tower');

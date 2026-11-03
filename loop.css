@@ -875,3 +875,6 @@ ul.log small { color: #8a7a60; margin-right: 4px; }
 .abtalk { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; pointer-events: none; display: none; }
 .abtalk.on { display: block; }
 .abigw:has(.abtalk.on) .abig { visibility: hidden; }
+
+/* ---------- 0.41: a spell's flash over the battlefield ---------- */
+.bflash { position: absolute; inset: 0; z-index: 3; pointer-events: none; opacity: 0; mix-blend-mode: screen; }

@@ -18,6 +18,7 @@ Run it in Terminal:
     python3 ~/Documents/bts-art/elevenlabs_gen.py intro             # 0.34: the intro's storyteller, music and sounds (from intro.json)
     python3 ~/Documents/bts-art/elevenlabs_gen.py intro music       # just one part: voice, music or sfx
     python3 ~/Documents/bts-art/elevenlabs_gen.py warhorn crumble splinter splash   # 0.38: the assault's sounds
+    python3 ~/Documents/bts-art/elevenlabs_gen.py spells            # 0.41: the spells' sounds (sp-cast, sp-boom, ...)
 
 Lines and voice descriptions are in hero_lines.json next to this script. Each speaker's voice is designed once
 and saved in your ElevenLabs voices (one of your custom voice slots each); its id is kept in out-voice/voices.json.
@@ -72,6 +73,19 @@ SFX = {
     'splinter': ('a heavy wooden gate smashed open: splintering planks, a cracking beam and iron hinges giving way', 1.6, False),
     'splash': ('someone wading quickly through shallow water, a few heavy splashes', 1.0, False),
     'growl': ('a crowd of monsters growling and snarling menacingly', 1.5, False),
+    # 0.41: spells
+    'sp-cast': ('a magic spell being gathered: a rising shimmering whoosh and a soft crackle of energy', 1.2, False),
+    'sp-boom': ('a fireball explosion: a deep fiery whoomp, roaring flames and crackling embers', 2.0, False),
+    'sp-thunder': ('a lightning bolt strike: a sharp electric crack and a short rumble of thunder', 1.5, False),
+    'sp-zap': ('a quick magic missile: a bright whistling zip ending in a small sparkling pop', 0.7, False),
+    'sp-beam': ('a disintegration ray: a high humming energy beam with a hiss and fizzling dust', 1.6, False),
+    'sp-heal': ('a healing spell: a gentle rising chime and warm shimmering sparkles', 1.5, False),
+    'sp-holy': ('radiant holy magic: a bright choir-like swell and a ringing burst of light', 1.8, False),
+    'sp-soul': ('necrotic soul magic: a ghostly wail being torn away and a deep dark whoosh', 2.0, False),
+    'sp-time': ('time stopping: a clock ticks loudly twice then everything freezes into a deep resonant hum', 2.2, False),
+    'sp-poof': ('a teleport: a soft magical whoosh and a puff of smoke', 0.8, False),
+    'sp-breath': ('a dragon breathing fire: a roaring torrent of flame and a hiss', 2.0, False),
+    'sp-charm': ('a seductive charm spell: a soft eerie shimmer with a low whispering echo', 1.5, False),
     'laugh': ('a deep evil villain laugh echoing in a stone throne room', 3.0, False),
     # battle
     'battle': ('a battle horn blows once, war drums pound, a fight is about to begin', 3.0, False),
@@ -584,6 +598,7 @@ def main():
         return heroes(args[1:], args[0])
     if args == ['test']: keys = TEST
     elif args == ['sfx']: keys = list(SFX)
+    elif args == ['spells']: keys = [k for k in SFX if k.startswith('sp-')]
     elif args == ['music']: keys = list(MUSIC)
     elif args == ['all']: keys = list(SFX) + list(MUSIC)
     else: keys = args

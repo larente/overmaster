@@ -106,7 +106,7 @@ for (let i = 0; i < N; i++) {
       if (R.worn.length < G.RELIC_SLOTS && R.bag[0] && !G.wearRelic(s, R.bag[0])) c.wears = (c.wears || 0) + 1;
       if (R.worn.length && R0() < 0.2 && !G.removeRelic(s, R.worn[0])) c.offs = (c.offs || 0) + 1;
       const rel = s.objects.filter(o => o.kind === 'relic' || o.kind === 'artifact'); if (rel.length && R0() < 0.3 && !G.villainOrder(s, rel[0].x, rel[0].y)) c.relicGo = (c.relicGo || 0) + 1;
-      if (R.worn.length > G.RELIC_SLOTS || new Set(R.worn.concat(R.bag)).size !== R.worn.length + R.bag.length) throw new Error('relics: ' + JSON.stringify(R)); }
+      if (R.worn.length > G.relicSlots(s) || new Set(R.worn.concat(R.bag)).size !== R.worn.length + R.bag.length) throw new Error('relics: ' + JSON.stringify(R)); }
     // 0.35: collect full sites (and try some that aren't full: those must refuse)
     if (G.collectNode) for (const n of s.nodes) if (R() < 0.7) { const full = G.nodeFull(s, n) && !G.nodeRaided(s, n); const before = s.res[G.NODE_KINDS[n.kind].res]; const r = G.collectNode(s, n.id);
       if (full !== !r.err) throw new Error('collect: full ' + full + ' but ' + JSON.stringify(r));

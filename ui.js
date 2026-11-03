@@ -126,6 +126,7 @@
     fog: () => fogNow(),
     seeObj: o => o.kind === 'stack' ? canSeeObj(o) : hasSeen(o.x, o.y),
     seeTile: (x, y) => hasSeen(x, y),
+    seeNode: (x, y) => hasScouted(x, y),
     seeNow: (x, y) => canSee(x, y),
     lairBuilding: o => lairShownBuilding(o),
     // how many minions stand hammering at a half-built lair right now
@@ -200,7 +201,14 @@
       if (ui.hover && !ui.place && !ui.hoverMin) { const o = orderAt(ui.hover); const col = ORDER_COL[o.kind]; if (col && (o.kind !== 'move')) set(ui.hover.x, ui.hover.y, col, 0.4, true); }
     }
     if (ui.sel && ui.sel.type === 'villain' && !ui.night) { const r = villainRoute(); if (r) { sp.path = r.arrows; sp.pathColors = r.colors; } }
+    // 0.41: point anywhere with the villain picked: the road he'd take, or a red tile where he can't go
+    if (ui.sel && ui.sel.type === 'villain' && !ui.night && !ui.moving && ui.hover && !ui.hoverMin) {
+      const pv = villainPreview(ui.hover);
+      if (pv === false) set(ui.hover.x, ui.hover.y, '#dc3c28', 0.5, true);
+      else if (pv) { sp.path = pv.arrows; sp.pathColors = pv.colors; set(ui.hover.x, ui.hover.y, '#d0aaff', 0.35, true); }
+    }
     const band = selBand();
+    sp.block = !ui.night && !!(ms.length || (ui.sel && ui.sel.type === 'villain') || band);   // 0.41: show where nobody can walk
     if (band && !ui.night) { const r = bandRoute(band); if (r.length) { sp.path = r.map((p, i) => [p[0], p[1], i + 1 < r.length ? Math.atan2(r[i + 1][1] - p[1], r[i + 1][0] - p[0]) : 0]).slice(0, -1); sp.pathColor = '#ff9a7a'; } }
     if (ui.mode === 'patrol' && band && ui.hover) set(ui.hover.x, ui.hover.y, G.patrolCheck(S, band, ui.hover.x, ui.hover.y) ? '#dc3c28' : '#ff9a7a', 0.45, true);
     if (ui.mode === 'move' && ui.hover && ms.length) { const o = orderAt(ui.hover); set(ui.hover.x, ui.hover.y, ORDER_COL[o.kind] || '#e8d4ff', 0.45, true); }
@@ -257,7 +265,7 @@
     const fog = document.createElement('canvas'); fog.width = G.MW; fog.height = G.MH;
     const fc = fog.getContext('2d'); const fd = fc.createImageData(G.MW, G.MH);
     const FG = fogNow();
-    for (let i = 0; i < G.MW * G.MH; i++) { fd.data[i * 4] = 6; fd.data[i * 4 + 1] = 5; fd.data[i * 4 + 2] = 10; fd.data[i * 4 + 3] = FG.vis[i] ? 0 : FG.seen[i] ? 120 : 248; }
+    for (let i = 0; i < G.MW * G.MH; i++) { fd.data[i * 4] = 6; fd.data[i * 4 + 1] = 5; fd.data[i * 4 + 2] = 10; fd.data[i * 4 + 3] = FG.vis[i] ? 0 : FG.far[i] ? 60 : FG.scout[i] ? 120 : 248; }
     fc.putImageData(fd, 0, 0);
     c.drawImage(fog, 0, 0, G.MW, G.MH, ox - TILE / 2, oy - TILE / 2, G.MW * TILE + TILE, G.MH * TILE + TILE);
     const pp = partyPx();
@@ -305,7 +313,7 @@
     const items = [];
     for (const site of G.sitesOf(S)) if (hasSeen(site.x, site.y)) items.push({ y: site.y, f: () => drawSite(c, site, ox, oy) });
     for (const o of S.objects) if (o.kind === 'stack' ? canSeeObj(o) : hasSeen(o.x, o.y)) items.push({ y: o.y, f: () => drawObj(c, o, ox, oy, now) });
-    for (const n of S.nodes || []) if (hasSeen(n.x, n.y)) items.push({ y: n.y, f: () => drawNode(c, n, ox, oy) });
+    for (const n of S.nodes || []) if (hasScouted(n.x, n.y)) items.push({ y: n.y, f: () => drawNode(c, n, ox, oy) });
     const spots = minionSpots(); const look = G.minionType(S).look;
     const msel = new Set(selMinions().map(m => m.id));
     for (const m of S.minions || []) { const p = minionTile(m); const d = spots.get(m.id) || { dx: 0, dy: 0 }; items.push({ y: p.y + d.dy + 0.05, f: () => {
@@ -493,7 +501,7 @@
     if (!miniBase || miniBase.key !== key) {
       const M = G.mapOf(S); miniBase = document.createElement('canvas'); miniBase.width = G.MW * 6; miniBase.height = G.MH * 6; miniBase.key = key;
       const m = miniBase.getContext('2d');
-      for (let y = 0; y < G.MH; y++) for (let x = 0; x < G.MW; x++) { const i = tidx(x, y); if (!FG.seen[i]) { m.fillStyle = '#07060b'; m.fillRect(x * 6, y * 6, 6, 6); continue; } m.fillStyle = M.road[i] ? '#c4aa7a' : A.MINI[M.T[i]]; m.fillRect(x * 6, y * 6, 6, 6); if (!FG.vis[i]) { m.fillStyle = 'rgba(8,6,14,0.5)'; m.fillRect(x * 6, y * 6, 6, 6); } }
+      for (let y = 0; y < G.MH; y++) for (let x = 0; x < G.MW; x++) { const i = tidx(x, y); if (!FG.scout[i]) { m.fillStyle = '#07060b'; m.fillRect(x * 6, y * 6, 6, 6); continue; } m.fillStyle = M.road[i] ? '#c4aa7a' : A.MINI[M.T[i]]; m.fillRect(x * 6, y * 6, 6, 6); if (!FG.vis[i]) { m.fillStyle = 'rgba(8,6,14,0.5)'; m.fillRect(x * 6, y * 6, 6, 6); } }
     }
     const W = cv.clientWidth || 200, H = Math.round(W * G.MH / G.MW);
     if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); cv.style.height = H + 'px'; }
@@ -502,7 +510,7 @@
     const sx = W / G.MW, sy = H / G.MH; const dot = Math.max(3, sx * 0.8);
     const sq = (x, y, col, z, edge) => { const r = (z || dot) / 2; c.fillStyle = col; c.fillRect((x + 0.5) * sx - r, (y + 0.5) * sy - r, r * 2, r * 2); if (edge) { c.strokeStyle = edge; c.lineWidth = 1; c.strokeRect((x + 0.5) * sx - r, (y + 0.5) * sy - r, r * 2, r * 2); } };
     for (const site of G.sitesOf(S)) if (FG.seen[tidx(site.x, site.y)]) sq(site.x, site.y, site.kind === 'tower' ? '#c47cff' : site.kind === 'town' ? '#fff4d6' : '#d9ccb0', site.kind === 'landmark' ? dot * 0.8 : dot * 1.5, '#1a1008');
-    for (const n of S.nodes || []) if (FG.seen[tidx(n.x, n.y)]) sq(n.x, n.y, G.nodeRaided(S, n) ? '#6a6458' : MINI_RES[n.kind], dot * 1.1, '#140c04');
+    for (const n of S.nodes || []) if (FG.scout[tidx(n.x, n.y)]) sq(n.x, n.y, G.nodeRaided(S, n) ? '#6a6458' : MINI_RES[n.kind], dot * 1.1, '#140c04');
     for (const o of S.objects) {
       if (o.kind === 'stack' ? !canSeeObj(o) : !FG.seen[tidx(o.x, o.y)]) continue;
       if (o.kind === 'dungeon' && o.mine) sq(o.x, o.y, o.building ? '#5a2a78' : G.lairWrecked(S, o) ? '#4a3a52' : '#c04aff', dot * 1.4, '#f0d8ff');
@@ -661,7 +669,8 @@
   }
   // what's on a tile, for clicks and hover
   function thingAt(x, y) {
-    if (!hasSeen(x, y)) return x === S.party.x && y === S.party.y && partyShown() ? { type: 'party', x, y } : { type: 'spot', x, y };
+    // 0.41: land made out from afar shows its deposits, and nothing else that's on it
+    if (!hasSeen(x, y)) { const n = hasScouted(x, y) && G.nodeAt(S, x, y); if (n) return { type: 'node', id: n.id, x, y }; return x === S.party.x && y === S.party.y && partyShown() ? { type: 'party', x, y } : { type: 'spot', x, y }; }
     let o = G.objAt(S, x, y); if (o && o.kind === 'stack' && !canSeeObj(o)) o = null;
     if (o && o.kind === 'dungeon' && o.mine) return { type: 'lair', id: o.id, x, y };
     const n = G.nodeAt(S, x, y); if (n) return { type: 'node', id: n.id, x, y };
@@ -698,14 +707,19 @@
     const k = [S.party.x, S.party.y, (S.minions || []).map(m => { const p = N ? mpos(m) : m; return p.x + ',' + p.y; }).join(';'), S.objects.filter(o => o.kind === 'dungeon' && o.mine).map(o => o.x + ',' + o.y + (o.building ? 'b' : '')).join(';'), S.objects.filter(o => o.kind === 'stack' && (o.lair || o.yours)).map(o => o.x + ',' + o.y).join(';'), G.villainOnMap(S) ? S.villain.x + ',' + S.villain.y : '-', living()].join('|');   // 0.31: your bands and villain see too
     if (ui.fog && ui.fog.k === k && ui.fog.seenRef === (N ? N.seen0 : S.dmSeen)) return ui.fog;
     // the title screen's world has no fog
-    if (S.title) { const all = new Uint8Array(G.MW * G.MH).fill(1); ui.fog = { k, vis: all, seen: all, seenRef: S.dmSeen }; return ui.fog; }
-    const vis = G.dmVisible(S, N ? mpos : null); const base = (N && N.seen0) || S.dmSeen || []; const seen = new Uint8Array(vis.length);
-    for (let i = 0; i < vis.length; i++) seen[i] = vis[i] || base[i] ? 1 : 0;
-    ui.fog = { k, vis, seen, seenRef: N ? N.seen0 : S.dmSeen }; return ui.fog;
+    if (S.title) { const all = new Uint8Array(G.MW * G.MH).fill(1); ui.fog = { k, vis: all, far: all, seen: all, scout: all, seenRef: S.dmSeen }; return ui.fog; }
+    // 0.41: two rings of sight. Near (vis): everything, monsters, relics and heroes too. Far (a ring farther): the land and its
+    // deposits only. seen remembers what was near once; scout remembers the land made out from afar as well
+    const vis = G.dmVisible(S, N ? mpos : null), far = G.dmVisible(S, N ? mpos : null, G.DM_FAR);
+    const base = (N && N.seen0) || S.dmSeen || []; const fbase = (N && N.far0) || S.dmFar || base;
+    const seen = new Uint8Array(vis.length), scout = new Uint8Array(vis.length);
+    for (let i = 0; i < vis.length; i++) { seen[i] = vis[i] || base[i] ? 1 : 0; scout[i] = seen[i] || far[i] || fbase[i] ? 1 : 0; }
+    ui.fog = { k, vis, far, seen, scout, seenRef: N ? N.seen0 : S.dmSeen }; return ui.fog;
   }
   const living = () => S.heroes.filter(h => h.status === 'ok').length;
   const canSee = (x, y) => x >= 0 && y >= 0 && x < G.MW && y < G.MH && fogNow().vis[tidx(Math.round(x), Math.round(y))] === 1;
   const hasSeen = (x, y) => x >= 0 && y >= 0 && x < G.MW && y < G.MH && fogNow().seen[tidx(x, y)] === 1;
+  const hasScouted = (x, y) => x >= 0 && y >= 0 && x < G.MW && y < G.MH && fogNow().scout[tidx(x, y)] === 1;   // 0.41: the land, made out at least from afar
   const canSeeObj = o => { const t = bandTile(o.id); return t ? canSee(t.x, t.y) : canSee(o.x, o.y); };
   // 0.31: the heroes walk in the fog: they show only where one of yours can see them, or in a fight
   function partyShown() {
@@ -799,7 +813,7 @@
   // what a right-click on this tile would tell the selected minions to do
   function orderAt(t) {
     const ms = selMinions(); if (!ms.length || !t) return { kind: 'none' };
-    if (!hasSeen(t.x, t.y)) { const e = G.moveCheck(S, t.x, t.y); return e && !/walk there/.test(e) ? { kind: 'move', x: t.x, y: t.y } : e ? { kind: 'no', why: e } : { kind: 'move', x: t.x, y: t.y }; }
+    if (!hasScouted(t.x, t.y)) { const e = G.moveCheck(S, t.x, t.y); return e && !/walk there/.test(e) ? { kind: 'move', x: t.x, y: t.y } : e ? { kind: 'no', why: e } : { kind: 'move', x: t.x, y: t.y }; }
     const n = G.nodeAt(S, t.x, t.y);
     if (n) {
       const K = G.NODE_KINDS[n.kind];
@@ -814,6 +828,28 @@
     const site = G.siteAt(S, t.x, t.y); if (site && site.id === 'tower') return { kind: 'home' };
     const err = G.moveCheck(S, t.x, t.y); if (err) return { kind: 'no', why: err };
     return { kind: 'move', x: t.x, y: t.y };
+  }
+  // 0.41: the road the villain would take to a tile (false: he can't go there), worked out once per tile pointed at
+  function villainPreview(t) {
+    const V = S.villain; const key = [t.x, t.y, V.x, V.y, V.state, S.day, S.objects.length, (V.path || []).length].join(':');
+    if (ui.vprev && ui.vprev.key === key) return ui.vprev.r;
+    let r = null;
+    const tw = G.siteOf(S, 'tower'); const home = t.x === tw.x && t.y === tw.y;
+    const o = G.objAt(S, t.x, t.y); const tgt = o && o.kind === 'stack' && o.wild && canSeeObj(o) ? o : null;
+    const loot = o && (o.kind === 'relic' || o.kind === 'artifact') && hasSeen(o.x, o.y);
+    const end = V.path && V.path.length ? V.path[V.path.length - 1] : null;
+    if (S.march || V.state === 'banished' || (end && end[0] === t.x && end[1] === t.y) || (home && !G.villainOnMap(S))) r = null;
+    else if (!tgt && !home && !loot && (!isFinite(G.tileCost(S, t.x, t.y)) || (o && hasSeen(o.x, o.y)) || (G.siteAt(S, t.x, t.y) && hasSeen(t.x, t.y)))) r = false;
+    else {
+      const path = G.villainPathTo(S, t.x, t.y, tgt);
+      if (!path) r = false;
+      else if (path.length) {
+        const from = G.villainOnMap(S) ? V : tw; const arrows = [], colors = []; let px = from.x, py = from.y, left = G.VILLAIN_DAY_MP, day = 0;
+        for (const [x, y] of path) { const c = G.stepCost(S, px, py, x, y); if (c > left) { day++; left = G.VILLAIN_DAY_MP; } left -= c; arrows.push([px, py, Math.atan2(y - py, x - px)]); colors.push(day === 0 ? '#cfa8ff' : day === 1 ? '#9a74d8' : '#6e54a0'); px = x; py = y; }
+        r = { arrows, colors };
+      }
+    }
+    ui.vprev = { key, r }; return r;
   }
   // the villain's road as arrows: bright for tonight's march, dim for later
   function villainRoute() {
@@ -915,10 +951,10 @@
     for (const m of ms) {
       if (m.job && m.job.kind === 'work' && (S.nodes.find(n => n.id === m.job.node) || {}).kind === kind) { sent++; continue; }
       // nearest first, but an open mine beats a raw deposit a few tiles closer
-      const opts = S.nodes.filter(n => n.kind === kind && !n.dev && !G.nodeRaided(S, n) && G.assignedTo(S, n).length < G.NODE_KINDS[kind].cap).sort((a, b) => Math.hypot(a.x - m.x, a.y - m.y) + (a.dev ? 0 : 3) - Math.hypot(b.x - m.x, b.y - m.y) - (b.dev ? 0 : 3));
+      const opts = S.nodes.filter(n => n.kind === kind && hasScouted(n.x, n.y) && !n.dev && !G.nodeRaided(S, n) && G.assignedTo(S, n).length < G.NODE_KINDS[kind].cap).sort((a, b) => Math.hypot(a.x - m.x, a.y - m.y) + (a.dev ? 0 : 3) - Math.hypot(b.x - m.x, b.y - m.y) - (b.dev ? 0 : 3));
       for (const n of opts) { if (!G.orderWork(S, n.id, m.id)) { sent++; last = n; break; } }
     }
-    if (!sent) { toast(`No free ${kind} deposit left that you can reach: every one is yours already, has a minion on the way, or was wrecked.`, 'bad'); return; }
+    if (!sent) { toast(`No free ${kind} deposit that you've found and can reach: send a minion or your villain exploring to find more.`, 'bad'); return; }
     if (last) ui.floats.push({ x: last.x * TILE + TILE / 2, y: last.y * TILE + TILE * 0.3, text: G.nodeName(last), color: ORDER_COL.work, t0: performance.now() });
     if (sent < ms.length) toast(`Only ${sent} found a free ${kind} site.`, 'sys');
     minionAck(ms[0], 'mine'); sfx('minion-go', { vol: 0.8 });
@@ -1015,7 +1051,7 @@
   function lairBar(o) { if (!o.mine) return null; const b = lairShownBuilding(o); if (!b) return null; const tot = o.buildTotal || G.buildDays(o.dtype); return Math.max(0, Math.min(1, 1 - b / tot)); }
   // before the engine runs the night: where everyone stands and what's half-built
   function nightBefore() {
-    return { mins: new Map((S.minions || []).map(m => [m.id, { x: m.x, y: m.y, path: m.path.map(p => p.slice()) }])), lairs: new Map(G.myLairs(S).filter(o => o.building).map(o => [o.id, o.building])), seen0: (S.dmSeen || []).slice() };
+    return { mins: new Map((S.minions || []).map(m => [m.id, { x: m.x, y: m.y, path: m.path.map(p => p.slice()) }])), lairs: new Map(G.myLairs(S).filter(o => o.building).map(o => [o.id, o.building])), seen0: (S.dmSeen || []).slice(), far0: (S.dmFar || S.dmSeen || []).slice() };
   }
   // after it: who walked where, which sites opened, which lairs went up
   function nightPlan(pre) {
@@ -1049,7 +1085,7 @@
     for (const id of lairs.keys()) { const o = S.objects.find(z => z.id === id); xs.push(o.x); ys.push(o.y); }
     for (const [id, w] of bands) { const [x, y] = w.pts[w.pts.length - 1]; if (vis0[y * G.MW + x] || pre.seen0[y * G.MW + x]) for (const [a, b] of w.pts) { xs.push(a); ys.push(b); } }
     if (!xs.length) { const tw = G.siteOf(S, 'tower'); xs.push(tw.x); ys.push(tw.y); }   // 0.31: not the heroes: they may be in the fog
-    return { t0: performance.now(), mins, bands, seen0: pre.seen0, spt, work, opened, lairs, fills, noCam, dur: end + 0.4 * sp, box: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)], filled: d.filled || [] };
+    return { t0: performance.now(), mins, bands, seen0: pre.seen0, far0: pre.far0, spt, work, opened, lairs, fills, noCam, dur: end + 0.4 * sp, box: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)], filled: d.filled || [] };
   }
   // glide out to watch, then back to where you were looking
   function nightCamera(N) {
@@ -1541,7 +1577,7 @@
       if (ev.died || ev.killed) sfx('die', { vol: 0.6, delay: 0.12, gap: 300 });
       return;
     }
-    if (ev.t === 'spell') { const f = ev.fx; sfx(ev.heal || f === 'holyword' ? 'holy' : f === 'fireball' || f === 'meteor' || f === 'breath' || f === 'lightning' || f === 'chain' ? 'fire' : 'dark'); return; }
+    if (ev.t === 'spell') return;   // 0.41: spellFx times each spell's sounds to its own wind-up and impact
     if (ev.t === 'summon') { sfx('summoned', { vol: 0.8 }); return; }
     if (ev.t === 'revive') { sfx('holy', { vol: 0.8 }); }
   }
@@ -2703,7 +2739,7 @@
   }
   function drawBattle() {
     const cv = bcv(); const b = S.battle; if (!cv || !b || !BF) return;
-    if (ui.r3d) { const now = performance.now(); ui.fx = ui.fx.filter(f => now - f.t0 < f.dur); ui.floats = ui.floats.filter(f => now - f.t0 < 1400); ui.bspec = battleSpec3d(); return; }
+    if (ui.r3d) { const now = performance.now(); ui.fx = ui.fx.filter(f => now - f.t0 < f.dur); ui.floats = ui.floats.filter(f => now - f.t0 < 1400); ui.bspec = battleSpec3d(); battleFlash(now); return; }
     const c = cv.getContext('2d'); c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(BF.field, 0, 0); c.setTransform(dpr, 0, 0, dpr, 0, 0);
     const R = BF.R; const now = performance.now();
     const deploy = b.phase === 'deploy';
@@ -2745,13 +2781,14 @@
       draw.push({ y: p.y - 0.1, f: () => { if (t === 'brush') A.brush(c, p.x, p.y, R, b.terrain, +k * 7 + S.seed); else A.obstacle(c, p.x, p.y, R, b.terrain, +k * 7 + S.seed, t === 'wall' && b.wallLv >= 2 ? 'stonewall' : t); } });
     }
     for (const x of b.units) {
-      const v = ui.view[x.id]; if (!v || (!v.alive && v.fade <= 0)) continue;
+      const v = ui.view[x.id]; if (!v || (!v.alive && v.fade <= 0) || v.ghost) continue;
       const p0 = v.px || hexXY(v.pos); const p = v.lift ? { x: p0.x, y: p0.y - v.lift } : p0;
       draw.push({ y: p0.y, f: () => drawUnit(c, x, v, p, R, now) });
     }
     draw.sort((a, z) => a.y - z.y); for (const d of draw) d.f();
     ui.fx = ui.fx.filter(f => now - f.t0 < f.dur);
     for (const f of ui.fx) if (now >= f.t0) drawFx(c, f, (now - f.t0) / f.dur, R);
+    battleFlash(now);
     ui.floats = ui.floats.filter(f => now - f.t0 < 1400);
     for (const f of ui.floats) {
       if (!f.battle) continue;
@@ -2789,7 +2826,11 @@
       if (v.down) { c.font = `700 ${Math.round(R * 0.3)}px Cinzel, Georgia, serif`; c.textAlign = 'center'; c.fillStyle = '#ff8a7a'; c.fillText('DOWN', p.x, p.y + R * 0.5); }
     }
   }
+  // 0.41: the 3D spells' kinds, drawn the simple way on the flat battlefield
+  const FX2D = { cast: 'ring', orb: 'shot', dart: 'shot', mist: 'shot', blast: 'boom', beam: 'bolt', nova: 'ring', souls: 'ring', clock: 'ring', portal: 'ring', poof: 'ring', pillar: 'holy', heal2: 'heal', breath2: 'flame' };
   function drawFx(c, f, t, R) {
+    if (f.kind === 'flash') return;
+    if (FX2D[f.kind]) { const g = Object.assign({}, f, { kind: FX2D[f.kind] }); if (f.kind === 'orb' && f.sky) { g.x = f.x2 - R * 2; g.y = f.y2 - R * 7; } if (f.kind === 'cast' || f.kind === 'poof') t = Math.min(1, t * 2.5); if (f.kind === 'breath2') { g.x = f.x2; g.y = f.y2; } if (g.kind === 'ring' && !g.color) g.color = '#c9a0ff'; f = g; }
     c.save();
     if (f.kind === 'boom') { c.globalAlpha = 1 - t; const g = c.createRadialGradient(f.x, f.y, 0, f.x, f.y, R * (0.6 + t * 1.6)); g.addColorStop(0, 'rgba(255,240,170,0.95)'); g.addColorStop(0.5, 'rgba(255,140,40,0.8)'); g.addColorStop(1, 'rgba(160,30,10,0)'); c.fillStyle = g; c.beginPath(); c.arc(f.x, f.y, R * (0.6 + t * 1.6), 0, 7); c.fill(); }
     if (f.kind === 'bolt') { c.globalAlpha = 1 - t * 0.7; c.strokeStyle = f.color || '#bfe6ff'; c.lineWidth = 3; c.shadowColor = f.color || '#8fd0ff'; c.shadowBlur = 12; c.beginPath(); c.moveTo(f.x, f.y); const n = 6; for (let i = 1; i <= n; i++) { const q = i / n; c.lineTo(f.x + (f.x2 - f.x) * q + (i < n ? (Math.sin(i * 12.9 + f.seed) * R * 0.35) : 0), f.y + (f.y2 - f.y) * q + (i < n ? Math.cos(i * 7.3 + f.seed) * R * 0.35 : 0)); } c.stroke(); }
@@ -2834,6 +2875,13 @@
       return Dice.show(tray, ev, speed).then(() => { ui.trayHide = setTimeout(() => { if (!ui.playing || !ui.dice) tray.hidden = true; }, 2600); });
     }
     if (ev.t === 'move' && S.battle && (ev.path || []).some(k => S.battle.tiles[k] === 'ford')) sfxOr('splash', 'steps-swamp', { vol: 0.5, gap: 300 });   // 0.38: wading
+    if (ev.t === 'move' && ev.blink) {   // 0.41: a teleport: a puff where it goes, a puff where it comes back
+      const v = ui.view[ev.id]; if (!v) return 0;
+      const a = hexXY(ev.path[0]), z = hexXY(ev.path[ev.path.length - 1]); const col = { misty: '#c9b0ff', phase: '#bfe8ff', mist: '#ff6a7a' }[ev.style] || '#c08aff';
+      const per = 420 * speed; ui.fx.push({ kind: 'poof', x: a.x, y: a.y, color: col, t0: now, dur: 620 * speed, seed: Math.random() * 9 }); ui.fx.push({ kind: 'poof', x: z.x, y: z.y, color: col, t0: now + per * 0.8, dur: 620 * speed, seed: Math.random() * 9 });
+      sfxOr('sp-poof', 'open', { vol: 0.5 }); v.ghost = true; setTimeout(() => { v.pos = ev.path[ev.path.length - 1]; v.px = null; v.lift = 0; v.ghost = false; }, per * 0.85);
+      return per + 60 * speed;
+    }
     if (ev.t === 'move') {
       const v = ui.view[ev.id]; if (!v) return 0;
       const pts = ev.path.map(hexXY); const per = (ev.fly ? 360 : 110 * (pts.length - 1)) * speed;
@@ -2879,21 +2927,142 @@
       renderBattleUI(true);
       return 260 * speed;
     }
-    if (ev.t === 'spell') {
-      const src = ev.src ? ui.view[ev.src] : null; const ps = src ? hexXY(src.pos) : { x: BF.W - 40, y: 40 };
-      const targets = (ev.targets || []).map(id => ui.view[id]).filter(Boolean);
-      if (ev.heal) { for (const tv of targets) { const tp = hexXY(tv.pos); ui.fx.push({ kind: 'heal', x: tp.x, y: tp.y, t0: now, dur: 800 * speed, seed: Math.random() * 6 }); const u2 = b.units.find(x => ui.view[x.id] === tv); if (u2) { tv.hp = u2.hp; tv.down = u2.down; tv.alive = u2.alive; } } renderBattleUI(true); return 400 * speed; }
-      if (ev.fx === 'fireball') { const cp = hexXY(ev.center); ui.fx.push({ kind: 'shot', x: ps.x, y: ps.y, x2: cp.x, y2: cp.y, t0: now, dur: 300 * speed, color: '#ffb040', arc: 0.6 }); ui.fx.push({ kind: 'boom', x: cp.x, y: cp.y, t0: now + 280 * speed, dur: 600 * speed }); return 520 * speed; }
-      if (ev.fx === 'meteor') { for (const tv of targets) { const tp = hexXY(tv.pos); ui.fx.push({ kind: 'boom', x: tp.x, y: tp.y, t0: now + Math.random() * 200, dur: 600 * speed }); } return 520 * speed; }
-      if (ev.fx === 'lightning' || ev.fx === 'chain') { let from = ps; for (const tv of targets) { const tp = hexXY(tv.pos); ui.fx.push({ kind: 'bolt', x: from.x, y: from.y, x2: tp.x, y2: tp.y, t0: now, dur: 420 * speed, seed: Math.random() * 9 }); if (ev.fx === 'chain') from = tp; } return 420 * speed; }
-      if (ev.fx === 'arrow') { for (const tv of targets) { const tp = hexXY(tv.pos); ui.fx.push({ kind: 'shot', x: ps.x, y: ps.y, x2: tp.x, y2: tp.y, t0: now, dur: 300 * speed, color: '#c9a0ff', arc: 0.2 }); } return 300 * speed; }
-      if (ev.fx === 'holyword') { for (const tv of targets) { const tp = hexXY(tv.pos); ui.fx.push({ kind: 'holy', x: tp.x, y: tp.y, t0: now, dur: 600 * speed }); } return 450 * speed; }
-      if (ev.fx === 'rend') { ui.fx.push({ kind: 'ring', x: ps.x, y: ps.y, t0: now, dur: 800 * speed, color: '#c06cff' }); return 500 * speed; }
-      if (ev.fx === 'breath') { for (const tv of targets) { const tp = hexXY(tv.pos); ui.fx.push({ kind: 'flame', x: tp.x, y: tp.y, t0: now, dur: 700 * speed }); } return 450 * speed; }
-      return 250 * speed;
-    }
-    if (ev.t === 'summon') { const u = unit(ev.id); ui.view[ev.id] = { pos: u.pos, count: u.count, hp: u.hp, alive: true, down: false, fade: 1 }; const p = hexXY(u.pos); ui.fx.push({ kind: 'ring', x: p.x, y: p.y, t0: now, dur: 500 * speed, color: '#8fb0ff' }); return 400 * speed; }
+    if (ev.t === 'spell') return spellFx(ev, speed);
+    if (ev.t === 'summon') { const u = unit(ev.id); const p = hexXY(u.pos); ui.fx.push({ kind: 'portal', x: p.x, y: p.y, t0: now, dur: 1100 * speed, color: u.undead ? '#7affc0' : '#9a5aff', seed: Math.random() * 9 }); ui.fx.push({ kind: 'ring', x: p.x, y: p.y, t0: now, dur: 500 * speed, color: '#8fb0ff' }); ui.view[ev.id] = { pos: u.pos, count: u.count, hp: u.hp, alive: true, down: false, fade: 1, born: now + 320 * speed }; return 420 * speed; }
     return 0;
+  }
+  /* ============ 0.41: spells, played out ============
+     Each spell is a wind-up at the caster (a circle of runes, light gathering in the hands) and then what it does:
+     the kinds of effect are drawn by world3d.js (or simply, on the flat battlefield, by drawFx). Returns how long the
+     next event should wait, so the damage numbers land with the blow. */
+  const REDUCED = (() => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } })();
+  const SPELL_COL = { arcane: '#c08aff', fire: '#ffb040', holy: '#ffe08a', necro: '#b07aff', nature: '#7dff9a', storm: '#a8d8ff', blood: '#ff4a6a', time: '#bfe0ff', hell: '#ff6a3a', green: '#7dff6a' };
+  function spellFx(ev, speed) {
+    const b = S.battle; const now = performance.now(); const sp = speed;
+    const at = id => { const v = ui.view[id]; return v ? hexXY(v.pos) : null; };
+    const unitOf = id => b.units.find(x => x.id === id);
+    const src = ev.src && ui.view[ev.src] ? ev.src : null; const su = src && unitOf(src); const ps = src ? at(src) : { x: BF.W - 40, y: 40 };
+    const tg = (ev.targets || []).filter(id => ui.view[id]);
+    const add = (kind, o, delay, dur) => ui.fx.push(Object.assign({ kind, t0: now + delay * sp, dur: dur * sp, seed: Math.random() * 9 }, o));
+    const flash = (color, op, delay, dur) => add('flash', { color, op }, delay, dur);
+    // sounds at their moment: a new spell sound if it's been made (elevenlabs_gen.py spells), else the nearest old one
+    const snd = (k, alt, delay, vol) => { const go = () => { if (!window.SND) return; const n = SND.has(k) ? k : alt; if (n) SND.play(n, { vol: vol == null ? 0.8 : vol, gap: 30 }); }; if (delay > 0) setTimeout(go, delay * sp); else go(); };
+    // the wind-up: the caster turns to face its target and starts its cast; a building just glows
+    const cast = (color, dur, toward) => {
+      if (!src) return 0;
+      const tp = toward || (tg[0] && tg[0] !== src && at(tg[0])) || null;
+      add('cast', { x: ps.x, y: ps.y, x2: tp ? tp.x : ps.x, y2: tp ? tp.y : ps.y + 1, src, color, frac: su && su.structure ? 0.92 : null }, 0, dur);
+      snd('sp-cast', null, 0, 0.55);
+      const v = ui.view[src];
+      if (v && !(su && su.structure)) { v.atk = now; const tv = tg[0] && tg[0] !== src ? ui.view[tg[0]] : null; if (tv) { v.face = tv.pos; clearTimeout(v.faceT); v.faceT = setTimeout(() => { v.face = null; }, dur * sp + 900 * sp); } }
+      return dur * (su && su.structure ? 0.35 : 0.6);
+    };
+    const P = ev.power, F = ev.fx;
+    // healing, in every flavour: light rising around whoever it lands on
+    if (ev.heal) {
+      const pal = P === 'potion' ? 'potion' : P === 'wind' ? 'wind' : P === 'phylactery' ? 'phyl' : P === 'divine' || F === 'resurrect' || F === 'miracle' || F === 'holyword' ? 'gold' : 'green';
+      for (const id of tg) { const tv = ui.view[id], u2 = unitOf(id); if (tv && u2) { tv.hp = u2.hp; tv.down = u2.down; tv.alive = u2.alive; } }
+      if (P === 'phylactery') { snd('sp-soul', 'dark', 0); const p = at(src) || ps; add('portal', { x: p.x, y: p.y, color: '#6affb8' }, 0, 1300); add('heal2', { x: p.x, y: p.y, dst: src, pal: 'phyl' }, 300, 1200); flash('#6affb8', 0.25, 250, 700); renderBattleUI(true); return 950 * sp; }
+      const big = pal === 'gold' && (P === 'divine' || F === 'resurrect' || F === 'miracle' || F === 'holyword');
+      const d0 = src && pal !== 'potion' && pal !== 'wind' ? cast(pal === 'gold' ? SPELL_COL.holy : SPELL_COL.nature, 480) : 0;
+      tg.forEach((id, i) => { const p = at(id); if (big) add('pillar', { x: p.x, y: p.y, dst: id, color: '#ffe9a0' }, d0 + i * 60, 950); add('heal2', { x: p.x, y: p.y, dst: id, pal }, d0 + i * 60 + (big ? 160 : 0), 1150); });
+      if (big) flash('#fff2c0', 0.3, d0, 500);
+      if (pal === 'potion') snd('item', null, 0, 0.6); snd(big ? 'sp-holy' : 'sp-heal', 'holy', d0, 0.75);
+      renderBattleUI(true);
+      return (d0 + 420 + tg.length * 60) * sp;
+    }
+    // fire: a Fireball, the Arcane Tower's fire, the hellfire orb; a demon's hellfire falls from the sky instead
+    if (F === 'fireball') {
+      const cp = hexXY(ev.center != null ? ev.center : (ui.view[tg[0]] || {}).pos || 0);
+      if (P === 'hellfire') {
+        const d0 = cast(SPELL_COL.hell, 600, cp);
+        add('orb', { x: cp.x, y: cp.y, x2: cp.x, y2: cp.y, sky: true, pal: 'hell', size: 1.5 }, d0, 430);
+        add('blast', { x: cp.x, y: cp.y, pal: 'hell', size: 1.5, shake: 0.3 }, d0 + 410, 1150); snd('sp-boom', 'fire', d0 + 400); flash('#ff5a2a', 0.38, d0 + 410, 520);
+        return (d0 + 410 + 420) * sp;
+      }
+      const pal = P === 'orb' ? 'hell' : P === 'arcane' ? 'arcane' : 'fire';
+      const d0 = cast(pal === 'arcane' ? SPELL_COL.arcane : pal === 'hell' ? SPELL_COL.hell : SPELL_COL.fire, 540, cp); const fl = 430;
+      add('orb', { x: ps.x, y: ps.y, x2: cp.x, y2: cp.y, src, pal, size: P === 'orb' ? 1.15 : 0.85, arc: 1.4, frac: su && su.structure ? 0.92 : null }, d0, fl);
+      add('blast', { x: cp.x, y: cp.y, pal, size: 1.55 }, d0 + fl - 20, 1100); snd('sp-boom', 'fire', d0 + fl - 30); flash(pal === 'arcane' ? '#c08aff' : '#ffb060', 0.32, d0 + fl, 460);
+      return (d0 + fl + 380) * sp;
+    }
+    // Meteor Shower and the Archmage's Meteor Swarm: a falling star for every hero it hits
+    if (F === 'meteor') {
+      const d0 = cast('#ff9a3a', 640, null);
+      tg.forEach((id, i) => { const p = at(id); const dl = d0 + i * 150 + Math.random() * 70; add('orb', { x: p.x, y: p.y, x2: p.x, y2: p.y, dst: id, sky: true, pal: 'fire', size: 1.15 }, dl, 470); add('blast', { x: p.x, y: p.y, pal: 'fire', size: 1.05, shake: 0.28 }, dl + 450, 1000); snd('sp-boom', 'fire', dl + 440, 0.7); });
+      if (tg.length) flash('#ffa040', 0.25, d0 + 450, tg.length * 150 + 450);
+      return (d0 + tg.length * 150 + 450 + 320) * sp;
+    }
+    // Lightning Bolt, and Chain Lightning leaping from one target to the next
+    if (F === 'lightning' || F === 'chain') {
+      const d0 = cast(SPELL_COL.storm, 440);
+      tg.forEach((id, i) => { const p = at(id); const prev = F === 'chain' && i ? tg[i - 1] : null; const fp = prev ? at(prev) : ps; const dl = d0 + (F === 'chain' ? i * 210 : 0);
+        add('bolt', { x: fp.x, y: fp.y, x2: p.x, y2: p.y, src: prev ? null : src, from: prev, dst: id, color: '#bfe6ff' }, dl, 540); flash('#e4f2ff', 0.42, dl, 200); snd('sp-thunder', 'crit', dl, i ? 0.6 : 0.85); });
+      return (d0 + (F === 'chain' ? (tg.length - 1) * 210 : 0) + 430) * sp;
+    }
+    // Millbrook's towers loose arrows from the nearest standing tower
+    if (F === 'arrow' && (ev.arrows || !src)) {
+      const towers = b.units.filter(x => x.structure && x.alive && x.side === 'party' && x.kind !== 'gate' && x.kind !== 'hall');
+      tg.forEach((id, i) => { const p = at(id); const tw = towers.length ? towers[i % towers.length] : null; const fp = tw ? at(tw.id) : ps; add('shot', { x: fp.x, y: fp.y - BF.R * 0.8, x2: p.x, y2: p.y, color: '#ffe9a8', arc: 0.5 }, i * 60, 340); });
+      snd('arrow', null, 0, 0.8);
+      return (300 + tg.length * 60) * sp;
+    }
+    // Magic Missile: one dart for every missile, each on its own curve
+    if (F === 'arrow') {
+      const id = tg[0]; const p = id && at(id); const n = Math.min(9, ev.n || 3); const d0 = cast(SPELL_COL.arcane, 420); if (!p) return d0 * sp;
+      for (let i = 0; i < n; i++) { add('dart', { x: ps.x, y: ps.y, x2: p.x, y2: p.y, src, dst: id, color: '#c08aff' }, d0 + i * 75, 560); snd('sp-zap', i ? null : 'arrow', d0 + i * 75, 0.5); }
+      return (d0 + n * 75 + 470) * sp;
+    }
+    // Disintegrate: the green ray
+    if (F === 'disintegrate') {
+      const id = tg[0]; const p = id && at(id); const d0 = cast(SPELL_COL.green, 500);
+      if (p) { add('beam', { x: ps.x, y: ps.y, x2: p.x, y2: p.y, src, dst: id, color: '#7dff6a' }, d0, 950); flash('#9aff8a', 0.28, d0, 320); snd('sp-beam', 'dark', d0); }
+      return (d0 + 650) * sp;
+    }
+    // radiant: Holy Word, the Temple Bell, Spirit Guardians
+    if (F === 'holyword') {
+      if (P === 'spirits') {
+        add('nova', { x: ps.x, y: ps.y, src, color: '#ffe08a', radius: 2.4 }, 0, 700); snd('sp-holy', 'holy', 0, 0.6);
+        tg.forEach((id, i) => { const p = at(id); add('dart', { x: ps.x, y: ps.y, x2: p.x, y2: p.y, src, dst: id, color: '#ffe08a', low: true }, i * 90, 520); add('pillar', { x: p.x, y: p.y, dst: id, color: '#fff2b0', h: 4 }, i * 90 + 370, 650); });
+        return (tg.length * 90 + 620) * sp;
+      }
+      const d0 = su && su.structure ? 150 : cast(SPELL_COL.holy, 540);
+      add('nova', { x: ps.x, y: ps.y, src, color: '#ffd86a', color2: '#fff0c0', radius: su && su.structure ? 9 : 7 }, Math.max(0, d0 - 80), 1000);
+      tg.forEach((id, i) => { const p = at(id); add('pillar', { x: p.x, y: p.y, dst: id, color: '#ffd86a' }, d0 + 120 + i * 70, 850); });
+      flash('#fff4c0', 0.34, d0, 420); snd('sp-holy', 'holy', Math.max(0, d0 - 80));
+      return (d0 + 120 + tg.length * 70 + 450) * sp;
+    }
+    // the vampire's Charm: a ribbon of crimson mist, then motes circling the charmed hero's head
+    if (P === 'charm') {
+      const id = tg[0]; const d0 = cast(SPELL_COL.blood, 500);
+      if (id) { const p = at(id); add('mist', { x: ps.x, y: ps.y, x2: p.x, y2: p.y, src, dst: id }, Math.max(0, d0 - 120), 1350); } snd('sp-charm', 'dark', Math.max(0, d0 - 120));
+      return (d0 + 820) * sp;
+    }
+    // Time Stop: a clock of runes over the whole field
+    if (P === 'timestop') { const d0 = cast(SPELL_COL.time, 620); add('clock', { x: ps.x, y: ps.y, src }, Math.max(0, d0 - 150), 1900); snd('sp-time', 'dark', Math.max(0, d0 - 150)); flash('#bfe0ff', 0.42, Math.max(0, d0 - 100), 1500); return (d0 + 950) * sp; }
+    // Soul Rend: a necrotic wave from the lich, and a wisp of every hero's soul dragged back to it
+    if (F === 'rend') {
+      const d0 = cast(SPELL_COL.necro, 720);
+      add('nova', { x: ps.x, y: ps.y, src, color: '#9a5aff', color2: '#4a1a7a', radius: 14, dark: true }, Math.max(0, d0 - 150), 1100);
+      tg.forEach((id, i) => { const p = at(id); add('souls', { x: p.x, y: p.y, x2: ps.x, y2: ps.y, dst: id, src, color: '#c9a8ff' }, d0 + 150 + i * 60, 1250); });
+      flash('#6a2aaa', 0.32, d0, 650); snd('sp-soul', 'dark', Math.max(0, d0 - 150));
+      return (d0 + 720) * sp;
+    }
+    // fire from the jaws (the dragon, a dragon in your army) and a demon's fire aura
+    if (F === 'breath') {
+      if (P === 'aura') { snd('fire', null, 0, 0.7); add('nova', { x: ps.x, y: ps.y, src, color: '#ff8a2a', color2: '#ff4a1a', radius: 2.6 }, 0, 800); tg.forEach((id, i) => { const p = at(id); add('blast', { x: p.x, y: p.y, pal: 'fire', size: 0.6, shake: 0.05 }, 180 + i * 60, 800); }); return 640 * sp; }
+      const d0 = cast('#ff9a3a', 380, tg[0] && at(tg[0]));
+      tg.forEach((id, i) => { const p = at(id); add('breath2', { x: ps.x, y: ps.y, x2: p.x, y2: p.y, src, dst: id }, d0 + i * 40, 1100); add('blast', { x: p.x, y: p.y, pal: 'fire', size: 0.75, shake: 0.08 }, d0 + 320 + i * 40, 900); });
+      if (tg.length) flash('#ff8a3a', 0.22, d0 + 200, 620); snd('sp-breath', 'fire', d0);
+      return (d0 + 860) * sp;
+    }
+    return (cast('#c9a0ff', 420) + 150) * sp;
+  }
+  // 0.41: the screen's own flash for the big spells (both battlefields): a soft wash of the spell's colour
+  function battleFlash(now) {
+    const el = $('bflash'); if (!el) return; let best = null, op = 0;
+    for (const f of ui.fx) { if (f.kind !== 'flash' || now < f.t0) continue; const t = (now - f.t0) / f.dur; if (t > 1) continue; const o = (f.op || 0.3) * Math.min(1, t * 5) * (1 - t) * (REDUCED ? 0.5 : 1); if (o > op) { op = o; best = f; } }
+    el.style.opacity = op.toFixed(3); if (best && el.dataset.c !== best.color) { el.dataset.c = best.color; el.style.background = `radial-gradient(ellipse at 50% 55%, ${best.color} 0%, transparent 75%)`; }
   }
   function fadeOut(v, speed) { const t0 = performance.now(); const dur = 450 * speed; const step = () => { v.fade = 1 - Math.min(1, (performance.now() - t0) / Math.max(1, dur)); if (v.fade > 0) requestAnimationFrame(step); }; step(); }
   function appendLog(text, cls) {
@@ -3552,5 +3721,5 @@
       fsb.hidden = false;
       fsb.addEventListener('click', () => { de.requestFullscreen({ navigationUI: 'hide' }).then(() => screen.orientation.lock('landscape')).catch(() => { /* the phone said no */ }); });
     } }
-  window.__bts = { state: () => S, ui, vo: () => VO, bark: (c, w, o) => bark(c, w, o), vsay: (c, o) => vsay(c, o), msay: (t, c, o) => msay(t, c, o), minionSay: (m, c) => minionSay(m, c), minionBubble: m => minionBubble(m), TILE, minionScreen, tileScreen, centerOn: (x, y) => { centerOn(x, y, true); drawMap(); }, enterBattle: () => enterBattle(), commit: () => commit(), openScreen: k => openScreen(k), renderSide: () => renderSide(), showOver: () => showOver(), spellbook: () => spellbook(), select: sel => { ui.sel = sel; renderSide(); drawMap(); }, showWeek: () => showWeek(), showVillainUps: () => showVillainUps(), dawn: () => dawn(), parley: r => showParley(r), parleyAct: (a, k) => parleyAct(a, k), endDay: () => endDay() };
+  window.__bts = { spell: (ev, sp) => spellFx(ev, sp || 1), state: () => S, ui, vo: () => VO, bark: (c, w, o) => bark(c, w, o), vsay: (c, o) => vsay(c, o), msay: (t, c, o) => msay(t, c, o), minionSay: (m, c) => minionSay(m, c), minionBubble: m => minionBubble(m), TILE, minionScreen, tileScreen, centerOn: (x, y) => { centerOn(x, y, true); drawMap(); }, enterBattle: () => enterBattle(), commit: () => commit(), openScreen: k => openScreen(k), renderSide: () => renderSide(), showOver: () => showOver(), spellbook: () => spellbook(), select: sel => { ui.sel = sel; renderSide(); drawMap(); }, showWeek: () => showWeek(), showVillainUps: () => showVillainUps(), dawn: () => dawn(), parley: r => showParley(r), parleyAct: (a, k) => parleyAct(a, k), endDay: () => endDay() };
 })();
